@@ -17,9 +17,9 @@ from .managers import PremierProductManager
 
 class PremierProduct(Model):
     premier_part_number = CharField(
-        primary_key=True,
         max_length=20,
-        unique=True
+        unique=True,
+        primary_key=True
     )
     vendor_part_number = CharField(
         max_length=20,
@@ -31,20 +31,86 @@ class PremierProduct(Model):
         max_length=30
     )
     msrp = DecimalField(
+        decimal_places=2,
         max_digits=10,
-        decimal_places=2
+        verbose_name='MSRP'
+    )
+    msrp_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MSRP CAD'
+    )
+    msrp_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MSRP USD'
     )
     map = DecimalField(
+        decimal_places=2,
         max_digits=10,
-        decimal_places=2
+        verbose_name='MAP'
+    )
+    map_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MAP CAD'
+    )
+    map_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MAP USD'
     )
     jobber = DecimalField(
+        decimal_places=2,
+        max_digits=10
+    )
+    jobber_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
         max_digits=10,
-        decimal_places=2
+        null=True,
+        verbose_name='jobber CAD'
+    )
+    jobber_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='jobber USD'
     )
     cost = DecimalField(
+        decimal_places=2,
+        max_digits=10
+    )
+    cost_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
         max_digits=10,
-        decimal_places=2
+        null=True,
+        verbose_name='cost CAD'
+    )
+    cost_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='cost USD'
     )
     part_status = CharField(
         max_length=20
@@ -78,46 +144,55 @@ class PremierProduct(Model):
         null=True
     )
     upc = CharField(
+        blank=True,
         max_length=50,
-        blank=True
+        verbose_name='UPC'
     )
     inventory_ab = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='Alberta inventory'
     )
     inventory_po = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='PO inventory'
     )
     inventory_ut = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='Utah inventory'
     )
     inventory_ky = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='Kentucky inventory'
     )
     inventory_tx = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='Texas inventory'
     )
     inventory_ca = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='California inventory'
     )
     inventory_wa = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='Washington inventory'
     )
     inventory_co = IntegerField(
         blank=True,
+        help_text='API field',
         null=True,
         verbose_name='Colorado inventory'
     )

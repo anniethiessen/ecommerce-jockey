@@ -273,9 +273,17 @@ class PremierProductModelAdmin(ImportMixin, DjangoObjectActions,
             'Prices', {
                 'fields': (
                     'msrp',
+                    'msrp_cad',
+                    'msrp_usd',
                     'map',
+                    'map_cad',
+                    'map_usd',
                     'jobber',
-                    'cost'
+                    'jobber_cad',
+                    'jobber_usd',
+                    'cost',
+                    'cost_cad',
+                    'cost_usd'
                 )
             }
         ),
