@@ -3,7 +3,7 @@ from django.db.models import Q
 
 
 class HasMissingInventory(SimpleListFilter):
-    title = 'needs inventory update'
+    title = 'has missing inventory'
     parameter_name = 'missing_inventory'
 
     def lookups(self, request, model_admin):
