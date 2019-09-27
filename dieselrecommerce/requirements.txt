@@ -26,7 +26,7 @@ pandas==0.25.1
 pathspec==0.5.9
 python-dateutil==2.8.0
 pytz==2019.2
-PyYAML==3.13
+PyYAML==4.2b1
 requests==2.22.0
 semantic-version==2.5.0
 six==1.11.0
