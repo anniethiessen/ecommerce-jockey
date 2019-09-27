@@ -1,3 +1,4 @@
+from django_object_actions import DjangoObjectActions
 from import_export.admin import ImportMixin
 
 from django.contrib import admin
@@ -192,7 +193,8 @@ class SemaProductModelAdmin(ModelAdmin):
 
 
 @admin.register(PremierProduct)
-class PremierProductModelAdmin(ImportMixin, ModelAdmin, PremierAPIActions):
+class PremierProductModelAdmin(ImportMixin, DjangoObjectActions,
+                               ModelAdmin, PremierAPIActions):
     resource_class = PremierProductResource
     list_per_page = 10
     search_fields = (
@@ -204,7 +206,11 @@ class PremierProductModelAdmin(ImportMixin, ModelAdmin, PremierAPIActions):
     )
 
     actions = (
-        'update_inventory_action',
+        'update_inventory_queryset_action',
+    )
+
+    change_actions = (
+        'update_inventory_object_action',
     )
 
     list_display = (
