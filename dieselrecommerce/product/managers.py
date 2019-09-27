@@ -17,7 +17,7 @@ class PremierProductQuerySet(QuerySet):
         queryset = self.filter(premier_part_number__isnull=False)
         part_numbers = [obj.premier_part_number for obj in queryset]
 
-        chunks = chunkify_list(part_numbers)
+        chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
                 if not token:
