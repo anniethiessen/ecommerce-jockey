@@ -9,7 +9,6 @@ from django.db.models import (
     DecimalField,
     ForeignKey,
     IntegerField,
-    OneToOneField,
     CASCADE
 )
 

@@ -1,5 +1,3 @@
-from math import floor
-
 from django.db.models import Manager, QuerySet
 
 from .utils import chunkify_list
