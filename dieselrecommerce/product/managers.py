@@ -1,9 +1,33 @@
-from django.db.models import Manager, QuerySet
+from django.db.models import Manager, QuerySet, Q
 
 from .utils import chunkify_list
 
 
 class PremierProductQuerySet(QuerySet):
+    def has_missing_inventory(self):
+        return self.filter(
+            Q(inventory_ab__isnull=True)
+            | Q(inventory_po__isnull=True)
+            | Q(inventory_ut__isnull=True)
+            | Q(inventory_ky__isnull=True)
+            | Q(inventory_tx__isnull=True)
+            | Q(inventory_ca__isnull=True)
+            | Q(inventory_wa__isnull=True)
+            | Q(inventory_co__isnull=True)
+        )
+
+    def has_all_inventory(self):
+        return self.filter(
+            inventory_ab__isnull=False,
+            inventory_po__isnull=False,
+            inventory_ut__isnull=False,
+            inventory_ky__isnull=False,
+            inventory_tx__isnull=False,
+            inventory_ca__isnull=False,
+            inventory_wa__isnull=False,
+            inventory_co__isnull=False
+        )
+
     def update_inventory_from_premier_api(self, token=None):
         msgs = []
         invalid = self.filter(premier_part_number__isnull=True)
@@ -41,6 +65,12 @@ class PremierProductManager(Manager):
             self.model,
             using=self._db
         )
+
+    def has_all_inventory(self):
+        return self.get_queryset().has_all_inventory()
+
+    def has_missing_inventory(self):
+        return self.get_queryset().has_missing_inventory()
 
     def update_inventory_from_premier_api(self, token=None):
         return self.get_queryset().update_inventory_from_premier_api(token)

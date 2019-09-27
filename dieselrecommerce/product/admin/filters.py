@@ -14,27 +14,9 @@ class HasMissingInventory(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
-            return queryset.filter(
-                Q(inventory_ab__isnull=True)
-                | Q(inventory_po__isnull=True)
-                | Q(inventory_ut__isnull=True)
-                | Q(inventory_ky__isnull=True)
-                | Q(inventory_tx__isnull=True)
-                | Q(inventory_ca__isnull=True)
-                | Q(inventory_wa__isnull=True)
-                | Q(inventory_co__isnull=True)
-            )
+            return queryset.has_missing_inventory()
         if self.value() == 'No':
-            return queryset.filter(
-                inventory_ab__isnull=False,
-                inventory_po__isnull=False,
-                inventory_ut__isnull=False,
-                inventory_ky__isnull=False,
-                inventory_tx__isnull=False,
-                inventory_ca__isnull=False,
-                inventory_wa__isnull=False,
-                inventory_co__isnull=False
-            )
+            return queryset.has_all_inventory()
 
 
 class HasAlbertaInventory(SimpleListFilter):
