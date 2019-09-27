@@ -40,3 +40,20 @@ class HasAlbertaInventory(SimpleListFilter):
                 Q(inventory_ab__isnull=True)
                 | Q(inventory_ab=0)
             )
+
+
+class HasMissingPricing(SimpleListFilter):
+    title = 'has missing pricing'
+    parameter_name = 'missing_pricing'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.has_missing_pricing()
+        if self.value() == 'No':
+            return queryset.has_all_pricing()

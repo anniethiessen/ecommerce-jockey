@@ -30,6 +30,46 @@ class PremierProduct(Model):
     manufacturer = CharField(
         max_length=30
     )
+    cost = DecimalField(
+        decimal_places=2,
+        max_digits=10
+    )
+    cost_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='cost CAD'
+    )
+    cost_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='cost USD'
+    )
+    jobber = DecimalField(
+        decimal_places=2,
+        max_digits=10
+    )
+    jobber_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='jobber CAD'
+    )
+    jobber_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='jobber USD'
+    )
     msrp = DecimalField(
         decimal_places=2,
         max_digits=10,
@@ -71,46 +111,6 @@ class PremierProduct(Model):
         max_digits=10,
         null=True,
         verbose_name='MAP USD'
-    )
-    jobber = DecimalField(
-        decimal_places=2,
-        max_digits=10
-    )
-    jobber_cad = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='jobber CAD'
-    )
-    jobber_usd = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='jobber USD'
-    )
-    cost = DecimalField(
-        decimal_places=2,
-        max_digits=10
-    )
-    cost_cad = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='cost CAD'
-    )
-    cost_usd = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='cost USD'
     )
     part_status = CharField(
         max_length=20
@@ -199,7 +199,39 @@ class PremierProduct(Model):
 
     objects = PremierProductManager()
 
-    def clear_inventory(self):
+    @classmethod
+    def get_premier_api_headers(cls, token=None):
+        if not token:
+            token = cls.retrieve_premier_api_token()
+
+        return {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+
+    @classmethod
+    def retrieve_premier_api_token(cls):
+        try:
+            url = f'{settings.PREMIER_BASE_URL}/authenticate'
+            params = {'apiKey': settings.PREMIER_API_KEY}
+            response = requests.get(url=url, params=params)
+            return json.loads(response.text)['sessionToken']
+        except Exception:
+            raise
+
+    def get_premier_api_update_success_msg(self, previous_data, new_data):
+        msg = f'Success: {self} updated'
+        for loc, inv in new_data.items():
+            if not inv == previous_data[loc]:
+                msg += f", {loc}: {previous_data[loc]} -> {inv}"
+        return msg
+
+    def get_premier_api_update_error_msg(self, error):
+        msg = f'Error: {self}, {error}'
+        return msg
+
+    # <editor-fold desc="Inventory">
+    def clear_inventory_fields(self):
         self.inventory_ab = None
         self.inventory_po = None
         self.inventory_ut = None
@@ -222,40 +254,6 @@ class PremierProduct(Model):
             'CO': self.inventory_co
         }
 
-    def get_inventory_update_success_msg(self, previous_inventory_data):
-        previous = previous_inventory_data
-        new = self.get_inventory_data()
-
-        msg = f'Success: {self} updated'
-        for loc, inv in new.items():
-            if not inv == previous[loc]:
-                msg += f", {loc}: {previous[loc]} -> {inv}"
-        return msg
-
-    def get_inventory_update_error_msg(self, error):
-        msg = f'Error: {self}, {error}'
-        return msg
-
-    @classmethod
-    def get_premier_api_headers(cls, token=None):
-        if not token:
-            token = cls.retrieve_premier_api_token()
-
-        return {
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        }
-
-    @classmethod
-    def retrieve_premier_api_token(cls):
-        try:
-            url = f'{settings.PREMIER_BASE_URL}/authenticate'
-            params = {'apiKey': settings.PREMIER_API_KEY}
-            response = requests.get(url=url, params=params)
-            return json.loads(response.text)['sessionToken']
-        except Exception:
-            raise
-
     @classmethod
     def retrieve_premier_api_inventory(cls, part_numbers, token=None):
         try:
@@ -272,7 +270,7 @@ class PremierProduct(Model):
 
     def update_inventory_from_premier_api(self, token=None):
         if not self.premier_part_number:
-            return self.get_inventory_update_error_msg(
+            return self.get_premier_api_update_error_msg(
                 "Premier Part Number required")
 
         try:
@@ -283,13 +281,13 @@ class PremierProduct(Model):
             data = response[0]['inventory']
             return self.update_inventory_from_data(data)
         except Exception as err:
-            return self.get_inventory_update_error_msg(str(err))
+            return self.get_premier_api_update_error_msg(str(err))
 
     def update_inventory_from_data(self, data):
         previous = self.get_inventory_data()
 
         try:
-            self.clear_inventory()
+            self.clear_inventory_fields()
             for item in data:
                 setattr(
                     self,
@@ -298,9 +296,88 @@ class PremierProduct(Model):
                 )
                 self.save()
         except Exception as err:
-            return self.get_inventory_update_error_msg(str(err))
+            return self.get_premier_api_update_error_msg(str(err))
 
-        return self.get_inventory_update_success_msg(previous)
+        self.refresh_from_db()
+        new = self.get_inventory_data()
+        return self.get_premier_api_update_success_msg(previous, new)
+    # </editor-fold>
+
+    # <editor-fold desc="Pricing">
+    def clear_pricing_fields(self):
+        self.cost_cad = None
+        self.cost_usd = None
+        self.jobber_cad = None
+        self.jobber_usd = None
+        self.msrp_cad = None
+        self.msrp_usd = None
+        self.map_cad = None
+        self.map_usd = None
+        self.save()
+
+    def get_pricing_data(self):
+        return {
+            'Cost CAD': self.cost_cad,
+            'Cost USD': self.cost_usd,
+            'Jobber CAD': self.jobber_cad,
+            'Jobber USD': self.jobber_usd,
+            'MSRP CAD': self.msrp_cad,
+            'MSRP USD': self.msrp_usd,
+            'MAP CAD': self.map_cad,
+            'MAP USD': self.map_usd
+        }
+
+    @classmethod
+    def retrieve_premier_api_pricing(cls, part_numbers, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_premier_api_token()
+
+            url = f'{settings.PREMIER_BASE_URL}/pricing'
+            params = {'itemNumbers': ','.join(part_numbers)}
+            headers = cls.get_premier_api_headers(token)
+            response = requests.get(url=url, headers=headers, params=params)
+            return json.loads(response.text)
+        except Exception:
+            raise
+
+    def update_pricing_from_premier_api(self, token=None):
+        if not self.premier_part_number:
+            return self.get_premier_api_update_error_msg(
+                "Premier Part Number required")
+
+        try:
+            if not token:
+                token = self.retrieve_premier_api_token()
+            response = self.retrieve_premier_api_pricing(
+                [self.premier_part_number], token)
+            data = response[0]['pricing']
+            return self.update_pricing_from_data(data)
+        except Exception as err:
+            return self.get_premier_api_update_error_msg(str(err))
+
+    def update_pricing_from_data(self, data):
+        previous = self.get_pricing_data()
+
+        try:
+            self.clear_pricing_fields()
+            for item in data:
+                currency = item.pop('currency')
+                item['msrp'] = item.pop('retail')
+                for key, value in item.items():
+                    setattr(
+                        self,
+                        f'{key.lower()}_{currency.lower()}',
+                        value
+                    )
+                self.save()
+        except Exception as err:
+            return self.get_premier_api_update_error_msg(str(err))
+
+        self.refresh_from_db()
+        new = self.get_pricing_data()
+        return self.get_premier_api_update_success_msg(previous, new)
+    # </editor-fold>
 
     def __str__(self):
         return f'{self.premier_part_number} :: {self.manufacturer}'

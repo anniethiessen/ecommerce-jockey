@@ -13,7 +13,8 @@ from ..models import (
 from .actions import PremierAPIActions
 from .filters import (
     HasAlbertaInventory,
-    HasMissingInventory
+    HasMissingInventory,
+    HasMissingPricing
 )
 from .resources import PremierProductResource
 from .utils import get_change_view_link
@@ -207,10 +208,12 @@ class PremierProductModelAdmin(ImportMixin, DjangoObjectActions,
 
     actions = (
         'update_inventory_queryset_action',
+        'update_pricing_queryset_action'
     )
 
     change_actions = (
         'update_inventory_object_action',
+        'update_pricing_object_action'
     )
 
     list_display = (
@@ -219,24 +222,10 @@ class PremierProductModelAdmin(ImportMixin, DjangoObjectActions,
         'vendor_part_number',
         'description',
         'manufacturer',
-        'msrp',
-        'map',
-        'jobber',
         'cost',
-        'part_status',
-        'weight',
-        'length',
-        'width',
-        'height',
-        'upc',
-        'inventory_ab',
-        'inventory_po',
-        'inventory_ut',
-        'inventory_ky',
-        'inventory_tx',
-        'inventory_ca',
-        'inventory_wa',
-        'inventory_co'
+        'jobber',
+        'msrp',
+        'map'
     )
 
     list_display_links = (
@@ -247,6 +236,7 @@ class PremierProductModelAdmin(ImportMixin, DjangoObjectActions,
         'manufacturer',
         'part_status',
         HasMissingInventory,
+        HasMissingPricing,
         HasAlbertaInventory
     )
 
@@ -272,18 +262,18 @@ class PremierProductModelAdmin(ImportMixin, DjangoObjectActions,
         (
             'Prices', {
                 'fields': (
+                    'cost',
+                    'cost_cad',
+                    'cost_usd',
+                    'jobber',
+                    'jobber_cad',
+                    'jobber_usd',
                     'msrp',
                     'msrp_cad',
                     'msrp_usd',
                     'map',
                     'map_cad',
-                    'map_usd',
-                    'jobber',
-                    'jobber_cad',
-                    'jobber_usd',
-                    'cost',
-                    'cost_cad',
-                    'cost_usd'
+                    'map_usd'
                 )
             }
         ),
