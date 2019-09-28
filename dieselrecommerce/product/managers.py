@@ -34,7 +34,7 @@ class PremierProductQuerySet(QuerySet):
         invalid = self.filter(premier_part_number__isnull=True)
         for obj in invalid:
             msgs.append(
-                obj.get_premier_api_update_error_msg(
+                obj.get_update_error_msg(
                     "Premier Part Number required"
                 )
             )
@@ -90,7 +90,7 @@ class PremierProductQuerySet(QuerySet):
         invalid = self.filter(premier_part_number__isnull=True)
         for obj in invalid:
             msgs.append(
-                obj.get_premier_api_update_error_msg(
+                obj.get_update_error_msg(
                     "Premier Part Number required"
                 )
             )
@@ -103,7 +103,7 @@ class PremierProductQuerySet(QuerySet):
             try:
                 if not token:
                     token = self.model.retrieve_premier_api_token()
-                response = self.model.retrieve_premier_api_inventory(
+                response = self.model.retrieve_premier_api_pricing(
                     chunk, token)
                 for items in response:
                     instance = queryset.get(
