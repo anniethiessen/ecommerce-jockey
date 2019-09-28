@@ -7,11 +7,11 @@ from django.db.models import (
     CASCADE
 )
 
-from .apis import PremierProductAPIMixin
+from .apis import PremierProductMixin
 from .managers import PremierProductManager
 
 
-class PremierProduct(Model, PremierProductAPIMixin):
+class PremierProduct(Model, PremierProductMixin):
     premier_part_number = CharField(
         max_length=20,
         unique=True,

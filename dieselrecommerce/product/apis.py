@@ -5,7 +5,7 @@ import requests
 from django.conf import settings
 
 
-class CoreAPIMixin(object):
+class ApiCoreMixin(object):
     def get_update_success_msg(self, previous_data, new_data):
         msg = f'Success: {self} updated'
         for loc, inv in new_data.items():
@@ -18,7 +18,7 @@ class CoreAPIMixin(object):
         return msg
 
 
-class PremierAPIMixin(CoreAPIMixin):
+class PremierApiCoreMixin(ApiCoreMixin):
     @classmethod
     def get_premier_api_headers(cls, token=None):
         if not token:
@@ -40,8 +40,7 @@ class PremierAPIMixin(CoreAPIMixin):
             raise
 
 
-# noinspection PyAttributeOutsideInit
-class PremierProductAPIMixin(PremierAPIMixin):
+class PremierApiProductMixin(PremierApiCoreMixin):
     @classmethod
     def retrieve_premier_api_inventory(cls, part_numbers, token=None):
         try:
@@ -72,6 +71,9 @@ class PremierProductAPIMixin(PremierAPIMixin):
         except Exception:
             raise
 
+
+# noinspection PyAttributeOutsideInit
+class PremierProductMixin(PremierApiProductMixin):
     # <editor-fold desc="Inventory">
     def clear_inventory_fields(self):
         self.inventory_ab = None
