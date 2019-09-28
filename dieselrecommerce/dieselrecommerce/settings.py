@@ -16,9 +16,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'product.apps.ProductAppConfig',
     'admin_reorder',
-    'import_export',
-    'product.apps.ProductAppConfig'
+    'import_export'
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -81,6 +81,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 ROOT_URLCONF = 'dieselrecommerce.urls'
 WSGI_APPLICATION = 'dieselrecommerce.wsgi.application'
+
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = '/static/'
 
 
