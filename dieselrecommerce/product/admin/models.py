@@ -408,8 +408,7 @@ class SemaDatasetModelAdmin(ModelAdmin):
                 'fields': (
                     'dataset_id',
                     'name',
-                    'is_authorized',
-                    'years'
+                    'is_authorized'
                 )
             }
         ),
