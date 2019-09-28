@@ -18,7 +18,8 @@ from ..models import (
 )
 from .actions import (
     PremierProductActions,
-    SemaBrandActions
+    SemaBrandActions,
+    SemaDatasetActions
 )
 from .filters import (
     HasAlbertaInventory,
@@ -378,12 +379,16 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
 
 @admin.register(SemaDataset)
-class SemaDatasetModelAdmin(ModelAdmin):
+class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     search_fields = (
         'brand__brand_id',
         'brand__name',
         'dataset_id',
         'name'
+    )
+
+    changelist_actions = (
+        'import_brand_datasets_class_action',
     )
 
     list_display = (

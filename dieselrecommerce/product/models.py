@@ -10,9 +10,9 @@ from django.db.models import (
 )
 
 from .apis import (
-    ApiCoreMixin,
     PremierProductMixin,
-    SemaBrandMixin
+    SemaBrandMixin,
+    SemaDatasetMixin
 )
 from .managers import PremierProductManager
 
@@ -334,7 +334,7 @@ class SemaBrand(Model, SemaBrandMixin):
         return f'{self.brand_id} :: {self.name}'
 
 
-class SemaDataset(Model, ApiCoreMixin):
+class SemaDataset(Model, SemaDatasetMixin):
     dataset_id = CharField(
         primary_key=True,
         max_length=10

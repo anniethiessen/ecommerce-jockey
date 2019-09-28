@@ -6,24 +6,30 @@ from django.conf import settings
 
 
 class ApiCoreMixin(object):
-    def get_create_or_update_success_msg(self, created):
-        action = 'created' if created else 'updated'
-        return f'Success: {self} {action}'
-
     @classmethod
-    def get_create_or_update_error_msg(cls, error):
-        msg = f'Error: {cls}, {error}'
-        return msg
+    def get_class_error_msg(cls, error):
+        return f'Error: {cls}, {error}'
+
+    def get_instance_error_msg(self, error):
+        return (
+            'Error: '
+            f'{self._meta.model._meta.verbose_name.title()} {self}, {error}'
+        )
+
+    def get_create_success_msg(self):
+        return (
+            'Success: '
+            f'{self._meta.model._meta.verbose_name.title()} {self} created'
+        )
 
     def get_update_success_msg(self, previous_data, new_data):
-        msg = f'Success: {self} updated'
+        msg = (
+            'Success: '
+            f'{self._meta.model._meta.verbose_name.title()} {self} updated'
+        )
         for loc, inv in new_data.items():
             if not inv == previous_data[loc]:
                 msg += f", {loc}: {previous_data[loc]} -> {inv}"
-        return msg
-
-    def get_update_error_msg(self, error):
-        msg = f'Error: {self}, {error}'
         return msg
 
 
@@ -109,7 +115,7 @@ class PremierProductMixin(PremierApiProductMixin):
 
     def update_inventory_from_premier_api(self, token=None):
         if not self.premier_part_number:
-            return self.get_update_error_msg(
+            return self.get_instance_error_msg(
                 "Premier Part Number required")
 
         try:
@@ -120,7 +126,7 @@ class PremierProductMixin(PremierApiProductMixin):
             data = response[0]['inventory']
             return self.update_inventory_from_data(data)
         except Exception as err:
-            return self.get_update_error_msg(str(err))
+            return self.get_instance_error_msg(str(err))
 
     def update_inventory_from_data(self, data):
         previous = self.get_inventory_data()
@@ -135,7 +141,7 @@ class PremierProductMixin(PremierApiProductMixin):
                 )
                 self.save()
         except Exception as err:
-            return self.get_update_error_msg(str(err))
+            return self.get_instance_error_msg(str(err))
 
         self.refresh_from_db()
         new = self.get_inventory_data()
@@ -168,7 +174,7 @@ class PremierProductMixin(PremierApiProductMixin):
 
     def update_pricing_from_premier_api(self, token=None):
         if not self.premier_part_number:
-            return self.get_update_error_msg(
+            return self.get_instance_error_msg(
                 "Premier Part Number required")
 
         try:
@@ -179,7 +185,7 @@ class PremierProductMixin(PremierApiProductMixin):
             data = response[0]['pricing']
             return self.update_pricing_from_data(data)
         except Exception as err:
-            return self.get_update_error_msg(str(err))
+            return self.get_instance_error_msg(str(err))
 
     def update_pricing_from_data(self, data):
         previous = self.get_pricing_data()
@@ -197,7 +203,7 @@ class PremierProductMixin(PremierApiProductMixin):
                     )
                 self.save()
         except Exception as err:
-            return self.get_update_error_msg(str(err))
+            return self.get_instance_error_msg(str(err))
 
         self.refresh_from_db()
         new = self.get_pricing_data()
@@ -218,7 +224,7 @@ class SemaApiCoreMixin(ApiCoreMixin):
             }
             response = requests.get(url=url, params=params)
             response = json.loads(response.text)
-            if response['success']:
+            if response.get('success', None):
                 return response['token']
             else:
                 raise Exception(str(response['message']))
@@ -226,7 +232,7 @@ class SemaApiCoreMixin(ApiCoreMixin):
             raise
 
 
-class SemaApiBrandMixin(SemaApiCoreMixin):
+class SemaApiBrandDatasetMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_brand_datasets(cls, token=None):
         try:
@@ -237,7 +243,7 @@ class SemaApiBrandMixin(SemaApiCoreMixin):
             params = {'token': token}
             response = requests.get(url=url, params=params)
             response = json.loads(response.text)
-            if response['success']:
+            if response.get('success', None):
                 return response['BrandDatasets']
             else:
                 raise Exception(str(response['message']))
@@ -245,50 +251,104 @@ class SemaApiBrandMixin(SemaApiCoreMixin):
             raise
 
 
-class SemaBrandMixin(SemaApiBrandMixin):
-    @classmethod
-    def unauthorize_datasets(cls):
-        from product.models import SemaDataset
-        SemaDataset.objects.all().update(is_authorized=False)
-
+class SemaBrandDatasetMixin(SemaApiBrandDatasetMixin):
     @classmethod
     def import_brand_datasets_from_sema_api(cls, token=None):
         try:
             if not token:
                 token = cls.retrieve_sema_api_token()
             data = cls.retrieve_sema_brand_datasets(token)
-            return cls.create_brand_datasets_from_data(data)
+            brand_msgs = cls.create_brands_from_data(data)
+            dataset_msgs = cls.create_datasets_from_data(data)
+            return brand_msgs + dataset_msgs
         except Exception as err:
-            return cls.get_create_or_update_error_msg(str(err))
+            return cls.get_class_error_msg(str(err))
+
+
+class SemaBrandMixin(SemaBrandDatasetMixin):
+    def get_brand_data(self):
+        return {
+            'ID': self.brand_id,
+            'Name': self.name
+        }
 
     @classmethod
-    def create_brand_datasets_from_data(cls, data):
-        from product.models import SemaDataset
-
+    def create_brands_from_data(cls, data):
         msgs = []
+        for item in data:
+            try:
+                brand = cls.objects.get(brand_id=item['AAIABrandId'])
+                previous = brand.get_brand_data()
+                brand.name = item['BrandName']
+                brand.save()
+                brand.refresh_from_db()
+                new = brand.get_brand_data()
+                msgs.append(brand.get_update_success_msg(previous, new))
+            except cls.DoesNotExist:
+                brand = cls.objects.create(
+                    brand_id=item['AAIABrandId'],
+                    name=item['BrandName']
+                )
+                msgs.append(brand.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        return msgs
 
+    @classmethod
+    def create_datasets_from_data(cls, data):
+        from product.models import SemaDataset
+        return SemaDataset.create_datasets_from_data(data)
+
+
+class SemaDatasetMixin(SemaBrandDatasetMixin):
+    @classmethod
+    def get_brand(cls, brand_id):
+        from product.models import SemaBrand
         try:
-            cls.unauthorize_datasets()
-            for item in data:
-                try:
-                    brand, c = cls.objects.update_or_create(
-                        brand_id=item['AAIABrandId'],
-                        defaults={'name': item['BrandName']}
-                    )
-                    msgs.append(brand.get_create_or_update_success_msg(c))
-                    dataset, c = SemaDataset.objects.update_or_create(
-                        dataset_id=item['DatasetId'],
-                        defaults={
-                            'name': item['DatasetName'],
-                            'brand': brand,
-                            'is_authorized': True
-                        }
-                    )
-                    msgs.append(dataset.get_create_or_update_success_msg(c))
-                except Exception as err:
-                    msgs.append(cls.get_create_or_update_error_msg(str(err)))
-        except Exception as err:
-            msgs.append(cls.get_create_or_update_error_msg(str(err)))
+            return SemaBrand.objects.get(brand_id=brand_id)
+        except Exception:
+            raise
 
+    def get_dataset_data(self):
+        return {
+            'ID': self.dataset_id,
+            'Name': self.name,
+            'Brand': str(self.brand)
+        }
+
+    @classmethod
+    def unauthorize_datasets(cls):
+        cls.objects.all().update(is_authorized=False)
+
+    @classmethod
+    def create_brands_from_data(cls, data):
+        from product.models import SemaBrand
+        return SemaBrand.create_brands_from_data(data)
+
+    @classmethod
+    def create_datasets_from_data(cls, data):
+        msgs = []
+        cls.unauthorize_datasets()
+        for item in data:
+            try:
+                dataset = cls.objects.get(dataset_id=item['DatasetId'])
+                previous = dataset.get_dataset_data()
+                dataset.name = item['DatasetName']
+                dataset.brand = cls.get_brand(item['AAIABrandId'])
+                dataset.is_authorized = True
+                dataset.save()
+                dataset.refresh_from_db()
+                new = dataset.get_dataset_data()
+                msgs.append(dataset.get_update_success_msg(previous, new))
+            except cls.DoesNotExist:
+                dataset = cls.objects.create(
+                    dataset_id=item['DatasetId'],
+                    name=item['DatasetName'],
+                    brand=cls.get_brand(item['AAIABrandId']),
+                    is_authorized=True
+                )
+                msgs.append(dataset.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
         return msgs
 # </editor-fold>
