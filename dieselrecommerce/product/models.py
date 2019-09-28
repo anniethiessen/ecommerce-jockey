@@ -5,6 +5,7 @@ from django.db.models import (
     DecimalField,
     ForeignKey,
     IntegerField,
+    PositiveIntegerField,
     PositiveSmallIntegerField,
     CASCADE
 )
@@ -27,10 +28,10 @@ class PremierProduct(Model, PremierProductMixin):
         max_length=20,
     )
     description = CharField(
-        max_length=300
+        max_length=500
     )
     manufacturer = CharField(
-        max_length=30
+        max_length=50
     )
     cost = DecimalField(
         decimal_places=2,
@@ -205,32 +206,6 @@ class PremierProduct(Model, PremierProductMixin):
         return f'{self.premier_part_number} :: {self.manufacturer}'
 
 
-# class SemaBaseVehicle(Model):  # TO DO TEMP
-#     base_vehicle_id = IntegerField(
-#         primary_key=True,
-#         unique=True
-#     )
-#
-#     class Meta:
-#         verbose_name = 'SEMA base vehicle'
-#
-#     def __str__(self):
-#         return str(self.base_vehicle_id)
-
-
-# class SemaVehicle(Model):  # TO DO TEMP
-#     vehicle_id = IntegerField(
-#         primary_key=True,
-#         unique=True
-#     )
-#
-#     class Meta:
-#         verbose_name = 'SEMA vehicle'
-#
-#     def __str__(self):
-#         return str(self.vehicle_id)
-
-
 class SemaYear(Model):
     year = PositiveSmallIntegerField(
         primary_key=True,
@@ -245,7 +220,7 @@ class SemaYear(Model):
 
 
 class SemaMake(Model):
-    make_id = IntegerField(
+    make_id = PositiveIntegerField(
         primary_key=True,
         unique=True
     )
@@ -261,11 +236,11 @@ class SemaMake(Model):
 
 
 class SemaModel(Model):
-    model_id = IntegerField(
+    model_id = PositiveIntegerField(
         primary_key=True,
         unique=True
     )
-    base_vehicle_id = IntegerField(  # TO DO TEMP
+    base_vehicle_id = PositiveIntegerField(
         unique=True
     )
     name = CharField(
@@ -275,10 +250,6 @@ class SemaModel(Model):
         SemaMake,
         on_delete=CASCADE
     )
-    # base_vehicle = ForeignKey(  # TO DO TEMP
-    #     SemaBaseVehicle,
-    #     on_delete=CASCADE
-    # )
 
     class Meta:
         verbose_name = 'SEMA model'
@@ -288,11 +259,11 @@ class SemaModel(Model):
 
 
 class SemaSubmodel(Model):
-    submodel_id = IntegerField(
+    submodel_id = PositiveIntegerField(
         primary_key=True,
         unique=True
     )
-    vehicle_id = IntegerField(  # TO DO TEMP
+    vehicle_id = PositiveIntegerField(
         unique=True
     )
     name = CharField(
@@ -302,10 +273,6 @@ class SemaSubmodel(Model):
         SemaModel,
         on_delete=CASCADE
     )
-    # vehicle = ForeignKey(  # TO DO TEMP
-    #     SemaVehicle,
-    #     on_delete=CASCADE
-    # )
 
     class Meta:
         verbose_name = 'SEMA submodel'
@@ -317,7 +284,8 @@ class SemaSubmodel(Model):
 class SemaBrand(Model, SemaBrandMixin):
     brand_id = CharField(
         primary_key=True,
-        max_length=10
+        max_length=10,
+        unique=True
     )
     name = CharField(
         max_length=50,
@@ -335,12 +303,12 @@ class SemaBrand(Model, SemaBrandMixin):
 
 
 class SemaDataset(Model, SemaDatasetMixin):
-    dataset_id = CharField(
+    dataset_id = PositiveIntegerField(
         primary_key=True,
-        max_length=10
+        unique=True
     )
     name = CharField(
-        max_length=100,
+        max_length=50,
     )
     is_authorized = BooleanField(
         default=False,
@@ -360,9 +328,9 @@ class SemaDataset(Model, SemaDatasetMixin):
 
 
 class SemaProduct(Model):
-    product_id = CharField(
+    product_id = PositiveIntegerField(
         primary_key=True,
-        max_length=30
+        unique=True
     )
     dataset = ForeignKey(
         SemaDataset,
