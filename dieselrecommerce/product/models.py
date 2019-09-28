@@ -5,6 +5,7 @@ from django.db.models import (
     DecimalField,
     ForeignKey,
     IntegerField,
+    PositiveSmallIntegerField,
     CASCADE
 )
 
@@ -202,6 +203,109 @@ class PremierProduct(Model, PremierProductMixin):
 
     def __str__(self):
         return f'{self.premier_part_number} :: {self.manufacturer}'
+
+
+class SemaBaseVehicle(Model):
+    base_vehicle_id = IntegerField(
+        primary_key=True,
+        unique=True
+    )
+
+    class Meta:
+        verbose_name = 'SEMA base vehicle'
+
+    def __str__(self):
+        return str(self.base_vehicle_id)
+
+
+class SemaVehicle(Model):
+    vehicle_id = IntegerField(
+        primary_key=True,
+        unique=True
+    )
+
+    class Meta:
+        verbose_name = 'SEMA vehicle'
+
+    def __str__(self):
+        return str(self.vehicle_id)
+
+
+class SemaYear(Model):
+    year = PositiveSmallIntegerField(
+        primary_key=True,
+        unique=True
+    )
+
+    class Meta:
+        verbose_name = 'SEMA year'
+
+    def __str__(self):
+        return str(self.year)
+
+
+class SemaMake(Model):
+    make_id = IntegerField(
+        primary_key=True,
+        unique=True
+    )
+    name = CharField(
+        max_length=50,
+    )
+
+    class Meta:
+        verbose_name = 'SEMA make'
+
+    def __str__(self):
+        return str(self.name)
+
+
+class SemaModel(Model):
+    model_id = IntegerField(
+        primary_key=True,
+        unique=True
+    )
+    name = CharField(
+        max_length=50,
+    )
+    make = ForeignKey(
+        SemaMake,
+        on_delete=CASCADE
+    )
+    base_vehicle = ForeignKey(
+        SemaBaseVehicle,
+        on_delete=CASCADE
+    )
+
+    class Meta:
+        verbose_name = 'SEMA model'
+
+    def __str__(self):
+        return f'{self.name} :: {self.make}'
+
+
+class SemaSubmodel(Model):
+    submodel_id = IntegerField(
+        primary_key=True,
+        unique=True
+    )
+    name = CharField(
+        max_length=50,
+    )
+    model = ForeignKey(
+        SemaModel,
+        on_delete=CASCADE
+    )
+    vehicle = ForeignKey(
+        SemaVehicle,
+        on_delete=CASCADE
+    )
+
+    class Meta:
+        verbose_name = 'SEMA submodel'
+
+    def __str__(self):
+        return f'{self.name} :: {self.model}'
 
 
 class SemaBrand(Model, SemaBrandMixin):
