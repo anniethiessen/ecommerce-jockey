@@ -1,4 +1,4 @@
-from django_object_actions import DjangoObjectActions
+from django_object_actions import BaseDjangoObjectActions as ObjectActions
 from import_export.admin import ImportMixin
 
 from django.contrib import admin
@@ -194,8 +194,8 @@ class SemaProductModelAdmin(ModelAdmin):
 
 
 @admin.register(PremierProduct)
-class PremierProductModelAdmin(ImportMixin, DjangoObjectActions,
-                               ModelAdmin, PremierAPIActions):
+class PremierProductModelAdmin(ImportMixin, ObjectActions,
+                               ModelAdmin, PremierProductActions):
     resource_class = PremierProductResource
     list_per_page = 10
     search_fields = (
