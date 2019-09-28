@@ -6,14 +6,14 @@ from django.contrib.admin import ModelAdmin
 
 from ..models import (
     PremierProduct,
-    SemaBaseVehicle,
+    # SemaBaseVehicle,  # TO DO TEMP
     SemaBrand,
     SemaDataset,
     SemaMake,
     SemaModel,
     SemaProduct,
     SemaSubmodel,
-    SemaVehicle,
+    # SemaVehicle,  # TO DO TEMP
     SemaYear
 )
 from .actions import (
@@ -30,72 +30,72 @@ from .resources import PremierProductResource
 from .utils import get_change_view_link
 
 
-@admin.register(SemaBaseVehicle)
-class SemaBaseVehicleModelAdmin(ModelAdmin):
-    search_fields = (
-        'base_vehicle_id',
-    )
+# @admin.register(SemaBaseVehicle)  # TO DO TEMP
+# class SemaBaseVehicleModelAdmin(ModelAdmin):
+#     search_fields = (
+#         'base_vehicle_id',
+#     )
+#
+#     list_display = (
+#         'details_link',
+#         'base_vehicle_id'
+#     )
+#
+#     list_display_links = (
+#         'details_link',
+#     )
+#
+#     fieldsets = (
+#         (
+#             None, {
+#                 'fields': (
+#                     'base_vehicle_id',
+#                 )
+#             }
+#         ),
+#     )
+#
+#     readonly_fields = (
+#         'details_link',
+#     )
+#
+#     def details_link(self, obj):
+#         return get_change_view_link(obj, 'Details')
+#     details_link.short_description = ''
 
-    list_display = (
-        'details_link',
-        'base_vehicle_id'
-    )
 
-    list_display_links = (
-        'details_link',
-    )
-
-    fieldsets = (
-        (
-            None, {
-                'fields': (
-                    'base_vehicle_id',
-                )
-            }
-        ),
-    )
-
-    readonly_fields = (
-        'details_link',
-    )
-
-    def details_link(self, obj):
-        return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
-
-
-@admin.register(SemaVehicle)
-class SemaVehicleModelAdmin(ModelAdmin):
-    search_fields = (
-        'vehicle_id',
-    )
-
-    list_display = (
-        'details_link',
-        'vehicle_id'
-    )
-
-    list_display_links = (
-        'details_link',
-    )
-
-    fieldsets = (
-        (
-            None, {
-                'fields': (
-                    'vehicle_id',
-                )
-            }
-        ),
-    )
-
-    readonly_fields = (
-        'details_link',
-    )
-
-    def details_link(self, obj):
-        return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+# @admin.register(SemaVehicle)  # TO DO TEMP
+# class SemaVehicleModelAdmin(ModelAdmin):
+#     search_fields = (
+#         'vehicle_id',
+#     )
+#
+#     list_display = (
+#         'details_link',
+#         'vehicle_id'
+#     )
+#
+#     list_display_links = (
+#         'details_link',
+#     )
+#
+#     fieldsets = (
+#         (
+#             None, {
+#                 'fields': (
+#                     'vehicle_id',
+#                 )
+#             }
+#         ),
+#     )
+#
+#     readonly_fields = (
+#         'details_link',
+#     )
+#
+#     def details_link(self, obj):
+#         return get_change_view_link(obj, 'Details')
+#     details_link.short_description = ''
 
 
 @admin.register(SemaYear)
@@ -178,17 +178,19 @@ class SemaModelModelAdmin(ModelAdmin):
     search_fields = (
         'make__make_id',
         'make__name',
-        'base_vehicle__base_vehicle_id',
+        # 'base_vehicle__base_vehicle_id',  # TO DO TEMP
         'model_id',
+        'base_vehicle_id',  # TO DO TEMP
         'name'
     )
 
     list_display = (
         'details_link',
         'model_id',
+        'base_vehicle_id',  # TO DO TEMP
         'name',
         'make',
-        'base_vehicle'
+        # 'base_vehicle'  # TO DO TEMP
     )
 
     list_display_links = (
@@ -200,6 +202,7 @@ class SemaModelModelAdmin(ModelAdmin):
             None, {
                 'fields': (
                     'model_id',
+                    'base_vehicle_id',  # TO DO TEMP
                     'name',
                 )
             }
@@ -211,21 +214,21 @@ class SemaModelModelAdmin(ModelAdmin):
                     'make'
                 )
             }
-        ),
-        (
-            'Base Vehicle', {
-                'fields': (
-                    'base_vehicle_link',
-                    'base_vehicle'
-                )
-            }
         )
+        # (
+        #     'Base Vehicle', {  # TO DO TEMP
+        #         'fields': (
+        #             'base_vehicle_link',
+        #             'base_vehicle'
+        #         )
+        #     }
+        # )
     )
 
     readonly_fields = (
         'details_link',
-        'make_link',
-        'base_vehicle_link'
+        'make_link'
+        # 'base_vehicle_link'  # TO DO TEMP
     )
 
     def details_link(self, obj):
@@ -239,12 +242,12 @@ class SemaModelModelAdmin(ModelAdmin):
             obj.make, 'See full make')
     make_link.short_description = ''
 
-    def base_vehicle_link(self, obj):
-        if not obj.base_vehicle:
-            return None
-        return get_change_view_link(
-            obj.base_vehicle, 'See full base vehicle')
-    base_vehicle_link.short_description = ''
+    # def base_vehicle_link(self, obj):  # TO DO TEMP
+    #     if not obj.base_vehicle:
+    #         return None
+    #     return get_change_view_link(
+    #         obj.base_vehicle, 'See full base vehicle')
+    # base_vehicle_link.short_description = ''
 
 
 @admin.register(SemaSubmodel)
@@ -252,20 +255,23 @@ class SemaSubmodelModelAdmin(ModelAdmin):
     search_fields = (
         'model__make__make_id',
         'model__make__name',
-        'model__base_vehicle__base_vehicle_id',
         'model__model_id',
+        'model__base_vehicle_id',  # TO DO TEMP
         'model__name',
-        'vehicle__vehicle_id',
+        # 'model__base_vehicle__base_vehicle_id',  # TO DO TEMP
+        # 'vehicle__vehicle_id',  # TO DO TEMP
         'submodel_id',
+        'vehicle_id',  # TO DO TEMP
         'name'
     )
 
     list_display = (
         'details_link',
         'submodel_id',
+        'vehicle_id',  # TO DO TEMP
         'name',
-        'model',
-        'vehicle'
+        'model'
+        # 'vehicle'  # TO DO TEMP
     )
 
     list_display_links = (
@@ -277,6 +283,7 @@ class SemaSubmodelModelAdmin(ModelAdmin):
             None, {
                 'fields': (
                     'submodel_id',
+                    'vehicle_id',  # TO DO TEMP
                     'name'
                 )
             }
@@ -288,21 +295,21 @@ class SemaSubmodelModelAdmin(ModelAdmin):
                     'model'
                 )
             }
-        ),
-        (
-            'Vehicle', {
-                'fields': (
-                    'vehicle_link',
-                    'vehicle'
-                )
-            }
         )
+        # (
+        #     'Vehicle', {  # TO DO TEMP
+        #         'fields': (
+        #             'vehicle_link',
+        #             'vehicle'
+        #         )
+        #     }
+        # )
     )
 
     readonly_fields = (
         'details_link',
-        'model_link',
-        'vehicle_link'
+        'model_link'
+        # 'vehicle_link'  # TO DO TEMP
     )
 
     def details_link(self, obj):
@@ -316,12 +323,12 @@ class SemaSubmodelModelAdmin(ModelAdmin):
             obj.model, 'See full model')
     model_link.short_description = ''
 
-    def vehicle_link(self, obj):
-        if not obj.vehicle:
-            return None
-        return get_change_view_link(
-            obj.vehicle, 'See full vehicle')
-    vehicle_link.short_description = ''
+    # def vehicle_link(self, obj):  # TO DO TEMP
+    #     if not obj.vehicle:
+    #         return None
+    #     return get_change_view_link(
+    #         obj.vehicle, 'See full vehicle')
+    # vehicle_link.short_description = ''
 
 
 @admin.register(SemaBrand)
