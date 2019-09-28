@@ -392,6 +392,9 @@ class SemaBrand(Model):
         max_length=50,
     )
 
+    class Meta:
+        verbose_name = 'SEMA brand'
+
     def __str__(self):
         return f'{self.brand_id} :: {self.name}'
 
@@ -410,6 +413,9 @@ class SemaDataset(Model):
         related_name='sema_datasets'
     )
 
+    class Meta:
+        verbose_name = 'SEMA dataset'
+
     def __str__(self):
         return f'{self.dataset_id} :: {self.name}'
 
@@ -424,6 +430,9 @@ class SemaProduct(Model):
         on_delete=CASCADE,
         related_name='sema_products',
     )
+
+    class Meta:
+        verbose_name = 'SEMA product'
 
     def __str__(self):
         return f'{self.product_id}'
