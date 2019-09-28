@@ -16,8 +16,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'product.apps.ProductAppConfig',
-    'import_export'
+    'admin_reorder',
+    'import_export',
+    'product.apps.ProductAppConfig'
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -26,7 +27,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware'
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'admin_reorder.middleware.ModelAdminReorder'
 ]
 TEMPLATES = [
     {
@@ -87,6 +89,74 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
+
+
+ADMIN_REORDER = (
+    {
+        'app': 'auth',
+        'label': 'Authorization',
+        'models': (
+            'auth.User',
+            'auth.Group'
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'premier',
+        'models': (
+            {
+                'model': 'product.PremierProduct',
+                'label': 'Products'
+            },
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'sema',
+        'models': (
+            {
+                'model': 'product.SemaYear',
+                'label': 'Years'
+            },
+            {
+                'model': 'product.SemaMake',
+                'label': 'Makes'
+            },
+            {
+                'model': 'product.SemaModel',
+                'label': 'Models'
+            },
+            {
+                'model': 'product.SemaSubmodel',
+                'label': 'Submodels'
+            }
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'sema',
+        'models': (
+            {
+                'model': 'product.SemaBrand',
+                'label': 'Brands'
+            },
+            {
+                'model': 'product.SemaDataset',
+                'label': 'Datasets'
+            }
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'sema',
+        'models': (
+            {
+                'model': 'product.SemaProduct',
+                'label': 'Products'
+            },
+        )
+    }
+)
 
 
 # --- CONSTANTS ---
