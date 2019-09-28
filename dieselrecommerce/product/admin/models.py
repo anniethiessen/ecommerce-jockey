@@ -10,7 +10,10 @@ from ..models import (
     SemaDataset,
     SemaProduct
 )
-from .actions import PremierAPIActions
+from .actions import (
+    PremierProductActions,
+    SemaBrandActions
+)
 from .filters import (
     HasAlbertaInventory,
     HasMissingInventory,
@@ -21,13 +24,15 @@ from .utils import get_change_view_link
 
 
 @admin.register(SemaBrand)
-class SemaBrandModelAdmin(ModelAdmin):
+class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     search_fields = (
         'brand_id',
         'name'
     )
 
-    # actions = ()
+    changelist_actions = (
+        'import_brand_datasets_class_action',
+    )
 
     list_display = (
         'details_link',
@@ -38,8 +43,6 @@ class SemaBrandModelAdmin(ModelAdmin):
     list_display_links = (
         'details_link',
     )
-
-    # list_filter = ()
 
     fieldsets = (
         (
@@ -68,27 +71,29 @@ class SemaDatasetModelAdmin(ModelAdmin):
         'name'
     )
 
-    # actions = ()
-
     list_display = (
         'details_link',
         'dataset_id',
         'name',
-        'brand'
+        'brand',
+        'is_authorized'
     )
 
     list_display_links = (
         'details_link',
     )
 
-    # list_filter = ()
+    list_filter = (
+        'is_authorized',
+    )
 
     fieldsets = (
         (
             None, {
                 'fields': (
                     'dataset_id',
-                    'name'
+                    'name',
+                    'is_authorized'
                 )
             }
         ),

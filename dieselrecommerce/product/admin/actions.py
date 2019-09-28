@@ -1,7 +1,7 @@
 from django.contrib import messages
 
 
-class PremierAPIActions(object):
+class PremierProductActions(object):
     def update_inventory_queryset_action(self, request, queryset):
         try:
             token = self.model.retrieve_premier_api_token()
@@ -84,4 +84,28 @@ class PremierAPIActions(object):
     update_pricing_object_action.label = "Update Pricing"
     update_pricing_object_action.short_description = (
         'Update this premier product\'s pricing from Premier API'
+    )
+
+
+class SemaBrandActions(object):
+    def import_brand_datasets_class_action(self, request, queryset):
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        try:
+            msgs = self.model.import_brand_datasets_from_sema_api(token)
+            for msg in msgs:
+                if msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_brand_datasets_class_action.allowed_permissions = ('view',)
+    import_brand_datasets_class_action.label = 'Import Brand Datasets'
+    import_brand_datasets_class_action.short_description = (
+        'Import brand datasets from SEMA API'
     )

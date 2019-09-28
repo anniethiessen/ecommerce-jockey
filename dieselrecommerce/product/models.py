@@ -1,5 +1,6 @@
 from django.db.models import (
     Model,
+    BooleanField,
     CharField,
     DecimalField,
     ForeignKey,
@@ -7,7 +8,11 @@ from django.db.models import (
     CASCADE
 )
 
-from .apis import PremierProductMixin
+from .apis import (
+    ApiCoreMixin,
+    PremierProductMixin,
+    SemaBrandMixin
+)
 from .managers import PremierProductManager
 
 
@@ -199,7 +204,7 @@ class PremierProduct(Model, PremierProductMixin):
         return f'{self.premier_part_number} :: {self.manufacturer}'
 
 
-class SemaBrand(Model):
+class SemaBrand(Model, SemaBrandMixin):
     brand_id = CharField(
         primary_key=True,
         max_length=10
@@ -211,17 +216,25 @@ class SemaBrand(Model):
     class Meta:
         verbose_name = 'SEMA brand'
 
+    @property
+    def dataset_count(self):
+        return self.sema_datasets.count()
+
     def __str__(self):
         return f'{self.brand_id} :: {self.name}'
 
 
-class SemaDataset(Model):
+class SemaDataset(Model, ApiCoreMixin):
     dataset_id = CharField(
         primary_key=True,
         max_length=10
     )
     name = CharField(
         max_length=100,
+    )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
     )
     brand = ForeignKey(
         SemaBrand,

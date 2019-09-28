@@ -6,6 +6,15 @@ from django.conf import settings
 
 
 class ApiCoreMixin(object):
+    def get_create_or_update_success_msg(self, created):
+        action = 'created' if created else 'updated'
+        return f'Success: {self} {action}'
+
+    @classmethod
+    def get_create_or_update_error_msg(cls, error):
+        msg = f'Error: {cls}, {error}'
+        return msg
+
     def get_update_success_msg(self, previous_data, new_data):
         msg = f'Success: {self} updated'
         for loc, inv in new_data.items():
@@ -18,6 +27,7 @@ class ApiCoreMixin(object):
         return msg
 
 
+# <editor-fold desc="Premier">
 class PremierApiCoreMixin(ApiCoreMixin):
     @classmethod
     def get_premier_api_headers(cls, token=None):
@@ -72,7 +82,6 @@ class PremierApiProductMixin(PremierApiCoreMixin):
             raise
 
 
-# noinspection PyAttributeOutsideInit
 class PremierProductMixin(PremierApiProductMixin):
     # <editor-fold desc="Inventory">
     def clear_inventory_fields(self):
@@ -194,3 +203,92 @@ class PremierProductMixin(PremierApiProductMixin):
         new = self.get_pricing_data()
         return self.get_update_success_msg(previous, new)
     # </editor-fold>
+# </editor-fold>
+
+
+# <editor-fold desc="SEMA">
+class SemaApiCoreMixin(ApiCoreMixin):
+    @classmethod
+    def retrieve_sema_api_token(cls):
+        try:
+            url = f'{settings.SEMA_BASE_URL}/token/get'
+            params = {
+                'userName': settings.SEMA_USERNAME,
+                'password': settings.SEMA_PASSWORD
+            }
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response['success']:
+                return response['token']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
+class SemaApiBrandMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_brand_datasets(cls, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
+            params = {'token': token}
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response['success']:
+                return response['BrandDatasets']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
+class SemaBrandMixin(SemaApiBrandMixin):
+    @classmethod
+    def unauthorize_datasets(cls):
+        from product.models import SemaDataset
+        SemaDataset.objects.all().update(is_authorized=False)
+
+    @classmethod
+    def import_brand_datasets_from_sema_api(cls, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_brand_datasets(token)
+            return cls.create_brand_datasets_from_data(data)
+        except Exception as err:
+            return cls.get_create_or_update_error_msg(str(err))
+
+    @classmethod
+    def create_brand_datasets_from_data(cls, data):
+        from product.models import SemaDataset
+
+        msgs = []
+
+        try:
+            cls.unauthorize_datasets()
+            for item in data:
+                try:
+                    brand, c = cls.objects.update_or_create(
+                        brand_id=item['AAIABrandId'],
+                        defaults={'name': item['BrandName']}
+                    )
+                    msgs.append(brand.get_create_or_update_success_msg(c))
+                    dataset, c = SemaDataset.objects.update_or_create(
+                        dataset_id=item['DatasetId'],
+                        defaults={
+                            'name': item['DatasetName'],
+                            'brand': brand,
+                            'is_authorized': True
+                        }
+                    )
+                    msgs.append(dataset.get_create_or_update_success_msg(c))
+                except Exception as err:
+                    msgs.append(cls.get_create_or_update_error_msg(str(err)))
+        except Exception as err:
+            msgs.append(cls.get_create_or_update_error_msg(str(err)))
+
+        return msgs
+# </editor-fold>

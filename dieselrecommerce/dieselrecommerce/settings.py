@@ -95,3 +95,7 @@ COMPANY_SITE = 'https://www.dieselrcorp.com'
 
 PREMIER_BASE_URL = 'http://api.premierwd.com/api/v5'
 PREMIER_API_KEY = os.environ['PREMIER_API_KEY']
+
+SEMA_BASE_URL = 'https://sdc.semadatacoop.org/sdcapi'
+SEMA_USERNAME = 'AThiessen'
+SEMA_PASSWORD = os.environ['SEMA_PASSWORD']
