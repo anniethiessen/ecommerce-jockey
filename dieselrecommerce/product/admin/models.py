@@ -19,6 +19,7 @@ from .filters import (
     HasMissingInventory,
     HasMissingPricing
 )
+from .inlines import SemaDatasetTabularInline
 from .resources import PremierProductResource
 from .utils import get_change_view_link
 
@@ -37,7 +38,8 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     list_display = (
         'details_link',
         'brand_id',
-        'name'
+        'name',
+        'dataset_count'
     )
 
     list_display_links = (
@@ -55,7 +57,13 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         ),
     )
 
-    # readonly_fields = ()
+    inlines = (
+        SemaDatasetTabularInline,
+    )
+
+    readonly_fields = (
+        'dataset_count',
+    )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
