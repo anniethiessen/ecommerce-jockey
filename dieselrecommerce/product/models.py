@@ -332,6 +332,9 @@ class SemaProduct(Model):
         primary_key=True,
         unique=True
     )
+    part_number = CharField(
+        max_length=20
+    )
     dataset = ForeignKey(
         SemaDataset,
         on_delete=CASCADE,

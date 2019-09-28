@@ -31,72 +31,128 @@ from .resources import PremierProductResource
 from .utils import get_change_view_link
 
 
-# @admin.register(SemaBaseVehicle)  # TO DO TEMP
-# class SemaBaseVehicleModelAdmin(ModelAdmin):
-#     search_fields = (
-#         'base_vehicle_id',
-#     )
-#
-#     list_display = (
-#         'details_link',
-#         'base_vehicle_id'
-#     )
-#
-#     list_display_links = (
-#         'details_link',
-#     )
-#
-#     fieldsets = (
-#         (
-#             None, {
-#                 'fields': (
-#                     'base_vehicle_id',
-#                 )
-#             }
-#         ),
-#     )
-#
-#     readonly_fields = (
-#         'details_link',
-#     )
-#
-#     def details_link(self, obj):
-#         return get_change_view_link(obj, 'Details')
-#     details_link.short_description = ''
+@admin.register(PremierProduct)
+class PremierProductModelAdmin(ImportMixin, ObjectActions,
+                               ModelAdmin, PremierProductActions):
+    resource_class = PremierProductResource
+    list_per_page = 10
+    search_fields = (
+        'premier_part_number',
+        'vendor_part_number',
+        'description',
+        'manufacturer',
+        'upc'
+    )
 
+    actions = (
+        'update_inventory_queryset_action',
+        'update_pricing_queryset_action'
+    )
 
-# @admin.register(SemaVehicle)  # TO DO TEMP
-# class SemaVehicleModelAdmin(ModelAdmin):
-#     search_fields = (
-#         'vehicle_id',
-#     )
-#
-#     list_display = (
-#         'details_link',
-#         'vehicle_id'
-#     )
-#
-#     list_display_links = (
-#         'details_link',
-#     )
-#
-#     fieldsets = (
-#         (
-#             None, {
-#                 'fields': (
-#                     'vehicle_id',
-#                 )
-#             }
-#         ),
-#     )
-#
-#     readonly_fields = (
-#         'details_link',
-#     )
-#
-#     def details_link(self, obj):
-#         return get_change_view_link(obj, 'Details')
-#     details_link.short_description = ''
+    change_actions = (
+        'update_inventory_object_action',
+        'update_pricing_object_action'
+    )
+
+    list_display = (
+        'details_link',
+        'premier_part_number',
+        'vendor_part_number',
+        'description',
+        'manufacturer',
+        'cost',
+        'jobber',
+        'msrp',
+        'map'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_filter = (
+        'manufacturer',
+        'part_status',
+        HasMissingInventory,
+        HasMissingPricing,
+        HasAlbertaInventory
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'premier_part_number',
+                )
+            }
+        ),
+        (
+            'Details', {
+                'fields': (
+                    'description',
+                    'manufacturer',
+                    'vendor_part_number',
+                    'part_status',
+                    'upc'
+                )
+            }
+        ),
+        (
+            'Prices', {
+                'fields': (
+                    'cost',
+                    'cost_cad',
+                    'cost_usd',
+                    'jobber',
+                    'jobber_cad',
+                    'jobber_usd',
+                    'msrp',
+                    'msrp_cad',
+                    'msrp_usd',
+                    'map',
+                    'map_cad',
+                    'map_usd'
+                )
+            }
+        ),
+        (
+            'Dimensions', {
+                'fields': (
+                    'weight',
+                    'length',
+                    'width',
+                    'height'
+                )
+            }
+        ),
+        (
+            'Inventory', {
+                'fields': (
+                    'inventory_ab',
+                    'inventory_po',
+                    'inventory_ut',
+                    'inventory_ky',
+                    'inventory_tx',
+                    'inventory_ca',
+                    'inventory_wa',
+                    'inventory_co'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'product_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def product_link(self, obj):
+        return get_change_view_link(obj.product, 'See full product')
+    product_link.short_description = ''
 
 
 @admin.register(SemaYear)
@@ -452,13 +508,13 @@ class SemaProductModelAdmin(ModelAdmin):
         'dataset__dataset_id',
         'dataset__name',
         'product_id',
+        'part_number'
     )
-
-    # actions = ()
 
     list_display = (
         'details_link',
         'product_id',
+        'part_number',
         'dataset'
     )
 
@@ -466,13 +522,12 @@ class SemaProductModelAdmin(ModelAdmin):
         'details_link',
     )
 
-    # list_filter = ()
-
     fieldsets = (
         (
             None, {
                 'fields': (
                     'product_id',
+                    'part_number'
                 )
             }
         ),
@@ -516,127 +571,3 @@ class SemaProductModelAdmin(ModelAdmin):
     def brand_a(self, obj):
         return str(obj.dataset.brand)
     brand_a.short_description = 'brand'
-
-
-@admin.register(PremierProduct)
-class PremierProductModelAdmin(ImportMixin, ObjectActions,
-                               ModelAdmin, PremierProductActions):
-    resource_class = PremierProductResource
-    list_per_page = 10
-    search_fields = (
-        'premier_part_number',
-        'vendor_part_number',
-        'description',
-        'manufacturer',
-        'upc'
-    )
-
-    actions = (
-        'update_inventory_queryset_action',
-        'update_pricing_queryset_action'
-    )
-
-    change_actions = (
-        'update_inventory_object_action',
-        'update_pricing_object_action'
-    )
-
-    list_display = (
-        'details_link',
-        'premier_part_number',
-        'vendor_part_number',
-        'description',
-        'manufacturer',
-        'cost',
-        'jobber',
-        'msrp',
-        'map'
-    )
-
-    list_display_links = (
-        'details_link',
-    )
-
-    list_filter = (
-        'manufacturer',
-        'part_status',
-        HasMissingInventory,
-        HasMissingPricing,
-        HasAlbertaInventory
-    )
-
-    fieldsets = (
-        (
-            None, {
-                'fields': (
-                    'premier_part_number',
-                )
-            }
-        ),
-        (
-            'Details', {
-                'fields': (
-                    'description',
-                    'manufacturer',
-                    'vendor_part_number',
-                    'part_status',
-                    'upc'
-                )
-            }
-        ),
-        (
-            'Prices', {
-                'fields': (
-                    'cost',
-                    'cost_cad',
-                    'cost_usd',
-                    'jobber',
-                    'jobber_cad',
-                    'jobber_usd',
-                    'msrp',
-                    'msrp_cad',
-                    'msrp_usd',
-                    'map',
-                    'map_cad',
-                    'map_usd'
-                )
-            }
-        ),
-        (
-            'Dimensions', {
-                'fields': (
-                    'weight',
-                    'length',
-                    'width',
-                    'height'
-                )
-            }
-        ),
-        (
-            'Inventory', {
-                'fields': (
-                    'inventory_ab',
-                    'inventory_po',
-                    'inventory_ut',
-                    'inventory_ky',
-                    'inventory_tx',
-                    'inventory_ca',
-                    'inventory_wa',
-                    'inventory_co'
-                )
-            }
-        )
-    )
-
-    readonly_fields = (
-        'details_link',
-        'product_link'
-    )
-
-    def details_link(self, obj):
-        return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
-
-    def product_link(self, obj):
-        return get_change_view_link(obj.product, 'See full product')
-    product_link.short_description = ''
