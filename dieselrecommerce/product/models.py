@@ -5,6 +5,7 @@ from django.db.models import (
     DecimalField,
     ForeignKey,
     IntegerField,
+    ManyToManyField,
     PositiveSmallIntegerField,
     CASCADE
 )
@@ -343,6 +344,12 @@ class SemaDataset(Model, ApiCoreMixin):
     brand = ForeignKey(
         SemaBrand,
         on_delete=CASCADE,
+        related_name='sema_datasets'
+    )
+    years = ManyToManyField(
+        SemaYear,
+        blank=True,
+        null=True,
         related_name='sema_datasets'
     )
 
