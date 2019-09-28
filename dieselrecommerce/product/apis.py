@@ -232,9 +232,9 @@ class SemaApiCoreMixin(ApiCoreMixin):
             raise
 
 
-class SemaApiBrandDatasetMixin(SemaApiCoreMixin):
+class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
-    def retrieve_sema_brand_datasets(cls, token=None):
+    def retrieve_sema_brands(cls, token=None):
         try:
             if not token:
                 token = cls.retrieve_sema_api_token()
@@ -251,26 +251,41 @@ class SemaApiBrandDatasetMixin(SemaApiCoreMixin):
             raise
 
 
-class SemaBrandDatasetMixin(SemaApiBrandDatasetMixin):
+class SemaApiDatasetMixin(SemaApiCoreMixin):
     @classmethod
-    def import_brand_datasets_from_sema_api(cls, token=None):
+    def retrieve_sema_datasets(cls, token=None):
         try:
             if not token:
                 token = cls.retrieve_sema_api_token()
-            data = cls.retrieve_sema_brand_datasets(token)
-            brand_msgs = cls.create_brands_from_data(data)
-            dataset_msgs = cls.create_datasets_from_data(data)
-            return brand_msgs + dataset_msgs
-        except Exception as err:
-            return cls.get_class_error_msg(str(err))
+
+            url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
+            params = {'token': token}
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['BrandDatasets']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
 
 
-class SemaBrandMixin(SemaBrandDatasetMixin):
+class SemaBrandMixin(SemaApiBrandMixin):
     def get_brand_data(self):
         return {
             'ID': self.brand_id,
             'Name': self.name
         }
+
+    @classmethod
+    def import_brands_from_sema_api(cls, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_brands(token)
+            return cls.create_brands_from_data(data)
+        except Exception as err:
+            return cls.get_class_error_msg(str(err))
 
     @classmethod
     def create_brands_from_data(cls, data):
@@ -294,15 +309,10 @@ class SemaBrandMixin(SemaBrandDatasetMixin):
                 msgs.append(cls.get_class_error_msg(str(err)))
         return msgs
 
-    @classmethod
-    def create_datasets_from_data(cls, data):
-        from product.models import SemaDataset
-        return SemaDataset.create_datasets_from_data(data)
 
-
-class SemaDatasetMixin(SemaBrandDatasetMixin):
-    @classmethod
-    def get_brand(cls, brand_id):
+class SemaDatasetMixin(SemaApiDatasetMixin):
+    @staticmethod
+    def get_brand(brand_id):
         from product.models import SemaBrand
         try:
             return SemaBrand.objects.get(brand_id=brand_id)
@@ -321,9 +331,14 @@ class SemaDatasetMixin(SemaBrandDatasetMixin):
         cls.objects.all().update(is_authorized=False)
 
     @classmethod
-    def create_brands_from_data(cls, data):
-        from product.models import SemaBrand
-        return SemaBrand.create_brands_from_data(data)
+    def import_datasets_from_sema_api(cls, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_datasets(token)
+            return cls.create_datasets_from_data(data)
+        except Exception as err:
+            return cls.get_class_error_msg(str(err))
 
     @classmethod
     def create_datasets_from_data(cls, data):

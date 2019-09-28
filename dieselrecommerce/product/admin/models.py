@@ -396,7 +396,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     )
 
     changelist_actions = (
-        'import_brand_datasets_class_action',
+        'import_brands_class_action',
     )
 
     list_display = (
@@ -444,7 +444,7 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     )
 
     changelist_actions = (
-        'import_brand_datasets_class_action',
+        'import_datasets_class_action',
     )
 
     list_display = (

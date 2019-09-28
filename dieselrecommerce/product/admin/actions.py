@@ -39,7 +39,7 @@ class PremierProductActions(object):
         except Exception as err:
             messages.error(request, str(err))
     update_inventory_object_action.allowed_permissions = ('view',)
-    update_inventory_object_action.label = "Update Inventory"
+    update_inventory_object_action.label = "Update Inventory from API"
     update_inventory_object_action.short_description = (
         'Update this premier product\'s inventory from Premier API'
     )
@@ -81,14 +81,14 @@ class PremierProductActions(object):
         except Exception as err:
             messages.error(request, str(err))
     update_pricing_object_action.allowed_permissions = ('view',)
-    update_pricing_object_action.label = "Update Pricing"
+    update_pricing_object_action.label = "Update Pricing from API"
     update_pricing_object_action.short_description = (
         'Update this premier product\'s pricing from Premier API'
     )
 
 
-class SemaBrandDatasetActions(object):
-    def import_brand_datasets_class_action(self, request, queryset):
+class SemaBrandActions(object):
+    def import_brands_class_action(self, request, queryset):
         try:
             token = self.model.retrieve_sema_api_token()
         except Exception as err:
@@ -96,7 +96,7 @@ class SemaBrandDatasetActions(object):
             return
 
         try:
-            msgs = self.model.import_brand_datasets_from_sema_api(token)
+            msgs = self.model.import_brands_from_sema_api(token)
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -104,16 +104,32 @@ class SemaBrandDatasetActions(object):
                     messages.error(request, msg)
         except Exception as err:
             messages.error(request, str(err))
-    import_brand_datasets_class_action.allowed_permissions = ('view',)
-    import_brand_datasets_class_action.label = 'Import Brand & Datasets'
-    import_brand_datasets_class_action.short_description = (
-        'Import brands and datasets from SEMA API'
+    import_brands_class_action.allowed_permissions = ('view',)
+    import_brands_class_action.label = 'Import Brands from API'
+    import_brands_class_action.short_description = (
+        'Import brands from SEMA API'
     )
 
 
-class SemaBrandActions(SemaBrandDatasetActions):
-    pass
+class SemaDatasetActions(object):
+    def import_datasets_class_action(self, request, queryset):
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
 
-
-class SemaDatasetActions(SemaBrandDatasetActions):
-    pass
+        try:
+            msgs = self.model.import_datasets_from_sema_api(token)
+            for msg in msgs:
+                if msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_datasets_class_action.allowed_permissions = ('view',)
+    import_datasets_class_action.label = 'Import Datasets from API'
+    import_datasets_class_action.short_description = (
+        'Import datasets from SEMA API'
+    )
