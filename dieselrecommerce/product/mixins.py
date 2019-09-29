@@ -45,6 +45,7 @@ class ProductMixin(MessagesMixin):
         for premier_product in premier_products:
             try:
                 sema_product = sema_products.get(
+                    dataset__brand__name=premier_product.manufacturer,
                     part_number=premier_product.vendor_part_number,
                 )
                 product = cls.objects.get_or_create(
@@ -61,6 +62,7 @@ class ProductMixin(MessagesMixin):
         for sema_product in sema_products:
             try:
                 premier_product = premier_products.get(
+                    manufacturer=sema_product.dataset.brand.name,
                     vendor_part_number=sema_product.part_number
                 )
                 product = cls.objects.create(
