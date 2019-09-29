@@ -188,3 +188,22 @@ class SemaDatasetActions(object):
     import_products_queryset_action.short_description = (
         'Import products from SEMA API for selected %(verbose_name_plural)s'
     )
+
+
+class ProductActions(object):
+    def link_products_class_action(self, request, queryset):
+        try:
+            msgs = self.model.link_products()
+
+            for msg in msgs:
+                if msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    link_products_class_action.allowed_permissions = ('view',)
+    link_products_class_action.label = 'Link products'
+    link_products_class_action.short_description = (
+        'Create product if Premier product and Sema product exist'
+    )

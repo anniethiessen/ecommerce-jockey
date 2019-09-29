@@ -5,7 +5,7 @@ import requests
 from django.conf import settings
 
 
-class ApiCoreMixin(object):
+class MessagesMixin(object):
     @classmethod
     def get_class_error_msg(cls, error):
         return f'Error: {cls}, {error}'
@@ -33,8 +33,52 @@ class ApiCoreMixin(object):
         return msg
 
 
+class ProductMixin(MessagesMixin):
+    @classmethod
+    def link_products(cls):
+        from product.models import PremierProduct, SemaProduct
+
+        msgs = []
+        premier_products = PremierProduct.objects.filter(product__isnull=True)
+        sema_products = SemaProduct.objects.filter(product__isnull=True)
+
+        for premier_product in premier_products:
+            try:
+                sema_product = sema_products.get(
+                    part_number=premier_product.vendor_part_number,
+                )
+                product = cls.objects.get_or_create(
+                    premier_product=premier_product,
+                    sema_product=sema_product
+                )
+                msgs.append(product.get_create_success_msg())
+            except SemaProduct.DoesNotExist:
+                msgs.append(premier_product.get_instance_error_msg(
+                    "SEMA product does not exist"))
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+
+        for sema_product in sema_products:
+            try:
+                premier_product = premier_products.get(
+                    vendor_part_number=sema_product.part_number
+                )
+                product = cls.objects.create(
+                    premier_product=premier_product,
+                    sema_product=sema_product
+                )
+                msgs.append(product.get_create_success_msg())
+            except PremierProduct.DoesNotExist:
+                msgs.append(sema_product.get_instance_error_msg(
+                    "Premier product does not exist"))
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+
+        return msgs
+
+
 # <editor-fold desc="Premier">
-class PremierApiCoreMixin(ApiCoreMixin):
+class PremierApiCoreMixin(MessagesMixin):
     @classmethod
     def get_premier_api_headers(cls, token=None):
         if not token:
@@ -211,7 +255,7 @@ class PremierProductMixin(PremierApiProductMixin):
 
 
 # <editor-fold desc="SEMA">
-class SemaApiCoreMixin(ApiCoreMixin):
+class SemaApiCoreMixin(MessagesMixin):
     @classmethod
     def retrieve_sema_api_token(cls):
         try:
@@ -397,7 +441,7 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
         return SemaProduct.create_products_from_data(self.dataset_id, data)
 
 
-class SemaProductMixin(ApiCoreMixin):
+class SemaProductMixin(MessagesMixin):
     @staticmethod
     def get_dataset(dataset_id):
         from product.models import SemaDataset

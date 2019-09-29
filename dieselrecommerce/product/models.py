@@ -12,15 +12,16 @@ from django.db.models import (
     SET_NULL
 )
 
-from .apis import (
-    PremierProductMixin,
-    SemaBrandMixin,
-    SemaDatasetMixin,
-    SemaProductMixin
-)
 from .managers import (
     PremierProductManager,
     SemaDatasetManager
+)
+from .mixins import (
+    PremierProductMixin,
+    ProductMixin,
+    SemaBrandMixin,
+    SemaDatasetMixin,
+    SemaProductMixin
 )
 
 
@@ -353,10 +354,10 @@ class SemaProduct(Model, SemaProductMixin):
         verbose_name = 'SEMA product'
 
     def __str__(self):
-        return f'{self.product_id}'
+        return f'{self.product_id} :: {self.dataset}'
 
 
-class Product(Model):
+class Product(Model, ProductMixin):
     premier_product = OneToOneField(
         PremierProduct,
         blank=True,

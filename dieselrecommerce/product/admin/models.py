@@ -17,6 +17,7 @@ from ..models import (
 )
 from .actions import (
     PremierProductActions,
+    ProductActions,
     SemaBrandActions,
     SemaDatasetActions
 )
@@ -557,7 +558,7 @@ class SemaProductModelAdmin(ModelAdmin):
 
 
 @admin.register(Product)
-class ProductModelAdmin(ModelAdmin):
+class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
     search_fields = (
         'premier_product__premier_part_number',
         'premier_product__vendor_part_number',
@@ -571,6 +572,10 @@ class ProductModelAdmin(ModelAdmin):
         'sema_product__product_id',
         'sema_product__part_number',
         'id'
+    )
+
+    changelist_actions = (
+        'link_products_class_action',
     )
 
     list_display = (
