@@ -6,14 +6,13 @@ from django.contrib.admin import ModelAdmin
 
 from ..models import (
     PremierProduct,
-    # SemaBaseVehicle,  # TO DO TEMP
+    Product,
     SemaBrand,
     SemaDataset,
     SemaMake,
     SemaModel,
     SemaProduct,
     SemaSubmodel,
-    # SemaVehicle,  # TO DO TEMP
     SemaYear
 )
 from .actions import (
@@ -82,13 +81,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         (
             None, {
                 'fields': (
+                    'product_link',
                     'premier_part_number',
-                )
-            }
-        ),
-        (
-            'Details', {
-                'fields': (
                     'description',
                     'manufacturer',
                     'vendor_part_number',
@@ -98,7 +92,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             }
         ),
         (
-            'Prices', {
+            'Pricing', {
                 'fields': (
                     'cost',
                     'cost_cad',
@@ -151,6 +145,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     details_link.short_description = ''
 
     def product_link(self, obj):
+        if not hasattr(obj, 'product') or obj.product is None:
+            return '-----'
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
 
@@ -235,19 +231,17 @@ class SemaModelModelAdmin(ModelAdmin):
     search_fields = (
         'make__make_id',
         'make__name',
-        # 'base_vehicle__base_vehicle_id',  # TO DO TEMP
         'model_id',
-        'base_vehicle_id',  # TO DO TEMP
+        'base_vehicle_id',
         'name'
     )
 
     list_display = (
         'details_link',
         'model_id',
-        'base_vehicle_id',  # TO DO TEMP
+        'base_vehicle_id',
         'name',
-        'make',
-        # 'base_vehicle'  # TO DO TEMP
+        'make'
     )
 
     list_display_links = (
@@ -259,8 +253,8 @@ class SemaModelModelAdmin(ModelAdmin):
             None, {
                 'fields': (
                     'model_id',
-                    'base_vehicle_id',  # TO DO TEMP
-                    'name',
+                    'base_vehicle_id',
+                    'name'
                 )
             }
         ),
@@ -272,20 +266,11 @@ class SemaModelModelAdmin(ModelAdmin):
                 )
             }
         )
-        # (
-        #     'Base Vehicle', {  # TO DO TEMP
-        #         'fields': (
-        #             'base_vehicle_link',
-        #             'base_vehicle'
-        #         )
-        #     }
-        # )
     )
 
     readonly_fields = (
         'details_link',
         'make_link'
-        # 'base_vehicle_link'  # TO DO TEMP
     )
 
     def details_link(self, obj):
@@ -299,13 +284,6 @@ class SemaModelModelAdmin(ModelAdmin):
             obj.make, 'See full make')
     make_link.short_description = ''
 
-    # def base_vehicle_link(self, obj):  # TO DO TEMP
-    #     if not obj.base_vehicle:
-    #         return None
-    #     return get_change_view_link(
-    #         obj.base_vehicle, 'See full base vehicle')
-    # base_vehicle_link.short_description = ''
-
 
 @admin.register(SemaSubmodel)
 class SemaSubmodelModelAdmin(ModelAdmin):
@@ -313,22 +291,19 @@ class SemaSubmodelModelAdmin(ModelAdmin):
         'model__make__make_id',
         'model__make__name',
         'model__model_id',
-        'model__base_vehicle_id',  # TO DO TEMP
+        'model__base_vehicle_id',
         'model__name',
-        # 'model__base_vehicle__base_vehicle_id',  # TO DO TEMP
-        # 'vehicle__vehicle_id',  # TO DO TEMP
         'submodel_id',
-        'vehicle_id',  # TO DO TEMP
+        'vehicle_id',
         'name'
     )
 
     list_display = (
         'details_link',
         'submodel_id',
-        'vehicle_id',  # TO DO TEMP
+        'vehicle_id',
         'name',
         'model'
-        # 'vehicle'  # TO DO TEMP
     )
 
     list_display_links = (
@@ -340,7 +315,7 @@ class SemaSubmodelModelAdmin(ModelAdmin):
             None, {
                 'fields': (
                     'submodel_id',
-                    'vehicle_id',  # TO DO TEMP
+                    'vehicle_id',
                     'name'
                 )
             }
@@ -353,20 +328,11 @@ class SemaSubmodelModelAdmin(ModelAdmin):
                 )
             }
         )
-        # (
-        #     'Vehicle', {  # TO DO TEMP
-        #         'fields': (
-        #             'vehicle_link',
-        #             'vehicle'
-        #         )
-        #     }
-        # )
     )
 
     readonly_fields = (
         'details_link',
         'model_link'
-        # 'vehicle_link'  # TO DO TEMP
     )
 
     def details_link(self, obj):
@@ -379,13 +345,6 @@ class SemaSubmodelModelAdmin(ModelAdmin):
         return get_change_view_link(
             obj.model, 'See full model')
     model_link.short_description = ''
-
-    # def vehicle_link(self, obj):  # TO DO TEMP
-    #     if not obj.vehicle:
-    #         return None
-    #     return get_change_view_link(
-    #         obj.vehicle, 'See full vehicle')
-    # vehicle_link.short_description = ''
 
 
 @admin.register(SemaBrand)
@@ -534,6 +493,7 @@ class SemaProductModelAdmin(ModelAdmin):
         (
             None, {
                 'fields': (
+                    'product_link',
                     'product_id',
                     'part_number'
                 )
@@ -559,6 +519,7 @@ class SemaProductModelAdmin(ModelAdmin):
 
     readonly_fields = (
         'details_link',
+        'product_link',
         'dataset_link',
         'brand_link',
         'brand_a'
@@ -567,6 +528,12 @@ class SemaProductModelAdmin(ModelAdmin):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def product_link(self, obj):
+        if not hasattr(obj, 'product') or obj.product is None:
+            return '-----'
+        return get_change_view_link(obj.product, 'See full product')
+    product_link.short_description = ''
 
     def dataset_link(self, obj):
         return get_change_view_link(obj.dataset, 'See full dataset')
@@ -579,3 +546,83 @@ class SemaProductModelAdmin(ModelAdmin):
     def brand_a(self, obj):
         return str(obj.dataset.brand)
     brand_a.short_description = 'brand'
+
+
+@admin.register(Product)
+class ProductModelAdmin(ModelAdmin):
+    search_fields = (
+        'premier_product__premier_part_number',
+        'premier_product__vendor_part_number',
+        'premier_product__description',
+        'premier_product__manufacturer',
+        'premier_product__upc',
+        'sema_product__dataset__brand__brand_id',
+        'sema_product__dataset__brand__name',
+        'sema_product__dataset__dataset_id',
+        'sema_product__dataset__name',
+        'sema_product__product_id',
+        'sema_product__part_number',
+        'id'
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'premier_product',
+        'sema_product'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'id',
+                )
+            }
+        ),
+        (
+            'Premier Product', {
+                'fields': (
+                    'premier_product_link',
+                    'premier_product'
+                )
+            }
+        ),
+        (
+            'SEMA Product', {
+                'fields': (
+                    'sema_product_link',
+                    'sema_product'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'id',
+        'premier_product_link',
+        'sema_product_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def premier_product_link(self, obj):
+        if not obj.premier_product:
+            return '-----'
+        return get_change_view_link(
+            obj.premier_product, 'See full Premier product')
+    details_link.short_description = ''
+
+    def sema_product_link(self, obj):
+        if not obj.sema_product:
+            return '-----'
+        return get_change_view_link(
+            obj.sema_product, 'See full SEMA product')
+    details_link.short_description = ''

@@ -5,9 +5,11 @@ from django.db.models import (
     DecimalField,
     ForeignKey,
     IntegerField,
+    OneToOneField,
     PositiveIntegerField,
     PositiveSmallIntegerField,
-    CASCADE
+    CASCADE,
+    SET_NULL
 )
 
 from .apis import (
@@ -352,3 +354,28 @@ class SemaProduct(Model, SemaProductMixin):
 
     def __str__(self):
         return f'{self.product_id}'
+
+
+class Product(Model):
+    premier_product = OneToOneField(
+        PremierProduct,
+        blank=True,
+        null=True,
+        related_name='product',
+        on_delete=SET_NULL
+    )
+    sema_product = OneToOneField(
+        SemaProduct,
+        blank=True,
+        null=True,
+        related_name='product',
+        on_delete=SET_NULL
+    )
+
+    def __str__(self):
+        s = str(self.pk)
+        if self.premier_product:
+            s = ' :: '.join([s, str(self.premier_product)])
+        if self.sema_product:
+            s = ' :: '.join([s, str(self.sema_product)])
+        return s
