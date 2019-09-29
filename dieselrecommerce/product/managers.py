@@ -113,6 +113,32 @@ class PremierProductQuerySet(QuerySet):
     # </editor-fold>
 
 
+class SemaDatasetQuerySet(QuerySet):
+    def import_products_from_sema_api(self, token=None):
+        msgs = []
+        invalid = self.filter(is_authorized=False)
+        for obj in invalid:
+            msgs.append(
+                obj.get_instance_error_msg("Dataset needs to be authorized")
+            )
+
+        queryset = self.filter(is_authorized=True)
+
+        try:
+            if not token:
+                token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        for obj in queryset:
+            try:
+                msgs += obj.import_products_from_sema_api(token)
+            except Exception as err:
+                msgs.append(obj.get_instance_error_msg(str(err)))
+
+        return msgs
+
+
 class PremierProductManager(Manager):
     def get_queryset(self):
         return PremierProductQuerySet(
@@ -137,3 +163,14 @@ class PremierProductManager(Manager):
 
     def update_pricing_from_premier_api(self, token=None):
         return self.get_queryset().update_pricing_from_premier_api(token)
+
+
+class SemaDatasetManager(Manager):
+    def get_queryset(self):
+        return SemaDatasetQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def import_products_from_sema_api(self, token=None):
+        return self.get_queryset().import_products_from_sema_api(token)

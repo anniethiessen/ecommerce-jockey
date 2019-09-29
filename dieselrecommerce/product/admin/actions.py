@@ -24,6 +24,10 @@ class PremierProductActions(object):
     )
 
     def update_inventory_object_action(self, request, obj):
+        if not obj.premier_part_number:
+            messages.error(request, "Premier Part Number required")
+            return
+
         try:
             token = self.model.retrieve_premier_api_token()
         except Exception as err:
@@ -66,6 +70,10 @@ class PremierProductActions(object):
     )
 
     def update_pricing_object_action(self, request, obj):
+        if not obj.premier_part_number:
+            messages.error(request, "Premier Part Number required")
+            return
+
         try:
             token = self.model.retrieve_premier_api_token()
         except Exception as err:
@@ -136,7 +144,7 @@ class SemaDatasetActions(object):
 
     def import_products_object_action(self, request, obj):
         if not obj.is_authorized:
-            messages.error(request, f"Dataset {obj} not authorized")
+            messages.error(request, "Dataset needs to be authorized")
             return
 
         try:
@@ -158,4 +166,25 @@ class SemaDatasetActions(object):
     import_products_object_action.label = 'Import Products from API'
     import_products_object_action.short_description = (
         'Import products from SEMA API'
+    )
+
+    def import_products_queryset_action(self, request, queryset):
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        try:
+            msgs = queryset.import_products_from_sema_api(token)
+            for msg in msgs:
+                if msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_products_queryset_action.allowed_permissions = ('view',)
+    import_products_queryset_action.short_description = (
+        'Import products from SEMA API for selected %(verbose_name_plural)s'
     )

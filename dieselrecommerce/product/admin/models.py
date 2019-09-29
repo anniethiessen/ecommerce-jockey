@@ -443,6 +443,10 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'name'
     )
 
+    actions = (
+        'import_products_queryset_action',
+    )
+
     changelist_actions = (
         'import_datasets_class_action',
     )

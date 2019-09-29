@@ -16,7 +16,10 @@ from .apis import (
     SemaDatasetMixin,
     SemaProductMixin
 )
-from .managers import PremierProductManager
+from .managers import (
+    PremierProductManager,
+    SemaDatasetManager
+)
 
 
 class PremierProduct(Model, PremierProductMixin):
@@ -320,6 +323,8 @@ class SemaDataset(Model, SemaDatasetMixin):
         on_delete=CASCADE,
         related_name='sema_datasets'
     )
+
+    objects = SemaDatasetManager()
 
     class Meta:
         verbose_name = 'SEMA dataset'
