@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 
 from ..models import (
+    Manufacturer,
     PremierProduct,
     Product,
     SemaBrand,
@@ -16,6 +17,7 @@ from ..models import (
     SemaYear
 )
 from .actions import (
+    ManufacturerActions,
     PremierProductActions,
     ProductActions,
     SemaBrandActions,
@@ -643,4 +645,48 @@ class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
             return '-----'
         return get_change_view_link(
             obj.sema_product, 'See full SEMA product')
+    details_link.short_description = ''
+
+
+@admin.register(Manufacturer)
+class ManufacturerModelAdmin(ObjectActions, ModelAdmin, ManufacturerActions):
+    search_fields = (
+        'premier_manufacturer',
+        'sema_brand'
+    )
+
+    changelist_actions = (
+        'check_unlinked_manufacturers_class_action',
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'premier_manufacturer',
+        'sema_brand'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'id',
+                    'premier_manufacturer',
+                    'sema_brand'
+                )
+            }
+        ),
+    )
+
+    readonly_fields = (
+        'details_link',
+        'id'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
     details_link.short_description = ''

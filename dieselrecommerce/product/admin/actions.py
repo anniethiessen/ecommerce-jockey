@@ -11,6 +11,8 @@ class PremierProductActions(object):
 
         try:
             msgs = queryset.update_inventory_from_premier_api(token)
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -57,6 +59,8 @@ class PremierProductActions(object):
 
         try:
             msgs = queryset.update_pricing_from_premier_api(token)
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -105,6 +109,8 @@ class SemaBrandActions(object):
 
         try:
             msgs = self.model.import_brands_from_sema_api(token)
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -129,6 +135,8 @@ class SemaDatasetActions(object):
 
         try:
             msgs = self.model.import_datasets_from_sema_api(token)
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -155,6 +163,8 @@ class SemaDatasetActions(object):
 
         try:
             msgs = obj.import_products_from_sema_api(token)
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -177,6 +187,8 @@ class SemaDatasetActions(object):
 
         try:
             msgs = queryset.import_products_from_sema_api(token)
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -195,6 +207,8 @@ class ProductActions(object):
         try:
             msgs = self.model.link_products()
 
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
                 if msg[:7] == 'Success':
                     messages.success(request, msg)
@@ -207,3 +221,23 @@ class ProductActions(object):
     link_products_class_action.short_description = (
         'Create product if Premier product and Sema product exist'
     )
+
+
+class ManufacturerActions(object):
+    def check_unlinked_manufacturers_class_action(self, request, queryset):
+        try:
+            msgs = self.model.check_unlinked_manufacturers()
+
+            if not msgs:
+                messages.success(request, 'Everything up-to-date')
+            for msg in msgs:
+                if msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    check_unlinked_manufacturers_class_action.allowed_permissions = ('view',)
+    check_unlinked_manufacturers_class_action.label = 'Check manufacturers'
+    check_unlinked_manufacturers_class_action.short_description = (
+        'Check if any unlinked Premier manufacturers and SEMA brands exist')

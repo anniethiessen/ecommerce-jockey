@@ -8,7 +8,7 @@ from django.conf import settings
 class MessagesMixin(object):
     @classmethod
     def get_class_error_msg(cls, error):
-        return f'Error: {cls}, {error}'
+        return f'Error: {cls._meta.verbose_name.title()}, {error}'
 
     def get_instance_error_msg(self, error):
         return (
@@ -74,6 +74,39 @@ class ProductMixin(MessagesMixin):
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
 
+        return msgs
+
+
+class ManufacturerMixin(MessagesMixin):
+    @classmethod
+    def check_unlinked_manufacturers(cls):
+        from product.models import PremierProduct, SemaBrand
+
+        msgs = []
+        premier_manufacturers = list(PremierProduct.objects.values_list(
+            'manufacturer', flat=True).distinct())
+        sema_brands = SemaBrand.objects.all()
+
+        for premier_manufacturer in premier_manufacturers:
+            try:
+                cls.objects.get(premier_manufacturer=premier_manufacturer)
+            except cls.DoesNotExist:
+                msgs.append(cls.get_class_error_msg(
+                    f"Premier Manufacturer {premier_manufacturer} "
+                    "Missing linked brand")
+                )
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+
+        for sema_brand in sema_brands:
+            try:
+                cls.objects.get(sema_brand=sema_brand.name)
+            except cls.DoesNotExist:
+                msgs.append(sema_brand.get_instance_error_msg(
+                    "Missing linked brand")
+                )
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
         return msgs
 
 

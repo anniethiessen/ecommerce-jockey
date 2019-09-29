@@ -17,6 +17,7 @@ from .managers import (
     SemaDatasetManager
 )
 from .mixins import (
+    ManufacturerMixin,
     PremierProductMixin,
     ProductMixin,
     SemaBrandMixin,
@@ -333,7 +334,7 @@ class SemaDataset(Model, SemaDatasetMixin):
         verbose_name = 'SEMA dataset'
 
     def __str__(self):
-        return f'{self.dataset_id} :: {self.name}'
+        return f'{self.dataset_id} :: {self.name} :: {self.brand}'
 
 
 class SemaProduct(Model, SemaProductMixin):
@@ -370,7 +371,8 @@ class Product(Model, ProductMixin):
         blank=True,
         null=True,
         related_name='product',
-        on_delete=SET_NULL
+        on_delete=SET_NULL,
+        verbose_name='SEMA product'
     )
 
     def __str__(self):
@@ -379,4 +381,24 @@ class Product(Model, ProductMixin):
             s = ' :: '.join([s, str(self.premier_product)])
         if self.sema_product:
             s = ' :: '.join([s, str(self.sema_product)])
+        return s
+
+
+class Manufacturer(Model, ManufacturerMixin):
+    premier_manufacturer = CharField(
+        max_length=50,
+        unique=True
+    )
+    sema_brand = CharField(
+        max_length=50,
+        unique=True,
+        verbose_name='SEMA brand'
+    )
+
+    def __str__(self):
+        s = str(self.pk)
+        if self.premier_manufacturer:
+            s = ' :: '.join([s, self.premier_manufacturer])
+        if self.sema_brand:
+            s = ' :: '.join([s, self.sema_brand])
         return s

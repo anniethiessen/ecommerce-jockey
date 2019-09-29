@@ -106,10 +106,8 @@ ADMIN_REORDER = (
         'app': 'product',
         'label': 'dieselr',
         'models': (
-            {
-                'model': 'product.Product',
-                'label': 'Products'
-            },
+            'product.Product',
+            'product.Manufacturer'
         )
     },
     {
