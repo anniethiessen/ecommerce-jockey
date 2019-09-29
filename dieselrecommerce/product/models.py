@@ -13,7 +13,8 @@ from django.db.models import (
 from .apis import (
     PremierProductMixin,
     SemaBrandMixin,
-    SemaDatasetMixin
+    SemaDatasetMixin,
+    SemaProductMixin
 )
 from .managers import PremierProductManager
 
@@ -327,7 +328,7 @@ class SemaDataset(Model, SemaDatasetMixin):
         return f'{self.dataset_id} :: {self.name}'
 
 
-class SemaProduct(Model):
+class SemaProduct(Model, SemaProductMixin):
     product_id = PositiveIntegerField(
         primary_key=True,
         unique=True

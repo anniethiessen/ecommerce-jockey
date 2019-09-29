@@ -115,8 +115,7 @@ class PremierProductMixin(PremierApiProductMixin):
 
     def update_inventory_from_premier_api(self, token=None):
         if not self.premier_part_number:
-            return self.get_instance_error_msg(
-                "Premier Part Number required")
+            return self.get_instance_error_msg("Premier Part Number required")
 
         try:
             if not token:
@@ -174,8 +173,7 @@ class PremierProductMixin(PremierApiProductMixin):
 
     def update_pricing_from_premier_api(self, token=None):
         if not self.premier_part_number:
-            return self.get_instance_error_msg(
-                "Premier Part Number required")
+            return self.get_instance_error_msg("Premier Part Number required")
 
         try:
             if not token:
@@ -269,11 +267,30 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
         except Exception:
             raise
 
+    @classmethod
+    def retrieve_sema_products(cls, dataset_id, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/lookup/products'
+            data = {
+                'token': token,
+                'branddatasetid': dataset_id
+            }
+            response = requests.post(url=url, json=data)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['Products']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
 
 class SemaBrandMixin(SemaApiBrandMixin):
     def get_brand_data(self):
         return {
-            'ID': self.brand_id,
             'Name': self.name
         }
 
@@ -321,7 +338,6 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
 
     def get_dataset_data(self):
         return {
-            'ID': self.dataset_id,
             'Name': self.name,
             'Brand': str(self.brand)
         }
@@ -363,6 +379,60 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
                     is_authorized=True
                 )
                 msgs.append(dataset.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        return msgs
+
+    def import_products_from_sema_api(self, token=None):
+        try:
+            if not token:
+                token = self.retrieve_sema_api_token()
+            data = self.retrieve_sema_products(self.dataset_id, token)
+            return self.create_products_from_data(data)
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+
+    def create_products_from_data(self, data):
+        from product.models import SemaProduct
+        return SemaProduct.create_products_from_data(self.dataset_id, data)
+
+
+class SemaProductMixin(ApiCoreMixin):
+    @staticmethod
+    def get_dataset(dataset_id):
+        from product.models import SemaDataset
+
+        try:
+            return SemaDataset.objects.get(dataset_id=dataset_id)
+        except Exception:
+            raise
+
+    def get_product_data(self):
+        return {
+            'Part': self.part_number,
+            'Dataset': str(self.dataset)
+        }
+
+    @classmethod
+    def create_products_from_data(cls, dataset_id, data):
+        msgs = []
+        for item in data:
+            try:
+                product = cls.objects.get(product_id=item['ProductId'])
+                previous = product.get_product_data()
+                product.part_number = item['PartNumber']
+                product.dataset = cls.get_dataset(dataset_id)
+                product.save()
+                product.refresh_from_db()
+                new = product.get_product_data()
+                msgs.append(product.get_update_success_msg(previous, new))
+            except cls.DoesNotExist:
+                product = cls.objects.create(
+                    product_id=item['ProductId'],
+                    part_number=item['PartNumber'],
+                    dataset=cls.get_dataset(dataset_id),
+                )
+                msgs.append(product.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
         return msgs

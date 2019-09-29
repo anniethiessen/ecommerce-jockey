@@ -133,3 +133,29 @@ class SemaDatasetActions(object):
     import_datasets_class_action.short_description = (
         'Import datasets from SEMA API'
     )
+
+    def import_products_object_action(self, request, obj):
+        if not obj.is_authorized:
+            messages.error(request, f"Dataset {obj} not authorized")
+            return
+
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        try:
+            msgs = obj.import_products_from_sema_api(token)
+            for msg in msgs:
+                if msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_products_object_action.allowed_permissions = ('view',)
+    import_products_object_action.label = 'Import Products from API'
+    import_products_object_action.short_description = (
+        'Import products from SEMA API'
+    )

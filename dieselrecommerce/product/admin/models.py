@@ -35,7 +35,7 @@ from .utils import get_change_view_link
 class PremierProductModelAdmin(ImportMixin, ObjectActions,
                                ModelAdmin, PremierProductActions):
     resource_class = PremierProductResource
-    list_per_page = 10
+
     search_fields = (
         'premier_part_number',
         'vendor_part_number',
@@ -445,6 +445,10 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
 
     changelist_actions = (
         'import_datasets_class_action',
+    )
+
+    change_actions = (
+        'import_products_object_action',
     )
 
     list_display = (
