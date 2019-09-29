@@ -23,7 +23,10 @@ from .actions import (
 from .filters import (
     HasAlbertaInventory,
     HasMissingInventory,
-    HasMissingPricing
+    HasMissingPricing,
+    HasPremierProduct,
+    HasProduct,
+    HasSemaProduct
 )
 from .inlines import SemaDatasetTabularInline
 from .resources import PremierProductResource
@@ -70,6 +73,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     )
 
     list_filter = (
+        HasProduct,
         'manufacturer',
         'part_status',
         HasMissingInventory,
@@ -145,7 +149,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     details_link.short_description = ''
 
     def product_link(self, obj):
-        if not hasattr(obj, 'product') or obj.product is None:
+        if not hasattr(obj, 'product'):
             return '-----'
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
@@ -489,6 +493,10 @@ class SemaProductModelAdmin(ModelAdmin):
         'details_link',
     )
 
+    list_filter = (
+        HasProduct,
+    )
+
     fieldsets = (
         (
             None, {
@@ -530,7 +538,7 @@ class SemaProductModelAdmin(ModelAdmin):
     details_link.short_description = ''
 
     def product_link(self, obj):
-        if not hasattr(obj, 'product') or obj.product is None:
+        if not hasattr(obj, 'product'):
             return '-----'
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
@@ -574,6 +582,11 @@ class ProductModelAdmin(ModelAdmin):
 
     list_display_links = (
         'details_link',
+    )
+
+    list_filter = (
+        HasPremierProduct,
+        HasSemaProduct
     )
 
     fieldsets = (
