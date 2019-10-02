@@ -366,7 +366,7 @@ class Product(Model, ProductMixin):
         related_name='product',
         on_delete=SET_NULL
     )
-    sema_product = OneToOneField(
+    sema_product = ForeignKey(
         SemaProduct,
         blank=True,
         null=True,
