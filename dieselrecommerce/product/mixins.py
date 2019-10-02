@@ -8,29 +8,37 @@ from django.conf import settings
 class MessagesMixin(object):
     @classmethod
     def get_class_error_msg(cls, error):
-        return f'Error: {cls._meta.verbose_name.title()}, {error}'
+        return f"Error: {cls._meta.verbose_name.title()}, {error}"
 
     def get_instance_error_msg(self, error):
         return (
-            'Error: '
-            f'{self._meta.model._meta.verbose_name.title()} {self}, {error}'
+            "Error: "
+            f"{self._meta.model._meta.verbose_name.title()} {self}, {error}"
         )
 
     def get_create_success_msg(self):
         return (
-            'Success: '
-            f'{self._meta.model._meta.verbose_name.title()} {self} created'
+            "Success: "
+            f"{self._meta.model._meta.verbose_name.title()} {self} created"
         )
 
     def get_update_success_msg(self, previous_data, new_data):
-        msg = (
-            'Success: '
-            f'{self._meta.model._meta.verbose_name.title()} {self} updated'
-        )
-        for loc, inv in new_data.items():
-            if not inv == previous_data[loc]:
-                msg += f", {loc}: {previous_data[loc]} -> {inv}"
-        return msg
+        changes = ""
+        for key, value in new_data.items():
+            if not value == previous_data[key]:
+                changes += f", {key}: {previous_data[key]} -> {value}"
+        if changes:
+            msg = (
+                "Success: "
+                f"{self._meta.model._meta.verbose_name.title()} {self} updated"
+                f"{changes}"
+            )
+        else:
+            msg = (
+                "Info: "
+                f"{self._meta.model._meta.verbose_name.title()} {self}"
+                "already up to date"
+            )
 
 
 class ProductMixin(MessagesMixin):

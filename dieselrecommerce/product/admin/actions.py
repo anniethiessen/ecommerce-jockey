@@ -11,10 +11,10 @@ class PremierProductActions(object):
 
         try:
             msgs = queryset.update_inventory_from_premier_api(token)
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
@@ -38,7 +38,9 @@ class PremierProductActions(object):
 
         try:
             msg = obj.update_inventory_from_premier_api(token)
-            if msg[:7] == 'Success':
+            if msg[:4] == 'Info':
+                messages.info(request, msg)
+            elif msg[:7] == 'Success':
                 messages.success(request, msg)
             else:
                 messages.error(request, msg)
@@ -59,10 +61,10 @@ class PremierProductActions(object):
 
         try:
             msgs = queryset.update_pricing_from_premier_api(token)
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
@@ -86,7 +88,9 @@ class PremierProductActions(object):
 
         try:
             msg = obj.update_pricing_from_premier_api(token)
-            if msg[:7] == 'Success':
+            if msg[:4] == 'Info':
+                messages.info(request, msg)
+            elif msg[:7] == 'Success':
                 messages.success(request, msg)
             else:
                 messages.error(request, msg)
@@ -109,10 +113,10 @@ class SemaBrandActions(object):
 
         try:
             msgs = self.model.import_brands_from_sema_api(token)
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
@@ -135,10 +139,10 @@ class SemaDatasetActions(object):
 
         try:
             msgs = self.model.import_datasets_from_sema_api(token)
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
@@ -163,10 +167,10 @@ class SemaDatasetActions(object):
 
         try:
             msgs = obj.import_products_from_sema_api(token)
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
@@ -187,10 +191,10 @@ class SemaDatasetActions(object):
 
         try:
             msgs = queryset.import_products_from_sema_api(token)
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
@@ -206,11 +210,10 @@ class ProductActions(object):
     def link_products_class_action(self, request, queryset):
         try:
             msgs = self.model.link_products()
-
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
@@ -227,11 +230,10 @@ class ManufacturerActions(object):
     def check_unlinked_manufacturers_class_action(self, request, queryset):
         try:
             msgs = self.model.check_unlinked_manufacturers()
-
-            if not msgs:
-                messages.success(request, 'Everything up-to-date')
             for msg in msgs:
-                if msg[:7] == 'Success':
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
                     messages.success(request, msg)
                 else:
                     messages.error(request, msg)
