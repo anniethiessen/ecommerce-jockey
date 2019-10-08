@@ -381,6 +381,29 @@ class SemaApiYearMixin(SemaApiCoreMixin):
             raise
 
 
+class SemaApiMakeMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_makes(cls, dataset_id=None, year=None, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/lookup/makes'
+            params = {
+                'token': token,
+                'branddatasetids': dataset_id,
+                'year': year
+            }
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['Makes']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
 class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_brands(cls, token=None):
@@ -478,6 +501,36 @@ class SemaYearMixin(SemaApiYearMixin):
                 year, created = cls.objects.get_or_create(year=item)
                 if created:
                     msgs.append(year.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+
+class SemaMakeMixin(SemaApiMakeMixin):
+    @classmethod
+    def import_makes_from_sema_api(cls, dataset_id=None,
+                                   year=None, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_makes(dataset_id, year, token)
+            return cls.create_makes_from_data(data)
+        except Exception as err:
+            return cls.get_class_error_msg(str(err))
+
+    @classmethod
+    def create_makes_from_data(cls, data):
+        msgs = []
+        for item in data:
+            try:
+                make, created = cls.objects.get_or_create(
+                    make_id=item['MakeID'],
+                    name=item['MakeName']
+                )
+                if created:
+                    msgs.append(make.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
         if not msgs:

@@ -112,7 +112,7 @@ class SemaYearActions(object):
             return
 
         try:
-            msgs = self.model.import_years_from_sema_api(token)
+            msgs = self.model.import_years_from_sema_api(token=token)
             for msg in msgs:
                 if msg[:4] == 'Info':
                     messages.info(request, msg)
@@ -125,7 +125,33 @@ class SemaYearActions(object):
     import_years_class_action.allowed_permissions = ('view',)
     import_years_class_action.label = 'Import Years from API'
     import_years_class_action.short_description = (
-        'Import years from SEMA API'
+        'Import all available years from SEMA API'
+    )
+
+
+class SemaMakeActions(object):
+    def import_makes_class_action(self, request, queryset):
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        try:
+            msgs = self.model.import_makes_from_sema_api(token=token)
+            for msg in msgs:
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_makes_class_action.allowed_permissions = ('view',)
+    import_makes_class_action.label = 'Import Makes from API'
+    import_makes_class_action.short_description = (
+        'Import all available makes from SEMA API'
     )
 
 

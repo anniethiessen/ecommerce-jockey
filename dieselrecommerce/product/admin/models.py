@@ -23,6 +23,7 @@ from .actions import (
     ProductActions,
     SemaBrandActions,
     SemaDatasetActions,
+    SemaMakeActions,
     SemaProductActions,
     SemaYearActions
 )
@@ -201,10 +202,14 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
 
 
 @admin.register(SemaMake)
-class SemaMakeModelAdmin(ModelAdmin):
+class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     search_fields = (
         'make_id',
         'name',
+    )
+
+    changelist_actions = (
+        'import_makes_class_action',
     )
 
     list_display = (

@@ -24,6 +24,7 @@ from .mixins import (
     ProductMixin,
     SemaBrandMixin,
     SemaDatasetMixin,
+    SemaMakeMixin,
     SemaProductMixin,
     SemaYearMixin
 )
@@ -230,7 +231,7 @@ class SemaYear(Model, SemaYearMixin):
         return str(self.year)
 
 
-class SemaMake(Model):
+class SemaMake(Model, SemaMakeMixin):
     make_id = PositiveIntegerField(
         primary_key=True,
         unique=True
