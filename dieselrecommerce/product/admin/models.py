@@ -24,6 +24,7 @@ from .actions import (
     SemaBrandActions,
     SemaDatasetActions,
     SemaMakeActions,
+    SemaModelActions,
     SemaProductActions,
     SemaYearActions
 )
@@ -243,21 +244,20 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
 
 
 @admin.register(SemaModel)
-class SemaModelModelAdmin(ModelAdmin):
+class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     search_fields = (
-        'make__make_id',
-        'make__name',
         'model_id',
-        'base_vehicle_id',
         'name'
+    )
+
+    changelist_actions = (
+        'import_models_class_action',
     )
 
     list_display = (
         'details_link',
         'model_id',
-        'base_vehicle_id',
-        'name',
-        'make'
+        'name'
     )
 
     list_display_links = (
@@ -269,45 +269,25 @@ class SemaModelModelAdmin(ModelAdmin):
             None, {
                 'fields': (
                     'model_id',
-                    'base_vehicle_id',
                     'name'
                 )
             }
         ),
-        (
-            'Make', {
-                'fields': (
-                    'make_link',
-                    'make'
-                )
-            }
-        )
     )
 
     readonly_fields = (
         'details_link',
-        'make_link'
     )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
-    def make_link(self, obj):
-        if not obj.make:
-            return None
-        return get_change_view_link(
-            obj.make, 'See full make')
-    make_link.short_description = ''
-
 
 @admin.register(SemaSubmodel)
 class SemaSubmodelModelAdmin(ModelAdmin):
     search_fields = (
-        'model__make__make_id',
-        'model__make__name',
         'model__model_id',
-        'model__base_vehicle_id',
         'model__name',
         'submodel_id',
         'vehicle_id',
