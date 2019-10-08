@@ -23,7 +23,8 @@ from .actions import (
     ProductActions,
     SemaBrandActions,
     SemaDatasetActions,
-    SemaProductActions
+    SemaProductActions,
+    SemaYearActions
 )
 from .filters import (
     HasAlbertaInventory,
@@ -162,9 +163,13 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
 
 
 @admin.register(SemaYear)
-class SemaYearModelAdmin(ModelAdmin):
+class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     search_fields = (
         'year',
+    )
+
+    changelist_actions = (
+        'import_years_class_action',
     )
 
     list_display = (
@@ -174,10 +179,6 @@ class SemaYearModelAdmin(ModelAdmin):
 
     list_display_links = (
         'details_link',
-    )
-
-    list_filter = (
-        'year',
     )
 
     fieldsets = (

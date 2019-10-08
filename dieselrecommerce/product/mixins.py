@@ -7,6 +7,21 @@ from django.conf import settings
 
 class MessagesMixin(object):
     @classmethod
+    def get_class_up_to_date_msg(cls):
+        return (
+            "Info: "
+            f"{cls._meta.verbose_name.title()}, "
+            "everything up-to-date"
+        )
+
+    def get_instance_up_to_date_msg(self):
+        return (
+            "Info: "
+            f"{self._meta.model._meta.verbose_name.title()} {self}, "
+            "already up-to-date"
+        )
+
+    @classmethod
     def get_class_error_msg(cls, error):
         return f"Error: {cls._meta.verbose_name.title()}, {error}"
 
@@ -36,11 +51,7 @@ class MessagesMixin(object):
             if changes:
                 msg += changes
             else:
-                msg = (
-                    "Info: "
-                    f"{self._meta.model._meta.verbose_name.title()} {self}"
-                    "already up to date"
-                )
+                msg = self.get_instance_up_to_date_msg()
         return msg
 
 
@@ -348,6 +359,28 @@ class SemaApiCoreMixin(MessagesMixin):
             raise
 
 
+class SemaApiYearMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_years(cls, dataset_id=None, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/lookup/years'
+            params = {
+                'token': token,
+                'branddatasetids': dataset_id
+            }
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['Years']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
 class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_brands(cls, token=None):
@@ -426,6 +459,32 @@ class SemaApiProductMixin(SemaApiCoreMixin):
             raise
 
 
+class SemaYearMixin(SemaApiYearMixin):
+    @classmethod
+    def import_years_from_sema_api(cls, dataset_id=None, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_years(dataset_id, token)
+            return cls.create_years_from_data(data)
+        except Exception as err:
+            return cls.get_class_error_msg(str(err))
+
+    @classmethod
+    def create_years_from_data(cls, data):
+        msgs = []
+        for item in data:
+            try:
+                year, created = cls.objects.get_or_create(year=item)
+                if created:
+                    msgs.append(year.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+
 class SemaBrandMixin(SemaApiBrandMixin):
     def get_brand_data(self):
         return {
@@ -462,6 +521,8 @@ class SemaBrandMixin(SemaApiBrandMixin):
                 msgs.append(brand.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
         return msgs
 
 
@@ -519,6 +580,8 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
                 msgs.append(dataset.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
         return msgs
 
     def import_products_from_sema_api(self, token=None):
@@ -573,6 +636,8 @@ class SemaProductMixin(SemaApiProductMixin):
                 msgs.append(product.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
         return msgs
 
     def update_html_from_sema_api(self, token=None):

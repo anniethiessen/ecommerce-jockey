@@ -24,7 +24,8 @@ from .mixins import (
     ProductMixin,
     SemaBrandMixin,
     SemaDatasetMixin,
-    SemaProductMixin
+    SemaProductMixin,
+    SemaYearMixin
 )
 
 
@@ -216,7 +217,7 @@ class PremierProduct(Model, PremierProductMixin):
         return f'{self.premier_part_number} :: {self.manufacturer}'
 
 
-class SemaYear(Model):
+class SemaYear(Model, SemaYearMixin):
     year = PositiveSmallIntegerField(
         primary_key=True,
         unique=True
