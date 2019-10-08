@@ -429,6 +429,32 @@ class SemaApiModelMixin(SemaApiCoreMixin):
             raise
 
 
+class SemaApiSubmodelMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_submodels(cls, dataset_id=None, year=None,
+                                make_id=None, model_id=None, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/lookup/submodels'
+            params = {
+                'token': token,
+                'branddatasetids': dataset_id,
+                'year': year,
+                'makeid': make_id,
+                'modelid': model_id
+            }
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['Submodels']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
 class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_brands(cls, token=None):
@@ -600,6 +626,50 @@ class SemaModelMixin(SemaApiModelMixin):
                     name=item['ModelName']
                 )
                 msgs.append(model.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+
+class SemaSubmodelMixin(SemaApiSubmodelMixin):
+    def get_submodel_data(self):
+        return {
+            'Name': self.name,
+        }
+
+    @classmethod
+    def import_submodels_from_sema_api(cls, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_submodels(token=token)
+            for item in data:
+                del item['VehicleID']
+            data = [dict(t) for t in {tuple(item.items()) for item in data}]
+            return cls.create_submodels_from_data(data)
+        except Exception as err:
+            return cls.get_class_error_msg(str(err))
+
+    @classmethod
+    def create_submodels_from_data(cls, data):
+        msgs = []
+        for item in data:
+            try:
+                submodel = cls.objects.get(submodel_id=item['SubmodelID'])
+                previous = submodel.get_submodel_data()
+                submodel.name = item['SubmodelName']
+                submodel.save()
+                submodel.refresh_from_db()
+                new = submodel.get_submodel_data()
+                msgs.append(submodel.get_update_success_msg(previous, new))
+            except cls.DoesNotExist:
+                submodel = cls.objects.create(
+                    submodel_id=item['SubmodelID'],
+                    name=item['SubmodelName']
+                )
+                msgs.append(submodel.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
         if not msgs:

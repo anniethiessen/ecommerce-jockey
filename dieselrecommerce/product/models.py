@@ -27,6 +27,7 @@ from .mixins import (
     SemaMakeMixin,
     SemaModelMixin,
     SemaProductMixin,
+    SemaSubmodelMixin,
     SemaYearMixin
 )
 
@@ -264,28 +265,20 @@ class SemaModel(Model, SemaModelMixin):
         return str(self.name)
 
 
-class SemaSubmodel(Model):
+class SemaSubmodel(Model, SemaSubmodelMixin):
     submodel_id = PositiveIntegerField(
         primary_key=True,
         unique=True
     )
-    vehicle_id = PositiveIntegerField(
-        unique=True
-    )
     name = CharField(
         max_length=50,
-    )
-    model = ForeignKey(
-        SemaModel,
-        on_delete=CASCADE,
-        related_name='submodels'
     )
 
     class Meta:
         verbose_name = 'SEMA submodel'
 
     def __str__(self):
-        return f'{self.name} :: {self.model}'
+        return str(self.name)
 
 
 class SemaBrand(Model, SemaBrandMixin):

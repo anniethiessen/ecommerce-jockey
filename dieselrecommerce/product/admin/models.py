@@ -26,6 +26,7 @@ from .actions import (
     SemaMakeActions,
     SemaModelActions,
     SemaProductActions,
+    SemaSubmodelActions,
     SemaYearActions
 )
 from .filters import (
@@ -285,21 +286,20 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
 
 
 @admin.register(SemaSubmodel)
-class SemaSubmodelModelAdmin(ModelAdmin):
+class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     search_fields = (
-        'model__model_id',
-        'model__name',
         'submodel_id',
-        'vehicle_id',
         'name'
+    )
+
+    changelist_actions = (
+        'import_submodels_class_action',
     )
 
     list_display = (
         'details_link',
         'submodel_id',
-        'vehicle_id',
-        'name',
-        'model'
+        'name'
     )
 
     list_display_links = (
@@ -311,36 +311,19 @@ class SemaSubmodelModelAdmin(ModelAdmin):
             None, {
                 'fields': (
                     'submodel_id',
-                    'vehicle_id',
                     'name'
                 )
             }
         ),
-        (
-            'Model', {
-                'fields': (
-                    'model_link',
-                    'model'
-                )
-            }
-        )
     )
 
     readonly_fields = (
         'details_link',
-        'model_link'
     )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
-
-    def model_link(self, obj):
-        if not obj.model:
-            return None
-        return get_change_view_link(
-            obj.model, 'See full model')
-    model_link.short_description = ''
 
 
 @admin.register(SemaBrand)
