@@ -22,23 +22,26 @@ class MessagesMixin(object):
             f"{self._meta.model._meta.verbose_name.title()} {self} created"
         )
 
-    def get_update_success_msg(self, previous_data, new_data):
-        changes = ""
-        for key, value in new_data.items():
-            if not value == previous_data[key]:
-                changes += f", {key}: {previous_data[key]} -> {value}"
-        if changes:
-            msg = (
-                "Success: "
-                f"{self._meta.model._meta.verbose_name.title()} {self} updated"
-                f"{changes}"
-            )
-        else:
-            msg = (
-                "Info: "
-                f"{self._meta.model._meta.verbose_name.title()} {self}"
-                "already up to date"
-            )
+    def get_update_success_msg(self, previous_data=None, new_data=None):
+        msg = (
+            "Success: "
+            f"{self._meta.model._meta.verbose_name.title()} {self} updated"
+        )
+        if previous_data and new_data:
+            changes = ""
+            for key, value in new_data.items():
+                if not value == previous_data[key]:
+                    changes += f", {key}: {previous_data[key]} -> {value}"
+
+            if changes:
+                msg += changes
+            else:
+                msg = (
+                    "Info: "
+                    f"{self._meta.model._meta.verbose_name.title()} {self}"
+                    "already up to date"
+                )
+        return msg
 
 
 class ProductMixin(MessagesMixin):
@@ -327,6 +330,23 @@ class SemaApiCoreMixin(MessagesMixin):
         except Exception:
             raise
 
+    @classmethod
+    def retrieve_sema_api_content_token(cls, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/token/getcontenttoken'
+            params = {'token': token}
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['contenttoken']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
 
 class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
@@ -382,6 +402,26 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
                 return response['Products']
             else:
                 raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
+class SemaApiProductMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_product_html(cls, product_id, token=None):
+        include_sema_header_footer = False
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            content_token = cls.retrieve_sema_api_content_token(token)
+            url = f'{settings.SEMA_BASE_URL}/content/product'
+            url += f'?contenttoken={content_token}'
+            params = {
+                'productid': product_id,
+                'stripHeaderFooter': str(~include_sema_header_footer).lower()
+            }
+            response = requests.get(url=url, params=params)
+            return str(response.text).strip()
         except Exception:
             raise
 
@@ -495,7 +535,7 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
         return SemaProduct.create_products_from_data(self.dataset_id, data)
 
 
-class SemaProductMixin(MessagesMixin):
+class SemaProductMixin(SemaApiProductMixin):
     @staticmethod
     def get_dataset(dataset_id):
         from product.models import SemaDataset
@@ -534,4 +574,26 @@ class SemaProductMixin(MessagesMixin):
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
         return msgs
+
+    def update_html_from_sema_api(self, token=None):
+        if not self.product_id:
+            return self.get_instance_error_msg("SEMA product ID required")
+
+        try:
+            if not token:
+                token = self.retrieve_sema_api_token()
+            html = self.retrieve_sema_product_html(self.product_id, token)
+            return self.update_html_from_data(html)
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+
+    def update_html_from_data(self, html):
+        try:
+            self.html = html
+            self.save()
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+
+        self.refresh_from_db()
+        return self.get_update_success_msg()
 # </editor-fold>

@@ -8,6 +8,7 @@ from django.db.models import (
     OneToOneField,
     PositiveIntegerField,
     PositiveSmallIntegerField,
+    TextField,
     CASCADE,
     SET_NULL
 )
@@ -349,6 +350,10 @@ class SemaProduct(Model, SemaProductMixin):
         SemaDataset,
         on_delete=CASCADE,
         related_name='sema_products',
+    )
+    html = TextField(
+        blank=True,
+        verbose_name='HTML'
     )
 
     class Meta:

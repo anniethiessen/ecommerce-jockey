@@ -49,7 +49,7 @@ class PremierProductActions(object):
     update_inventory_object_action.allowed_permissions = ('view',)
     update_inventory_object_action.label = "Update Inventory from API"
     update_inventory_object_action.short_description = (
-        'Update this premier product\'s inventory from Premier API'
+        'Update this Premier product\'s inventory from Premier API'
     )
 
     def update_pricing_queryset_action(self, request, queryset):
@@ -99,7 +99,7 @@ class PremierProductActions(object):
     update_pricing_object_action.allowed_permissions = ('view',)
     update_pricing_object_action.label = "Update Pricing from API"
     update_pricing_object_action.short_description = (
-        'Update this premier product\'s pricing from Premier API'
+        'Update this Premier product\'s pricing from Premier API'
     )
 
 
@@ -203,6 +203,35 @@ class SemaDatasetActions(object):
     import_products_queryset_action.allowed_permissions = ('view',)
     import_products_queryset_action.short_description = (
         'Import products from SEMA API for selected %(verbose_name_plural)s'
+    )
+
+
+class SemaProductActions(object):
+    def update_html_object_action(self, request, obj):
+        if not obj.product_id:
+            messages.error(request, "SEMA product ID required")
+            return
+
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        try:
+            msg = obj.update_html_from_sema_api(token)
+            if msg[:4] == 'Info':
+                messages.info(request, msg)
+            elif msg[:7] == 'Success':
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_html_object_action.allowed_permissions = ('view',)
+    update_html_object_action.label = "Update HTML from API"
+    update_html_object_action.short_description = (
+        'Update this SEMA product\'s HTML from SEMA API'
     )
 
 

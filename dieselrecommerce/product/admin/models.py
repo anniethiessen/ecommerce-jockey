@@ -3,6 +3,7 @@ from import_export.admin import ImportMixin
 
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from django.utils.safestring import mark_safe
 
 from ..models import (
     Manufacturer,
@@ -21,7 +22,8 @@ from .actions import (
     PremierProductActions,
     ProductActions,
     SemaBrandActions,
-    SemaDatasetActions
+    SemaDatasetActions,
+    SemaProductActions
 )
 from .filters import (
     HasAlbertaInventory,
@@ -475,7 +477,7 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
 
 
 @admin.register(SemaProduct)
-class SemaProductModelAdmin(ModelAdmin):
+class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     search_fields = (
         'dataset__brand__brand_id',
         'dataset__brand__name',
@@ -483,6 +485,10 @@ class SemaProductModelAdmin(ModelAdmin):
         'dataset__name',
         'product_id',
         'part_number'
+    )
+
+    change_actions = (
+        'update_html_object_action',
     )
 
     list_display = (
@@ -525,6 +531,23 @@ class SemaProductModelAdmin(ModelAdmin):
                     'brand_a'
                 )
             }
+        ),
+        (
+            'HTML', {
+                'fields': (
+                    'html',
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            None, {
+                'fields': (
+                    'html_preview',
+                )
+            }
         )
     )
 
@@ -533,7 +556,8 @@ class SemaProductModelAdmin(ModelAdmin):
         'product_link',
         'dataset_link',
         'brand_link',
-        'brand_a'
+        'brand_a',
+        'html_preview'
     )
 
     def details_link(self, obj):
@@ -557,6 +581,19 @@ class SemaProductModelAdmin(ModelAdmin):
     def brand_a(self, obj):
         return str(obj.dataset.brand)
     brand_a.short_description = 'brand'
+
+    def html_preview(self, obj):
+        if not obj.html:
+            return '-----'
+        try:
+            html = f"<html>\n{obj.html.split('</head>', 1)[1]}"
+            image_class = 'class="main-product-img"'
+            image_width = 'width="300px"'
+            index = html.index(image_class)
+            html = f"{html[:index]}{image_width} {html[index:]}"
+            return mark_safe(html)
+        except Exception as err:
+            return str(err)
 
 
 @admin.register(Product)
