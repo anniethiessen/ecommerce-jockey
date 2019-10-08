@@ -59,6 +59,29 @@ class HasMissingPricing(SimpleListFilter):
             return queryset.has_all_pricing()
 
 
+class HasMissingHtml(SimpleListFilter):
+    title = 'has missing HTML'
+    parameter_name = 'missing_html'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                Q(html__isnull=True)
+                | Q(html='')
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(html__isnull=False)
+                & ~Q(html='')
+            )
+
+
 class HasProduct(SimpleListFilter):
     title = 'has full product'
     parameter_name = 'product'

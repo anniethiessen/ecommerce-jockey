@@ -28,6 +28,7 @@ from .actions import (
 from .filters import (
     HasAlbertaInventory,
     HasMissingInventory,
+    HasMissingHtml,
     HasMissingPricing,
     HasPremierProduct,
     HasProduct,
@@ -487,6 +488,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'part_number'
     )
 
+    actions = (
+        'update_html_queryset_action',
+    )
+
     change_actions = (
         'update_html_object_action',
     )
@@ -504,6 +509,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     list_filter = (
         HasProduct,
+        HasMissingHtml
     )
 
     fieldsets = (

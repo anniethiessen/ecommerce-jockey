@@ -234,6 +234,29 @@ class SemaProductActions(object):
         'Update this SEMA product\'s HTML from SEMA API'
     )
 
+    def update_html_queryset_action(self, request, queryset):
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        try:
+            msgs = queryset.update_html_from_sema_api(token)
+            for msg in msgs:
+                if msg[:4] == 'Info':
+                    messages.info(request, msg)
+                elif msg[:7] == 'Success':
+                    messages.success(request, msg)
+                else:
+                    messages.error(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_html_queryset_action.allowed_permissions = ('view',)
+    update_html_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' HTML from SEMA API'
+    )
+
 
 class ProductActions(object):
     def link_products_class_action(self, request, queryset):

@@ -15,7 +15,8 @@ from django.db.models import (
 
 from .managers import (
     PremierProductManager,
-    SemaDatasetManager
+    SemaDatasetManager,
+    SemaProductManager
 )
 from .mixins import (
     ManufacturerMixin,
@@ -355,6 +356,8 @@ class SemaProduct(Model, SemaProductMixin):
         blank=True,
         verbose_name='HTML'
     )
+
+    objects = SemaProductManager()
 
     class Meta:
         verbose_name = 'SEMA product'

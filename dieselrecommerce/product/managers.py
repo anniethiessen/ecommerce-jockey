@@ -139,6 +139,32 @@ class SemaDatasetQuerySet(QuerySet):
         return msgs
 
 
+class SemaProductQuerySet(QuerySet):
+    def update_html_from_sema_api(self, token=None):
+        msgs = []
+        invalid = self.filter(product_id__isnull=True)
+        for obj in invalid:
+            msgs.append(
+                obj.get_instance_error_msg("SEMA product ID required")
+            )
+
+        queryset = self.filter(product_id__isnull=False)
+
+        try:
+            if not token:
+                token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        for obj in queryset:
+            try:
+                msgs.append(obj.update_html_from_sema_api(token))
+            except Exception as err:
+                msgs.append(obj.get_instance_error_msg(str(err)))
+
+        return msgs
+
+
 class PremierProductManager(Manager):
     def get_queryset(self):
         return PremierProductQuerySet(
@@ -174,3 +200,14 @@ class SemaDatasetManager(Manager):
 
     def import_products_from_sema_api(self, token=None):
         return self.get_queryset().import_products_from_sema_api(token)
+
+
+class SemaProductManager(Manager):
+    def get_queryset(self):
+        return SemaProductQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def update_html_from_sema_api(self, token=None):
+        return self.get_queryset().update_html_from_sema_api(token)
