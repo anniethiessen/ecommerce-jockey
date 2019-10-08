@@ -258,7 +258,8 @@ class SemaModel(Model):
     )
     make = ForeignKey(
         SemaMake,
-        on_delete=CASCADE
+        on_delete=CASCADE,
+        related_name='models'
     )
 
     class Meta:
@@ -281,7 +282,8 @@ class SemaSubmodel(Model):
     )
     model = ForeignKey(
         SemaModel,
-        on_delete=CASCADE
+        on_delete=CASCADE,
+        related_name='submodels'
     )
 
     class Meta:
