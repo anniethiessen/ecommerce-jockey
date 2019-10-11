@@ -388,6 +388,42 @@ class SemaDatasetActions(object):
     )
 
 
+class SemaCategoryActions(object):
+    def import_categories_class_action(self, request, queryset):
+        from product.models import SemaDataset
+
+        msgs = []
+        datasets = SemaDataset.objects.all()
+
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        for dataset in datasets:
+            try:
+                msgs += self.model.import_categories_from_sema_api(
+                    dataset_id=dataset.dataset_id,
+                    token=token
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+
+        for msg in msgs:
+            if msg[:4] == 'Info':
+                messages.info(request, msg)
+            elif msg[:7] == 'Success':
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+    import_categories_class_action.allowed_permissions = ('view',)
+    import_categories_class_action.label = 'Import Categories from API'
+    import_categories_class_action.short_description = (
+        'Import all available categories from SEMA API'
+    )
+
+
 class SemaProductActions(object):
     def update_html_object_action(self, request, obj):
         if not obj.product_id:

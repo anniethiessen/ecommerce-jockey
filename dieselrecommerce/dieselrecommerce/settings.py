@@ -157,6 +157,10 @@ ADMIN_REORDER = (
                 'label': 'Datasets'
             },
             {
+                'model': 'product.SemaCategory',
+                'label': 'Categories'
+            },
+            {
                 'model': 'product.SemaProduct',
                 'label': 'Products'
             },

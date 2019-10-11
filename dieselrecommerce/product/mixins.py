@@ -163,6 +163,7 @@ class PremierApiCoreMixin(MessagesMixin):
             url = f'{settings.PREMIER_BASE_URL}/authenticate'
             params = {'apiKey': settings.PREMIER_API_KEY}
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             return json.loads(response.text)['sessionToken']
         except Exception:
             raise
@@ -180,7 +181,11 @@ class PremierApiProductMixin(PremierApiCoreMixin):
             headers = cls.get_premier_api_headers(token)
             response = requests.get(url=url, headers=headers,
                                     params=params)
-            return json.loads(response.text)
+            response.raise_for_status()
+            if response.status_code == requests.codes.ok:
+                return json.loads(response.text)
+            else:
+                raise Exception('Bad request')
         except Exception:
             raise
 
@@ -195,7 +200,11 @@ class PremierApiProductMixin(PremierApiCoreMixin):
             headers = cls.get_premier_api_headers(token)
             response = requests.get(url=url, headers=headers,
                                     params=params)
-            return json.loads(response.text)
+            response.raise_for_status()
+            if response.status_code == requests.codes.ok:
+                return json.loads(response.text)
+            else:
+                raise Exception('Bad request')
         except Exception:
             raise
 
@@ -333,11 +342,12 @@ class SemaApiCoreMixin(MessagesMixin):
                 'password': settings.SEMA_PASSWORD
             }
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['token']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -350,11 +360,12 @@ class SemaApiCoreMixin(MessagesMixin):
             url = f'{settings.SEMA_BASE_URL}/token/getcontenttoken'
             params = {'token': token}
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['contenttoken']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -372,11 +383,12 @@ class SemaApiYearMixin(SemaApiCoreMixin):
                 'branddatasetids': dataset_id
             }
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['Years']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -395,11 +407,12 @@ class SemaApiMakeMixin(SemaApiCoreMixin):
                 'year': year
             }
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['Makes']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -420,11 +433,12 @@ class SemaApiModelMixin(SemaApiCoreMixin):
                 'makeid': make_id
             }
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['Models']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -446,11 +460,12 @@ class SemaApiSubmodelMixin(SemaApiCoreMixin):
                 'modelid': model_id
             }
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['Submodels']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -471,11 +486,12 @@ class SemaApiBaseVehicleMixin(SemaApiCoreMixin):
                 'makeid': make_id
             }
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['Models']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -497,11 +513,12 @@ class SemaApiVehicleMixin(SemaApiCoreMixin):
                 'modelid': model_id
             }
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['Submodels']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -516,11 +533,12 @@ class SemaApiBrandMixin(SemaApiCoreMixin):
             url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
             params = {'token': token}
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['BrandDatasets']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -535,11 +553,12 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
             url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
             params = {'token': token}
             response = requests.get(url=url, params=params)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['BrandDatasets']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -555,11 +574,35 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
                 'branddatasetid': dataset_id
             }
             response = requests.post(url=url, json=data)
+            response.raise_for_status()
             response = json.loads(response.text)
-            if response.get('success', None):
+            if response.get('success', False):
                 return response['Products']
             else:
-                raise Exception(str(response['message']))
+                raise Exception(response.get('message', 'Bad request'))
+        except Exception:
+            raise
+
+
+class SemaApiCategoryMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_categories(cls, dataset_id, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/lookup/categories'
+            data = {
+                'token': token,
+                'branddatasetid': dataset_id
+            }
+            response = requests.post(url=url, json=data)
+            response.raise_for_status()
+            response = json.loads(response.text)
+            if response.get('success', False):
+                return response['Categories']
+            else:
+                raise Exception(response.get('message', 'Bad request'))
         except Exception:
             raise
 
@@ -987,6 +1030,78 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
     def create_products_from_data(self, data):
         from product.models import SemaProduct
         return SemaProduct.create_products_from_data(self.dataset_id, data)
+
+
+class SemaCategoryMixin(SemaApiCategoryMixin):
+    @classmethod
+    def get_category(cls, category_id):
+        try:
+            return cls.objects.get(category_id=category_id)
+        except cls.DoesNotExist:
+            raise Exception(f'Parent {category_id} does not exist')
+        except Exception as err:
+            raise
+
+    def get_category_data(self):
+        return {
+            'Name': self.name,
+            'Parent': str(self.parent_category)
+        }
+
+    @classmethod
+    def import_categories_from_sema_api(cls, dataset_id, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_categories(dataset_id, token)
+            return cls.create_categories_from_data(data)
+        except Exception as err:
+            return cls.get_class_error_msg(str(err))
+
+    @classmethod
+    def create_categories_from_data(cls, data):
+        msgs = []
+        for item in data:
+            try:
+                subcategories = item.pop('Categories', [])
+                msgs.append(cls.create_category_from_data(item))
+                if subcategories:
+                    msgs += cls.create_categories_from_data(subcategories)
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+    @classmethod
+    def create_category_from_data(cls, item):
+        try:
+            category = cls.objects.get(category_id=item['CategoryId'])
+            previous = category.get_category_data()
+            category.name = item['Name']
+            if item['ParentId']:
+                parent = cls.get_category(item['ParentId'])
+            else:
+                parent = None
+            category.parent_category = parent
+            category.save()
+            category.refresh_from_db()
+            new = category.get_category_data()
+            msg = category.get_update_success_msg(previous, new)
+        except cls.DoesNotExist:
+            if item['ParentId']:
+                parent = cls.get_category(item['ParentId'])
+            else:
+                parent = None
+            category = cls.objects.create(
+                category_id=item['CategoryId'],
+                name=item['Name'],
+                parent_category=parent
+            )
+            msg = category.get_create_success_msg()
+        except Exception as err:
+            msg = cls.get_class_error_msg(str(err))
+        return msg
 
 
 class SemaProductMixin(SemaApiProductMixin):

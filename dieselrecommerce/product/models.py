@@ -24,6 +24,7 @@ from .mixins import (
     ProductMixin,
     SemaBaseVehicleMixin,
     SemaBrandMixin,
+    SemaCategoryMixin,
     SemaDatasetMixin,
     SemaMakeMixin,
     SemaModelMixin,
@@ -380,6 +381,29 @@ class SemaDataset(Model, SemaDatasetMixin):
 
     def __str__(self):
         return f'{self.dataset_id} :: {self.name} :: {self.brand}'
+
+
+class SemaCategory(Model, SemaCategoryMixin):
+    category_id = PositiveIntegerField(
+        primary_key=True,
+        unique=True
+    )
+    name = CharField(
+        max_length=50,
+    )
+    parent_category = ForeignKey(
+        'self',
+        blank=True,
+        null=True,
+        on_delete=SET_NULL,
+        related_name='child_categories'
+    )
+
+    class Meta:
+        verbose_name = 'SEMA categories'
+
+    def __str__(self):
+        return f'{self.parent_category} :: {self.name}'
 
 
 class SemaProduct(Model, SemaProductMixin):

@@ -11,6 +11,7 @@ from ..models import (
     Product,
     SemaBaseVehicle,
     SemaBrand,
+    SemaCategory,
     SemaDataset,
     SemaMake,
     SemaModel,
@@ -25,6 +26,7 @@ from .actions import (
     ProductActions,
     SemaBaseVehicleActions,
     SemaBrandActions,
+    SemaCategoryActions,
     SemaDatasetActions,
     SemaMakeActions,
     SemaModelActions,
@@ -632,6 +634,64 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         return get_change_view_link(
             obj.brand, 'See full brand')
     brand_link.short_description = ''
+
+
+@admin.register(SemaCategory)
+class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
+    search_fields = (
+        'category_id',
+        'name'
+    )
+
+    changelist_actions = (
+        'import_categories_class_action',
+    )
+
+    list_display = (
+        'details_link',
+        'category_id',
+        'name',
+        'parent_category'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'category_id',
+                    'name'
+                )
+            }
+        ),
+        (
+            'Parent Category', {
+                'fields': (
+                    'parent_category_link',
+                    'parent_category'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'parent_category_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def parent_category_link(self, obj):
+        if not obj.parent_category:
+            return None
+        return get_change_view_link(
+            obj.parent_category, 'See full parent category')
+    parent_category_link.short_description = ''
 
 
 @admin.register(SemaProduct)
