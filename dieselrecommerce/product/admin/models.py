@@ -16,6 +16,7 @@ from ..models import (
     SemaModel,
     SemaProduct,
     SemaSubmodel,
+    SemaVehicle,
     SemaYear
 )
 from .actions import (
@@ -29,6 +30,7 @@ from .actions import (
     SemaModelActions,
     SemaProductActions,
     SemaSubmodelActions,
+    SemaVehicleActions,
     SemaYearActions
 )
 from .filters import (
@@ -337,7 +339,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'make__make_id',
         'make__name',
         'model__model_id',
-        'model__name',
+        'model__name'
     )
 
     changelist_actions = (
@@ -424,6 +426,92 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
             return None
         return get_change_view_link(obj.model, 'See full model')
     model_link.short_description = ''
+
+
+@admin.register(SemaVehicle)
+class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
+    search_fields = (
+        'base_vehicle__base_vehicle_id',
+        'base_vehicle__year__year',
+        'base_vehicle__make__make_id',
+        'base_vehicle__make__name',
+        'base_vehicle__model__model_id',
+        'base_vehicle__model__name',
+        'submodel__submodel_id',
+        'submodel__name',
+        'vehicle_id'
+    )
+
+    changelist_actions = (
+        'import_vehicles_class_action',
+    )
+
+    list_display = (
+        'details_link',
+        'vehicle_id',
+        'base_vehicle',
+        'submodel'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_filter = (
+        'base_vehicle',
+        'submodel'
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'vehicle_id',
+                )
+            }
+        ),
+        (
+            'Base Vehicle', {
+                'fields': (
+                    'base_vehicle_link',
+                    'base_vehicle'
+                )
+            }
+        ),
+        (
+            'Submodel', {
+                'fields': (
+                    'submodel_link',
+                    'submodel'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'base_vehicle_link',
+        'submodel_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def base_vehicle_link(self, obj):
+        if not obj.base_vehicle:
+            return None
+        return get_change_view_link(
+            obj.base_vehicle,
+            'See full base vehicle'
+        )
+    base_vehicle_link.short_description = ''
+
+    def submodel_link(self, obj):
+        if not obj.submodel:
+            return None
+        return get_change_view_link(obj.submodel, 'See full submodel')
+    submodel_link.short_description = ''
 
 
 @admin.register(SemaBrand)

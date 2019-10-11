@@ -246,6 +246,45 @@ class SemaBaseVehicleActions(object):
     )
 
 
+class SemaVehicleActions(object):
+    def import_vehicles_class_action(self, request, queryset):
+        from product.models import SemaBaseVehicle
+
+        msgs = []
+        base_vehicles = SemaBaseVehicle.objects.all()
+
+        try:
+            token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            messages.error(request, f"Token error: {err}")
+            return
+
+        for base_vehicle in base_vehicles:
+            try:
+                msgs += self.model.import_vehicles_from_sema_api(
+                    base_vehicle_id=base_vehicle.base_vehicle_id,
+                    year=base_vehicle.year.year,
+                    make_id=base_vehicle.make.make_id,
+                    model_id=base_vehicle.model.model_id,
+                    token=token
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+
+        for msg in msgs:
+            if msg[:4] == 'Info':
+                messages.info(request, msg)
+            elif msg[:7] == 'Success':
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+    import_vehicles_class_action.allowed_permissions = ('view',)
+    import_vehicles_class_action.label = 'Import Vehicles from API'
+    import_vehicles_class_action.short_description = (
+        'Import all available vehicles from SEMA API'
+    )
+
+
 class SemaBrandActions(object):
     def import_brands_class_action(self, request, queryset):
         try:

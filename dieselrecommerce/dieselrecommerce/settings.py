@@ -145,6 +145,10 @@ ADMIN_REORDER = (
                 'label': 'Base Vehicles'
             },
             {
+                'model': 'product.SemaVehicle',
+                'label': 'Vehicles'
+            },
+            {
                 'model': 'product.SemaBrand',
                 'label': 'Brands'
             },

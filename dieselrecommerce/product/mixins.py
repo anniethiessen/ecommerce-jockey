@@ -480,6 +480,32 @@ class SemaApiBaseVehicleMixin(SemaApiCoreMixin):
             raise
 
 
+class SemaApiVehicleMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_vehicles(cls, dataset_id=None, year=None,
+                               make_id=None, model_id=None, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/lookup/submodels'
+            params = {
+                'token': token,
+                'branddatasetids': dataset_id,
+                'year': year,
+                'makeid': make_id,
+                'modelid': model_id
+            }
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['Submodels']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
 class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_brands(cls, token=None):
@@ -775,6 +801,74 @@ class SemaBaseVehicleMixin(SemaApiBaseVehicleMixin):
                     model=cls.get_model(item['ModelID'])
                 )
                 msgs.append(base_vehicle.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+
+class SemaVehicleMixin(SemaApiVehicleMixin):
+    @staticmethod
+    def get_base_vehicle(base_vehicle_id):
+        from product.models import SemaBaseVehicle
+
+        try:
+            return SemaBaseVehicle.objects.get(base_vehicle_id=base_vehicle_id)
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_submodel(submodel_id):
+        from product.models import SemaSubmodel
+
+        try:
+            return SemaSubmodel.objects.get(submodel_id=submodel_id)
+        except Exception:
+            raise
+
+    def get_vehicle_data(self):
+        return {
+            'Base Vehicle': str(self.base_vehicle),
+            'Submodel': str(self.submodel)
+        }
+
+    @classmethod
+    def import_vehicles_from_sema_api(cls, base_vehicle_id, year, make_id,
+                                      model_id, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_vehicles(
+                year=year,
+                make_id=make_id,
+                model_id=model_id,
+                token=token
+            )
+            return cls.create_vehicles_from_data(base_vehicle_id, data)
+        except Exception as err:
+            return [cls.get_class_error_msg(str(err))]
+
+    @classmethod
+    def create_vehicles_from_data(cls, base_vehicle_id, data):
+        msgs = []
+        for item in data:
+            try:
+                vehicle = cls.objects.get(vehicle_id=item['VehicleID'])
+                previous = vehicle.get_vehicle_data()
+                vehicle.base_vehicle = cls.get_base_vehicle(base_vehicle_id)
+                vehicle.submodel = cls.get_submodel(item['SubmodelID'])
+                vehicle.save()
+                vehicle.refresh_from_db()
+                new = vehicle.get_vehicle_data()
+                msgs.append(vehicle.get_update_success_msg(previous, new))
+            except cls.DoesNotExist:
+                vehicle = cls.objects.create(
+                    vehicle_id=item['VehicleID'],
+                    base_vehicle=cls.get_base_vehicle(base_vehicle_id),
+                    submodel=cls.get_submodel(item['SubmodelID'])
+                )
+                msgs.append(vehicle.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
         if not msgs:
