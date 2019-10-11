@@ -139,13 +139,11 @@ ADMIN_REORDER = (
             {
                 'model': 'product.SemaSubmodel',
                 'label': 'Submodels'
-            }
-        )
-    },
-    {
-        'app': 'product',
-        'label': 'sema',
-        'models': (
+            },
+            {
+                'model': 'product.SemaBaseVehicle',
+                'label': 'Base Vehicles'
+            },
             {
                 'model': 'product.SemaBrand',
                 'label': 'Brands'
@@ -153,13 +151,7 @@ ADMIN_REORDER = (
             {
                 'model': 'product.SemaDataset',
                 'label': 'Datasets'
-            }
-        )
-    },
-    {
-        'app': 'product',
-        'label': 'sema',
-        'models': (
+            },
             {
                 'model': 'product.SemaProduct',
                 'label': 'Products'

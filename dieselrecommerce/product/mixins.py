@@ -455,6 +455,31 @@ class SemaApiSubmodelMixin(SemaApiCoreMixin):
             raise
 
 
+class SemaApiBaseVehicleMixin(SemaApiCoreMixin):
+    @classmethod
+    def retrieve_sema_base_vehicles(cls, dataset_id=None, year=None,
+                                    make_id=None, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+
+            url = f'{settings.SEMA_BASE_URL}/lookup/models'
+            params = {
+                'token': token,
+                'branddatasetids': dataset_id,
+                'year': year,
+                'makeid': make_id
+            }
+            response = requests.get(url=url, params=params)
+            response = json.loads(response.text)
+            if response.get('success', None):
+                return response['Models']
+            else:
+                raise Exception(str(response['message']))
+        except Exception:
+            raise
+
+
 class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_brands(cls, token=None):
@@ -670,6 +695,86 @@ class SemaSubmodelMixin(SemaApiSubmodelMixin):
                     name=item['SubmodelName']
                 )
                 msgs.append(submodel.get_create_success_msg())
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+
+class SemaBaseVehicleMixin(SemaApiBaseVehicleMixin):
+    @staticmethod
+    def get_year(year):
+        from product.models import SemaYear
+
+        try:
+            return SemaYear.objects.get(year=year)
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_make(make_id):
+        from product.models import SemaMake
+
+        try:
+            return SemaMake.objects.get(make_id=make_id)
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_model(model_id):
+        from product.models import SemaModel
+
+        try:
+            return SemaModel.objects.get(model_id=model_id)
+        except Exception:
+            raise
+
+    def get_base_vehicle_data(self):
+        return {
+            'Year': str(self.year),
+            'Make': str(self.make),
+            'Model': str(self.model)
+        }
+
+    @classmethod
+    def import_base_vehicles_from_sema_api(cls, year, make_id, token=None):
+        try:
+            if not token:
+                token = cls.retrieve_sema_api_token()
+            data = cls.retrieve_sema_base_vehicles(
+                year=year,
+                make_id=make_id,
+                token=token
+            )
+            return cls.create_base_vehicles_from_data(year, make_id, data)
+        except Exception as err:
+            return [cls.get_class_error_msg(str(err))]
+
+    @classmethod
+    def create_base_vehicles_from_data(cls, year, make_id, data):
+        msgs = []
+        for item in data:
+            try:
+                base_vehicle = cls.objects.get(
+                    base_vehicle_id=item['BaseVehicleID']
+                )
+                previous = base_vehicle.get_base_vehicle_data()
+                base_vehicle.year = cls.get_year(year)
+                base_vehicle.make = cls.get_make(make_id)
+                base_vehicle.model = cls.get_model(item['ModelID'])
+                base_vehicle.save()
+                base_vehicle.refresh_from_db()
+                new = base_vehicle.get_base_vehicle_data()
+                msgs.append(base_vehicle.get_update_success_msg(previous, new))
+            except cls.DoesNotExist:
+                base_vehicle = cls.objects.create(
+                    base_vehicle_id=item['BaseVehicleID'],
+                    year=cls.get_year(year),
+                    make=cls.get_make(make_id),
+                    model=cls.get_model(item['ModelID'])
+                )
+                msgs.append(base_vehicle.get_create_success_msg())
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
         if not msgs:

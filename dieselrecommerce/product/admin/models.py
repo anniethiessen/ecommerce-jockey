@@ -9,6 +9,7 @@ from ..models import (
     Manufacturer,
     PremierProduct,
     Product,
+    SemaBaseVehicle,
     SemaBrand,
     SemaDataset,
     SemaMake,
@@ -21,6 +22,7 @@ from .actions import (
     ManufacturerActions,
     PremierProductActions,
     ProductActions,
+    SemaBaseVehicleActions,
     SemaBrandActions,
     SemaDatasetActions,
     SemaMakeActions,
@@ -324,6 +326,104 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+
+@admin.register(SemaBaseVehicle)
+class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
+                                SemaBaseVehicleActions):
+    search_fields = (
+        'base_vehicle_id',
+        'year__year',
+        'make__make_id',
+        'make__name',
+        'model__model_id',
+        'model__name',
+    )
+
+    changelist_actions = (
+        'import_base_vehicles_class_action',
+    )
+
+    list_display = (
+        'details_link',
+        'base_vehicle_id',
+        'year',
+        'make',
+        'model'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_filter = (
+        'make',
+        'model',
+        'year'
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'base_vehicle_id',
+                )
+            }
+        ),
+        (
+            'Year', {
+                'fields': (
+                    'year_link',
+                    'year'
+                )
+            }
+        ),
+        (
+            'Make', {
+                'fields': (
+                    'make_link',
+                    'make'
+                )
+            }
+        ),
+        (
+            'Model', {
+                'fields': (
+                    'model_link',
+                    'model'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'year_link',
+        'make_link',
+        'model_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def year_link(self, obj):
+        if not obj.year:
+            return None
+        return get_change_view_link(obj.year, 'See full year')
+    year_link.short_description = ''
+
+    def make_link(self, obj):
+        if not obj.make:
+            return None
+        return get_change_view_link(obj.make, 'See full make')
+    make_link.short_description = ''
+
+    def model_link(self, obj):
+        if not obj.model:
+            return None
+        return get_change_view_link(obj.model, 'See full model')
+    model_link.short_description = ''
 
 
 @admin.register(SemaBrand)
