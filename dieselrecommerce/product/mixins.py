@@ -1,4 +1,5 @@
 import json
+import time
 
 import requests
 
@@ -342,6 +343,9 @@ class SemaApiCoreMixin(MessagesMixin):
                 'password': settings.SEMA_PASSWORD
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_api_token()
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -360,6 +364,9 @@ class SemaApiCoreMixin(MessagesMixin):
             url = f'{settings.SEMA_BASE_URL}/token/getcontenttoken'
             params = {'token': token}
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_api_content_token(token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -383,6 +390,9 @@ class SemaApiYearMixin(SemaApiCoreMixin):
                 'branddatasetids': dataset_id
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_years(dataset_id, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -407,6 +417,9 @@ class SemaApiMakeMixin(SemaApiCoreMixin):
                 'year': year
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_makes(dataset_id, year, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -433,6 +446,10 @@ class SemaApiModelMixin(SemaApiCoreMixin):
                 'makeid': make_id
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_models(
+                    dataset_id, year, make_id, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -460,6 +477,10 @@ class SemaApiSubmodelMixin(SemaApiCoreMixin):
                 'modelid': model_id
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_submodels(
+                    dataset_id, year, make_id, model_id, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -486,6 +507,10 @@ class SemaApiBaseVehicleMixin(SemaApiCoreMixin):
                 'makeid': make_id
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_base_vehicles(
+                    dataset_id, year, make_id, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -513,6 +538,10 @@ class SemaApiVehicleMixin(SemaApiCoreMixin):
                 'modelid': model_id
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_vehicles(
+                    dataset_id, year, make_id, model_id, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -533,6 +562,9 @@ class SemaApiBrandMixin(SemaApiCoreMixin):
             url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
             params = {'token': token}
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_brands(token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -553,6 +585,9 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
             url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
             params = {'token': token}
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_datasets(token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -574,6 +609,9 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
                 'branddatasetid': dataset_id
             }
             response = requests.post(url=url, json=data)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_products(dataset_id, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -597,6 +635,9 @@ class SemaApiCategoryMixin(SemaApiCoreMixin):
                 'branddatasetid': dataset_id
             }
             response = requests.post(url=url, json=data)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_categories(dataset_id, token)
             response.raise_for_status()
             response = json.loads(response.text)
             if response.get('success', False):
@@ -622,6 +663,9 @@ class SemaApiProductMixin(SemaApiCoreMixin):
                 'stripHeaderFooter': str(~include_sema_header_footer).lower()
             }
             response = requests.get(url=url, params=params)
+            if response.status_code == 409:
+                time.sleep(1)
+                return cls.retrieve_sema_product_html(product_id, token)
             return str(response.text).strip()
         except Exception:
             raise
