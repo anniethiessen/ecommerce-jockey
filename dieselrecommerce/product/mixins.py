@@ -151,7 +151,10 @@ class PremierApiCoreMixin(MessagesMixin):
     @classmethod
     def get_premier_api_headers(cls, token=None):
         if not token:
-            token = cls.retrieve_premier_api_token()
+            try:
+                token = cls.retrieve_premier_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
         return {
             'Authorization': f'Bearer {token}',
@@ -173,39 +176,39 @@ class PremierApiCoreMixin(MessagesMixin):
 class PremierApiProductMixin(PremierApiCoreMixin):
     @classmethod
     def retrieve_premier_api_inventory(cls, part_numbers, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_premier_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
 
+        try:
             url = f'{settings.PREMIER_BASE_URL}/inventory'
             params = {'itemNumbers': ','.join(part_numbers)}
             headers = cls.get_premier_api_headers(token)
             response = requests.get(url=url, headers=headers,
                                     params=params)
             response.raise_for_status()
-            if response.status_code == requests.codes.ok:
-                return json.loads(response.text)
-            else:
-                raise Exception('Bad request')
+            return json.loads(response.text)
         except Exception:
             raise
 
     @classmethod
     def retrieve_premier_api_pricing(cls, part_numbers, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_premier_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
 
+        try:
             url = f'{settings.PREMIER_BASE_URL}/pricing'
             params = {'itemNumbers': ','.join(part_numbers)}
             headers = cls.get_premier_api_headers(token)
             response = requests.get(url=url, headers=headers,
                                     params=params)
             response.raise_for_status()
-            if response.status_code == requests.codes.ok:
-                return json.loads(response.text)
-            else:
-                raise Exception('Bad request')
+            return json.loads(response.text)
         except Exception:
             raise
 
@@ -239,9 +242,13 @@ class PremierProductMixin(PremierApiProductMixin):
         if not self.premier_part_number:
             return self.get_instance_error_msg("Premier Part Number required")
 
-        try:
-            if not token:
+        if not token:
+            try:
                 token = self.retrieve_premier_api_token()
+            except Exception as err:
+                return self.get_instance_error_msg(f"Token error: {err}")
+
+        try:
             response = self.retrieve_premier_api_inventory(
                 [self.premier_part_number], token)
             data = response[0]['inventory']
@@ -297,9 +304,13 @@ class PremierProductMixin(PremierApiProductMixin):
         if not self.premier_part_number:
             return self.get_instance_error_msg("Premier Part Number required")
 
-        try:
-            if not token:
+        if not token:
+            try:
                 token = self.retrieve_premier_api_token()
+            except Exception as err:
+                return self.get_instance_error_msg(f"Token error: {err}")
+
+        try:
             response = self.retrieve_premier_api_pricing(
                 [self.premier_part_number], token)
             data = response[0]['pricing']
@@ -357,10 +368,13 @@ class SemaApiCoreMixin(MessagesMixin):
 
     @classmethod
     def retrieve_sema_api_content_token(cls, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/token/getcontenttoken'
             params = {'token': token}
             response = requests.get(url=url, params=params)
@@ -380,10 +394,13 @@ class SemaApiCoreMixin(MessagesMixin):
 class SemaApiYearMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_years(cls, dataset_id=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/years'
             params = {
                 'token': token,
@@ -406,10 +423,13 @@ class SemaApiYearMixin(SemaApiCoreMixin):
 class SemaApiMakeMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_makes(cls, dataset_id=None, year=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/makes'
             params = {
                 'token': token,
@@ -434,10 +454,13 @@ class SemaApiModelMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_models(cls, dataset_id=None, year=None,
                              make_id=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/models'
             params = {
                 'token': token,
@@ -464,10 +487,13 @@ class SemaApiSubmodelMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_submodels(cls, dataset_id=None, year=None,
                                 make_id=None, model_id=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/submodels'
             params = {
                 'token': token,
@@ -495,10 +521,13 @@ class SemaApiBaseVehicleMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_base_vehicles(cls, dataset_id=None, year=None,
                                     make_id=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/models'
             params = {
                 'token': token,
@@ -525,10 +554,13 @@ class SemaApiVehicleMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_vehicles(cls, dataset_id=None, year=None,
                                make_id=None, model_id=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/submodels'
             params = {
                 'token': token,
@@ -555,10 +587,13 @@ class SemaApiVehicleMixin(SemaApiCoreMixin):
 class SemaApiBrandMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_brands(cls, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
             params = {'token': token}
             response = requests.get(url=url, params=params)
@@ -578,10 +613,13 @@ class SemaApiBrandMixin(SemaApiCoreMixin):
 class SemaApiDatasetMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_datasets(cls, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
             params = {'token': token}
             response = requests.get(url=url, params=params)
@@ -599,10 +637,13 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
 
     @classmethod
     def retrieve_sema_products(cls, dataset_id, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/products'
             data = {
                 'token': token,
@@ -625,10 +666,13 @@ class SemaApiDatasetMixin(SemaApiCoreMixin):
 class SemaApiCategoryMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_categories(cls, dataset_id, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
 
+        try:
             url = f'{settings.SEMA_BASE_URL}/lookup/categories'
             data = {
                 'token': token,
@@ -652,9 +696,14 @@ class SemaApiProductMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_product_html(cls, product_id, token=None):
         include_sema_header_footer = False
-        try:
-            if not token:
+
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                raise Exception(f"Token error: {err}")
+
+        try:
             content_token = cls.retrieve_sema_api_content_token(token)
             url = f'{settings.SEMA_BASE_URL}/content/product'
             url += f'?contenttoken={content_token}'
@@ -674,9 +723,13 @@ class SemaApiProductMixin(SemaApiCoreMixin):
 class SemaYearMixin(SemaApiYearMixin):
     @classmethod
     def import_years_from_sema_api(cls, dataset_id=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_years(dataset_id, token)
             return cls.create_years_from_data(data)
         except Exception as err:
@@ -701,9 +754,13 @@ class SemaMakeMixin(SemaApiMakeMixin):
     @classmethod
     def import_makes_from_sema_api(cls, dataset_id=None,
                                    year=None, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_makes(dataset_id, year, token)
             return cls.create_makes_from_data(data)
         except Exception as err:
@@ -735,9 +792,13 @@ class SemaModelMixin(SemaApiModelMixin):
 
     @classmethod
     def import_models_from_sema_api(cls, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_models(token=token)
             for item in data:
                 del item['BaseVehicleID']
@@ -779,9 +840,13 @@ class SemaSubmodelMixin(SemaApiSubmodelMixin):
 
     @classmethod
     def import_submodels_from_sema_api(cls, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_submodels(token=token)
             for item in data:
                 del item['VehicleID']
@@ -852,9 +917,13 @@ class SemaBaseVehicleMixin(SemaApiBaseVehicleMixin):
 
     @classmethod
     def import_base_vehicles_from_sema_api(cls, year, make_id, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_base_vehicles(
                 year=year,
                 make_id=make_id,
@@ -923,9 +992,13 @@ class SemaVehicleMixin(SemaApiVehicleMixin):
     @classmethod
     def import_vehicles_from_sema_api(cls, base_vehicle_id, year, make_id,
                                       model_id, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return [cls.get_class_error_msg(f"Token error: {err}")]
+
+        try:
             data = cls.retrieve_sema_vehicles(
                 year=year,
                 make_id=make_id,
@@ -971,9 +1044,13 @@ class SemaBrandMixin(SemaApiBrandMixin):
 
     @classmethod
     def import_brands_from_sema_api(cls, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_brands(token)
             return cls.create_brands_from_data(data)
         except Exception as err:
@@ -1025,9 +1102,13 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
 
     @classmethod
     def import_datasets_from_sema_api(cls, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_datasets(token)
             return cls.create_datasets_from_data(data)
         except Exception as err:
@@ -1063,9 +1144,13 @@ class SemaDatasetMixin(SemaApiDatasetMixin):
         return msgs
 
     def import_products_from_sema_api(self, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = self.retrieve_sema_api_token()
+            except Exception as err:
+                return self.get_instance_error_msg(f"Token error: {err}")
+
+        try:
             data = self.retrieve_sema_products(self.dataset_id, token)
             return self.create_products_from_data(data)
         except Exception as err:
@@ -1094,9 +1179,13 @@ class SemaCategoryMixin(SemaApiCategoryMixin):
 
     @classmethod
     def import_categories_from_sema_api(cls, dataset_id, token=None):
-        try:
-            if not token:
+        if not token:
+            try:
                 token = cls.retrieve_sema_api_token()
+            except Exception as err:
+                return cls.get_class_error_msg(f"Token error: {err}")
+
+        try:
             data = cls.retrieve_sema_categories(dataset_id, token)
             return cls.create_categories_from_data(data)
         except Exception as err:
@@ -1127,7 +1216,8 @@ class SemaCategoryMixin(SemaApiCategoryMixin):
                 parent = cls.get_category(item['ParentId'])
             else:
                 parent = None
-            category.parent_category = parent
+            if parent:
+                category.parent_category = parent
             category.save()
             category.refresh_from_db()
             new = category.get_category_data()
@@ -1194,9 +1284,13 @@ class SemaProductMixin(SemaApiProductMixin):
         if not self.product_id:
             return self.get_instance_error_msg("SEMA product ID required")
 
-        try:
-            if not token:
+        if not token:
+            try:
                 token = self.retrieve_sema_api_token()
+            except Exception as err:
+                return self.get_instance_error_msg(f"Token error: {err}")
+
+        try:
             html = self.retrieve_sema_product_html(self.product_id, token)
             return self.update_html_from_data(html)
         except Exception as err:
