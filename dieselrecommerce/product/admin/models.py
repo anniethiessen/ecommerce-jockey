@@ -36,6 +36,7 @@ from .actions import (
     SemaYearActions
 )
 from .filters import (
+    ByDecade,
     HasAlbertaInventory,
     HasMissingInventory,
     HasMissingHtml,
@@ -182,15 +183,22 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
 
     changelist_actions = (
         'import_years_class_action',
+        'import_new_years_class_action'
     )
 
     list_display = (
         'details_link',
-        'year'
+        'year',
+        'is_authorized'
     )
 
     list_display_links = (
         'details_link',
+    )
+
+    list_filter = (
+        'is_authorized',
+        ByDecade
     )
 
     fieldsets = (
@@ -198,6 +206,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
             None, {
                 'fields': (
                     'year',
+                    'is_authorized'
                 )
             }
         ),

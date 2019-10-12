@@ -10,16 +10,20 @@ from django.db.models import (
     PositiveSmallIntegerField,
     TextField,
     CASCADE,
-    SET_NULL
+    SET_NULL,
+    Q
 )
 
+from .apis import SemaApi
 from .managers import (
     PremierProductManager,
     SemaDatasetManager,
-    SemaProductManager
+    SemaProductManager,
+    SemaYearManager
 )
 from .mixins import (
     ManufacturerMixin,
+    MessagesMixin,
     PremierProductMixin,
     ProductMixin,
     SemaBaseVehicleMixin,
@@ -30,9 +34,11 @@ from .mixins import (
     SemaModelMixin,
     SemaProductMixin,
     SemaSubmodelMixin,
-    SemaVehicleMixin,
-    SemaYearMixin
+    SemaVehicleMixin
 )
+
+
+sema_api = SemaApi()
 
 
 class PremierProduct(Model, PremierProductMixin):
@@ -223,13 +229,108 @@ class PremierProduct(Model, PremierProductMixin):
         return f'{self.premier_part_number} :: {self.manufacturer}'
 
 
-class SemaYear(Model, SemaYearMixin):
+class SemaYear(Model, MessagesMixin):
     year = PositiveSmallIntegerField(
         primary_key=True,
         unique=True
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
+
+    def get_data(self):
+        return {
+            'is_authorized': self.is_authorized
+        }
+
+    @classmethod
+    def import_from_api(cls, brand_id=None, dataset_id=None, new_only=False):
+        msgs = []
+
+        if (brand_id or dataset_id) and new_only:
+            msgs.append(
+                cls.get_class_error_msg(
+                    "New only import cannot be used with filters"
+                )
+            )
+            return msgs
+
+        data = sema_api.retrieve_years(brand_id, dataset_id)
+
+        if not new_only:
+            msgs += cls.unauthorize_from_api_data(data)
+
+        for item in data:
+            try:
+                year = cls.objects.get(year=item)
+                if not new_only:
+                    msgs.append(year.update_from_api_data(item))
+            except cls.DoesNotExist:
+                msgs.append(cls.create_from_api_data(item))
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(f"{item}: {err}"))
+
+        if not msgs:
+            if new_only:
+                msgs.append(cls.get_class_nothing_new_msg())
+            else:
+                msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+    @classmethod
+    def unauthorize_from_api_data(cls, data, include_up_to_date=True):
+        msgs = []
+        unauthorized_years = cls.objects.filter(~Q(year__in=data))
+
+        if include_up_to_date:
+            for year in unauthorized_years.filter(is_authorized=False):
+                msgs.append(year.get_instance_up_to_date_msg())
+
+        for year in unauthorized_years.filter(is_authorized=True):
+            previous = year.get_data()
+            year.is_authorized = False
+            year.save()
+            year.refresh_from_db()
+            new = year.get_data()
+            msgs.append(year.get_update_success_msg(previous, new))
+
+        return msgs
+
+    @classmethod
+    def create_from_api_data(cls, data):
+        try:
+            year = cls.objects.create(
+                year=data,
+                is_authorized=True
+            )
+            msg = year.get_create_success_msg()
+        except Exception as err:
+            msg = cls.get_class_error_msg(f"{data}: {err}")
+
+        return msg
+
+    def update_from_api_data(self, data, include_up_to_date=True):
+        try:
+            previous = self.get_data()
+            self.is_authorized = True
+            self.save()
+            self.refresh_from_db()
+            new = self.get_data()
+            msg = self.get_update_success_msg(
+                previous,
+                new,
+                include_up_to_date
+            )
+        except Exception as err:
+            msg = self.get_instance_error_msg(f"{data}: {err}")
+
+        return msg
+
+    objects = SemaYearManager()
 
     class Meta:
+        ordering = ['year']
         verbose_name = 'SEMA year'
 
     def __str__(self):

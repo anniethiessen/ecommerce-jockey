@@ -59,6 +59,32 @@ class HasMissingPricing(SimpleListFilter):
             return queryset.has_all_pricing()
 
 
+class ByDecade(SimpleListFilter):
+    title = 'decade'
+    parameter_name = 'year'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('1900', '1900s'),
+            ('1910', '1910s'),
+            ('1920', '1920s'),
+            ('1930', '1930s'),
+            ('1940', '1940s'),
+            ('1950', '1950s'),
+            ('1960', '1960s'),
+            ('1970', '1970s'),
+            ('1980', '1980s'),
+            ('1990', '1990s'),
+            ('2000', '2000s'),
+            ('2010', '2010s'),
+            ('2020', '2020s')
+        )
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.with_year_data().filter(decade=int(self.value()))
+
+
 class HasMissingHtml(SimpleListFilter):
     title = 'has missing HTML'
     parameter_name = 'missing_html'

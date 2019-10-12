@@ -23,6 +23,14 @@ class MessagesMixin(object):
         )
 
     @classmethod
+    def get_class_nothing_new_msg(cls):
+        return (
+            "Info: "
+            f"{cls._meta.verbose_name.title()}, "
+            "nothing new"
+        )
+
+    @classmethod
     def get_class_error_msg(cls, error):
         return f"Error: {cls._meta.verbose_name.title()}, {error}"
 
@@ -38,7 +46,8 @@ class MessagesMixin(object):
             f"{self._meta.model._meta.verbose_name.title()} {self} created"
         )
 
-    def get_update_success_msg(self, previous_data=None, new_data=None):
+    def get_update_success_msg(self, previous_data=None, new_data=None,
+                               include_up_to_date=True):
         msg = (
             "Success: "
             f"{self._meta.model._meta.verbose_name.title()} {self} updated"
@@ -51,8 +60,10 @@ class MessagesMixin(object):
 
             if changes:
                 msg += changes
-            else:
+            elif include_up_to_date:
                 msg = self.get_instance_up_to_date_msg()
+            else:
+                msg = None
         return msg
 
 
@@ -391,35 +402,6 @@ class SemaApiCoreMixin(MessagesMixin):
             raise
 
 
-class SemaApiYearMixin(SemaApiCoreMixin):
-    @classmethod
-    def retrieve_sema_years(cls, dataset_id=None, token=None):
-        if not token:
-            try:
-                token = cls.retrieve_sema_api_token()
-            except Exception as err:
-                raise Exception(f"Token error: {err}")
-
-        try:
-            url = f'{settings.SEMA_BASE_URL}/lookup/years'
-            params = {
-                'token': token,
-                'branddatasetids': dataset_id
-            }
-            response = requests.get(url=url, params=params)
-            if response.status_code == 409:
-                time.sleep(1)
-                return cls.retrieve_sema_years(dataset_id, token)
-            response.raise_for_status()
-            response = json.loads(response.text)
-            if response.get('success', False):
-                return response['Years']
-            else:
-                raise Exception(response.get('message', 'Bad request'))
-        except Exception:
-            raise
-
-
 class SemaApiMakeMixin(SemaApiCoreMixin):
     @classmethod
     def retrieve_sema_makes(cls, dataset_id=None, year=None, token=None):
@@ -718,36 +700,6 @@ class SemaApiProductMixin(SemaApiCoreMixin):
             return str(response.text).strip()
         except Exception:
             raise
-
-
-class SemaYearMixin(SemaApiYearMixin):
-    @classmethod
-    def import_years_from_sema_api(cls, dataset_id=None, token=None):
-        if not token:
-            try:
-                token = cls.retrieve_sema_api_token()
-            except Exception as err:
-                return cls.get_class_error_msg(f"Token error: {err}")
-
-        try:
-            data = cls.retrieve_sema_years(dataset_id, token)
-            return cls.create_years_from_data(data)
-        except Exception as err:
-            return cls.get_class_error_msg(str(err))
-
-    @classmethod
-    def create_years_from_data(cls, data):
-        msgs = []
-        for item in data:
-            try:
-                year, created = cls.objects.get_or_create(year=item)
-                if created:
-                    msgs.append(year.get_create_success_msg())
-            except Exception as err:
-                msgs.append(cls.get_class_error_msg(str(err)))
-        if not msgs:
-            msgs.append(cls.get_class_up_to_date_msg())
-        return msgs
 
 
 class SemaMakeMixin(SemaApiMakeMixin):

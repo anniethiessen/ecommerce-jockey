@@ -1,4 +1,5 @@
-from django.db.models import Manager, QuerySet, Q
+from django.db.models import Manager, QuerySet, F, Q
+from django.db.models.functions import Floor
 
 from .utils import chunkify_list
 
@@ -113,6 +114,13 @@ class PremierProductQuerySet(QuerySet):
     # </editor-fold>
 
 
+class SemaYearQuerySet(QuerySet):
+    def with_year_data(self):
+        return self.annotate(
+            decade=Floor(F('year') / 10) * 10
+        )
+
+
 class SemaDatasetQuerySet(QuerySet):
     def import_products_from_sema_api(self, token=None):
         msgs = []
@@ -163,6 +171,17 @@ class SemaProductQuerySet(QuerySet):
                 msgs.append(obj.get_instance_error_msg(str(err)))
 
         return msgs
+
+
+class SemaYearManager(Manager):
+    def get_queryset(self):
+        return SemaYearQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def with_year_data(self):
+        return self.get_queryset().with_year_data()
 
 
 class PremierProductManager(Manager):
