@@ -17,9 +17,16 @@ from django.db.models import (
 from .apis import SemaApi
 from .managers import (
     PremierProductManager,
+    SemaBaseVehicleManager,
+    SemaBrandManager,
+    SemaCategoryManager,
     SemaDatasetManager,
+    SemaMakeManager,
+    SemaModelManager,
     SemaProductManager,
-    SemaYearManager
+    SemaSubmodelManager,
+    SemaYearManager,
+    SemaVehicleManager
 )
 from .mixins import (
     ManufacturerMixin,
@@ -350,6 +357,8 @@ class SemaMake(Model, SemaMakeMixin):
         help_text='brand has given access to dataset'
     )
 
+    objects = SemaMakeManager()
+
     class Meta:
         ordering = ['name']
         verbose_name = 'SEMA make'
@@ -371,6 +380,8 @@ class SemaModel(Model, SemaModelMixin):
         help_text='brand has given access to dataset'
     )
 
+    objects = SemaModelManager()
+
     class Meta:
         ordering = ['name']
         verbose_name = 'SEMA model'
@@ -391,6 +402,8 @@ class SemaSubmodel(Model, SemaSubmodelMixin):
         default=False,
         help_text='brand has given access to dataset'
     )
+
+    objects = SemaSubmodelManager()
 
     class Meta:
         ordering = ['name']
@@ -425,6 +438,8 @@ class SemaBaseVehicle(Model, SemaBaseVehicleMixin):
         help_text='brand has given access to dataset'
     )
 
+    objects = SemaBaseVehicleManager()
+
     class Meta:
         ordering = ['make', 'model', 'year']
         verbose_name = 'SEMA base vehicle'
@@ -453,6 +468,8 @@ class SemaVehicle(Model, SemaVehicleMixin):
         help_text='brand has given access to dataset'
     )
 
+    objects = SemaVehicleManager()
+
     class Meta:
         ordering = ['base_vehicle', 'submodel']
         verbose_name = 'SEMA vehicle'
@@ -474,6 +491,8 @@ class SemaBrand(Model, SemaBrandMixin):
         default=False,
         help_text='brand has given access to dataset'
     )
+
+    objects = SemaBrandManager()
 
     class Meta:
         ordering = ['name']
@@ -534,6 +553,8 @@ class SemaCategory(Model, SemaCategoryMixin):
         default=False,
         help_text='brand has given access to dataset'
     )
+
+    objects = SemaCategoryManager()
 
     @property
     def child_category_count(self):

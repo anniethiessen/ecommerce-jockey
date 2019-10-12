@@ -121,6 +121,30 @@ class SemaYearQuerySet(QuerySet):
         )
 
 
+class SemaMakeQuerySet(QuerySet):
+    pass
+
+
+class SemaModelQuerySet(QuerySet):
+    pass
+
+
+class SemaSubmodelQuerySet(QuerySet):
+    pass
+
+
+class SemaBaseVehicleQuerySet(QuerySet):
+    pass
+
+
+class SemaVehicleQuerySet(QuerySet):
+    pass
+
+
+class SemaBrandQuerySet(QuerySet):
+    pass
+
+
 class SemaDatasetQuerySet(QuerySet):
     def import_products_from_sema_api(self, token=None):
         msgs = []
@@ -145,6 +169,10 @@ class SemaDatasetQuerySet(QuerySet):
                 msgs.append(obj.get_instance_error_msg(str(err)))
 
         return msgs
+
+
+class SemaCategoryQuerySet(QuerySet):
+    pass
 
 
 class SemaProductQuerySet(QuerySet):
@@ -173,17 +201,6 @@ class SemaProductQuerySet(QuerySet):
         return msgs
 
 
-class SemaYearManager(Manager):
-    def get_queryset(self):
-        return SemaYearQuerySet(
-            self.model,
-            using=self._db
-        )
-
-    def with_year_data(self):
-        return self.get_queryset().with_year_data()
-
-
 class PremierProductManager(Manager):
     def get_queryset(self):
         return PremierProductQuerySet(
@@ -210,6 +227,65 @@ class PremierProductManager(Manager):
         return self.get_queryset().update_pricing_from_premier_api(token)
 
 
+class SemaYearManager(Manager):
+    def get_queryset(self):
+        return SemaYearQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def with_year_data(self):
+        return self.get_queryset().with_year_data()
+
+
+class SemaMakeManager(Manager):
+    def get_queryset(self):
+        return SemaMakeQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaModelManager(Manager):
+    def get_queryset(self):
+        return SemaModelQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaSubmodelManager(Manager):
+    def get_queryset(self):
+        return SemaSubmodelQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaBaseVehicleManager(Manager):
+    def get_queryset(self):
+        return SemaBaseVehicleQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaVehicleManager(Manager):
+    def get_queryset(self):
+        return SemaVehicleQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaBrandManager(Manager):
+    def get_queryset(self):
+        return SemaBrandQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
 class SemaDatasetManager(Manager):
     def get_queryset(self):
         return SemaDatasetQuerySet(
@@ -219,6 +295,14 @@ class SemaDatasetManager(Manager):
 
     def import_products_from_sema_api(self, token=None):
         return self.get_queryset().import_products_from_sema_api(token)
+
+
+class SemaCategoryManager(Manager):
+    def get_queryset(self):
+        return SemaCategoryQuerySet(
+            self.model,
+            using=self._db
+        )
 
 
 class SemaProductManager(Manager):
