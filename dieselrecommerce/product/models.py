@@ -345,8 +345,13 @@ class SemaMake(Model, SemaMakeMixin):
     name = CharField(
         max_length=50,
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     class Meta:
+        ordering = ['name']
         verbose_name = 'SEMA make'
 
     def __str__(self):
@@ -361,8 +366,13 @@ class SemaModel(Model, SemaModelMixin):
     name = CharField(
         max_length=50,
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     class Meta:
+        ordering = ['name']
         verbose_name = 'SEMA model'
 
     def __str__(self):
@@ -377,8 +387,13 @@ class SemaSubmodel(Model, SemaSubmodelMixin):
     name = CharField(
         max_length=50,
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     class Meta:
+        ordering = ['name']
         verbose_name = 'SEMA submodel'
 
     def __str__(self):
@@ -405,8 +420,13 @@ class SemaBaseVehicle(Model, SemaBaseVehicleMixin):
         on_delete=CASCADE,
         related_name='base_vehicles'
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     class Meta:
+        ordering = ['make', 'model', 'year']
         verbose_name = 'SEMA base vehicle'
 
     def __str__(self):
@@ -428,8 +448,13 @@ class SemaVehicle(Model, SemaVehicleMixin):
         on_delete=CASCADE,
         related_name='vehicles'
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     class Meta:
+        ordering = ['base_vehicle', 'submodel']
         verbose_name = 'SEMA vehicle'
 
     def __str__(self):
@@ -445,8 +470,13 @@ class SemaBrand(Model, SemaBrandMixin):
     name = CharField(
         max_length=50,
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     class Meta:
+        ordering = ['name']
         verbose_name = 'SEMA brand'
 
     @property
@@ -478,6 +508,7 @@ class SemaDataset(Model, SemaDatasetMixin):
     objects = SemaDatasetManager()
 
     class Meta:
+        ordering = ['name']
         verbose_name = 'SEMA dataset'
 
     def __str__(self):
@@ -499,12 +530,17 @@ class SemaCategory(Model, SemaCategoryMixin):
         on_delete=SET_NULL,
         related_name='child_categories'
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     @property
     def child_category_count(self):
         return self.child_categories.all().count()
 
     class Meta:
+        ordering = ['name']
         verbose_name = 'SEMA category'
         verbose_name_plural = 'SEMA categories'
 
@@ -531,10 +567,15 @@ class SemaProduct(Model, SemaProductMixin):
         blank=True,
         verbose_name='HTML'
     )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
 
     objects = SemaProductManager()
 
     class Meta:
+        ordering = ['dataset', 'part_number']
         verbose_name = 'SEMA product'
 
     def __str__(self):

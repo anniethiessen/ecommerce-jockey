@@ -235,17 +235,23 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     list_display = (
         'details_link',
         'make_id',
-        'name'
+        'name',
+        'is_authorized'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_filter = (
+        'is_authorized',
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'is_authorized',
                     'make_id',
                     'name'
                 )
@@ -276,17 +282,23 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     list_display = (
         'details_link',
         'model_id',
-        'name'
+        'name',
+        'is_authorized'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_filter = (
+        'is_authorized',
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'is_authorized',
                     'model_id',
                     'name'
                 )
@@ -317,17 +329,23 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     list_display = (
         'details_link',
         'submodel_id',
-        'name'
+        'name',
+        'is_authorized'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_filter = (
+        'is_authorized',
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'is_authorized',
                     'submodel_id',
                     'name'
                 )
@@ -365,7 +383,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'base_vehicle_id',
         'year',
         'make',
-        'model'
+        'model',
+        'is_authorized'
     )
 
     list_display_links = (
@@ -373,6 +392,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_filter = (
+        'is_authorized',
         'make',
         'model',
         'year'
@@ -382,7 +402,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         (
             None, {
                 'fields': (
-                    'base_vehicle_id',
+                    'is_authorized',
+                    'base_vehicle_id'
                 )
             }
         ),
@@ -464,7 +485,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'details_link',
         'vehicle_id',
         'base_vehicle',
-        'submodel'
+        'submodel',
+        'is_authorized'
     )
 
     list_display_links = (
@@ -472,6 +494,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     list_filter = (
+        'is_authorized',
         'base_vehicle',
         'submodel'
     )
@@ -480,7 +503,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         (
             None, {
                 'fields': (
-                    'vehicle_id',
+                    'is_authorized',
+                    'vehicle_id'
                 )
             }
         ),
@@ -543,17 +567,23 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         'details_link',
         'brand_id',
         'name',
-        'dataset_count'
+        'dataset_count',
+        'is_authorized'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_filter = (
+        'is_authorized',
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'is_authorized',
                     'brand_id',
                     'name'
                 )
@@ -615,9 +645,9 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         (
             None, {
                 'fields': (
+                    'is_authorized',
                     'dataset_id',
-                    'name',
-                    'is_authorized'
+                    'name'
                 )
             }
         ),
@@ -664,6 +694,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'category_id',
         'name',
         'parent_category',
+        'is_authorized',
         'child_category_count'
     )
 
@@ -671,10 +702,15 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'details_link',
     )
 
+    list_filter = (
+        'is_authorized',
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'is_authorized',
                     'category_id',
                     'name'
                 )
@@ -735,7 +771,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'details_link',
         'product_id',
         'part_number',
-        'dataset'
+        'dataset',
+        'is_authorized'
     )
 
     list_display_links = (
@@ -743,6 +780,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     list_filter = (
+        'is_authorized',
         HasProduct,
         HasMissingHtml
     )
@@ -752,6 +790,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             None, {
                 'fields': (
                     'product_link',
+                    'is_authorized',
                     'product_id',
                     'part_number'
                 )
