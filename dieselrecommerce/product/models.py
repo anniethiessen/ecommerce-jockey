@@ -399,10 +399,17 @@ class SemaCategory(Model, SemaCategoryMixin):
         related_name='child_categories'
     )
 
+    @property
+    def child_category_count(self):
+        return self.child_categories.all().count()
+
     class Meta:
-        verbose_name = 'SEMA categories'
+        verbose_name = 'SEMA category'
+        verbose_name_plural = 'SEMA categories'
 
     def __str__(self):
+        if not self.parent_category:
+            return self.name
         return f'{self.parent_category} :: {self.name}'
 
 

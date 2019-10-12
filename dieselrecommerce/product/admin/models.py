@@ -44,7 +44,10 @@ from .filters import (
     HasProduct,
     HasSemaProduct
 )
-from .inlines import SemaDatasetTabularInline
+from .inlines import (
+    SemaCategoryTabularInline,
+    SemaDatasetTabularInline
+)
 from .resources import PremierProductResource
 from .utils import get_change_view_link
 
@@ -651,7 +654,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'details_link',
         'category_id',
         'name',
-        'parent_category'
+        'parent_category',
+        'child_category_count'
     )
 
     list_display_links = (
@@ -679,7 +683,12 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     readonly_fields = (
         'details_link',
-        'parent_category_link'
+        'parent_category_link',
+        'child_category_count'
+    )
+
+    inlines = (
+        SemaCategoryTabularInline,
     )
 
     def details_link(self, obj):
