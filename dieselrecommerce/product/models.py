@@ -236,45 +236,53 @@ class PremierProduct(Model, PremierProductMixin):
         return f'{self.premier_part_number} :: {self.manufacturer}'
 
 
-class SemaYear(Model, MessagesMixin):
-    year = PositiveSmallIntegerField(
-        primary_key=True,
-        unique=True
-    )
+class SemaApiModel(Model, MessagesMixin):
     is_authorized = BooleanField(
         default=False,
         help_text='brand has given access to dataset'
     )
 
-    def get_data(self):
+    sema_api_method = None
+
+    @property
+    def state(self):
         return {
-            'is_authorized': self.is_authorized
+            'Authorized': self.is_authorized
         }
 
     @classmethod
-    def import_from_api(cls, brand_id=None, dataset_id=None, new_only=False):
+    def get_errors(cls, new_only, *args, **kwargs):
+        errors = []
+        if not cls.sema_api_method:
+            return errors.append('SEMA API method must be defined')
+        return errors
+
+    @staticmethod
+    def parse_data(data):
+        raise Exception('Parse data must be defined')
+
+    @classmethod
+    def import_from_api(cls, new_only=False, *args, **kwargs):
         msgs = []
 
-        if (brand_id or dataset_id) and new_only:
-            msgs.append(
-                cls.get_class_error_msg(
-                    "New only import cannot be used with filters"
-                )
-            )
+        errors = cls.get_errors(new_only, **kwargs)
+        if errors:
+            msgs.append(cls.get_class_error_msg(errors))
             return msgs
 
-        data = sema_api.retrieve_years(brand_id, dataset_id)
+        data = getattr(sema_api, cls.sema_api_method)(**kwargs)
 
         if not new_only:
             msgs += cls.unauthorize_from_api_data(data)
 
         for item in data:
+            pk, update_fields = cls.parse_data(item)
             try:
-                year = cls.objects.get(year=item)
+                obj = cls.objects.get(pk=pk)
                 if not new_only:
-                    msgs.append(year.update_from_api_data(item))
+                    msgs.append(obj.update_from_api_data(**update_fields))
             except cls.DoesNotExist:
-                msgs.append(cls.create_from_api_data(item))
+                msgs.append(cls.create_from_api_data(pk, **update_fields))
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(f"{item}: {err}"))
 
@@ -288,51 +296,77 @@ class SemaYear(Model, MessagesMixin):
     @classmethod
     def unauthorize_from_api_data(cls, data, include_up_to_date=True):
         msgs = []
-        unauthorized_years = cls.objects.filter(~Q(year__in=data))
+        unauthorized = cls.objects.filter(~Q(pk__in=data))
 
         if include_up_to_date:
-            for year in unauthorized_years.filter(is_authorized=False):
-                msgs.append(year.get_instance_up_to_date_msg())
+            for obj in unauthorized.filter(is_authorized=False):
+                msgs.append(obj.get_instance_up_to_date_msg())
 
-        for year in unauthorized_years.filter(is_authorized=True):
-            previous = year.get_data()
-            year.is_authorized = False
-            year.save()
-            year.refresh_from_db()
-            new = year.get_data()
-            msgs.append(year.get_update_success_msg(previous, new))
+        for obj in unauthorized.filter(is_authorized=True):
+            previous = obj.state
+            obj.is_authorized = False
+            obj.save()
+            obj.refresh_from_db()
+            new = obj.state
+            msgs.append(obj.get_update_success_msg(previous, new))
 
         return msgs
 
     @classmethod
-    def create_from_api_data(cls, data):
+    def create_from_api_data(cls, pk, **update_fields):
         try:
-            year = cls.objects.create(
-                year=data,
-                is_authorized=True
+            obj = cls.objects.create(
+                pk=pk,
+                is_authorized=True,
+                **update_fields
             )
-            msg = year.get_create_success_msg()
+            msg = obj.get_create_success_msg()
         except Exception as err:
-            msg = cls.get_class_error_msg(f"{data}: {err}")
-
+            msg = cls.get_class_error_msg(f"{pk}, {update_fields}, {err}")
         return msg
 
-    def update_from_api_data(self, data, include_up_to_date=True):
+    def update_from_api_data(self, include_up_to_date=True, **update_fields):
         try:
-            previous = self.get_data()
+            prev = self.state
             self.is_authorized = True
+            for attr, value in update_fields.items():
+                setattr(self, attr, value)
             self.save()
             self.refresh_from_db()
-            new = self.get_data()
-            msg = self.get_update_success_msg(
-                previous,
-                new,
-                include_up_to_date
-            )
+            new = self.state
+            msg = self.get_update_success_msg(prev, new, include_up_to_date)
         except Exception as err:
-            msg = self.get_instance_error_msg(f"{data}: {err}")
-
+            msg = self.get_instance_error_msg(f"{update_fields}, {err}")
         return msg
+
+    class Meta:
+        abstract = True
+
+
+class SemaYear(SemaApiModel):
+    year = PositiveSmallIntegerField(
+        primary_key=True,
+        unique=True
+    )
+
+    sema_api_method = 'retrieve_years'  # brand_id=None, dataset_id=None
+
+    @property
+    def state(self):
+        return super().state
+
+    @classmethod
+    def get_errors(cls, new_only, *args, **kwargs):
+        errors = super().get_errors(new_only, *args, **kwargs)
+        if (kwargs.get('brand_id') or kwargs.get('dataset_id')) and new_only:
+            return errors.append("New only import cannot be used with filters")
+        return errors
+
+    @staticmethod
+    def parse_data(data):
+        pk = data
+        update_fields = {}
+        return pk, update_fields
 
     objects = SemaYearManager()
 
