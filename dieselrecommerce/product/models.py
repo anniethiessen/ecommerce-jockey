@@ -264,6 +264,10 @@ class SemaApiModel(Model, MessagesMixin):
         raise Exception('Get authorized PK list must be defined')
 
     @staticmethod
+    def clean_data(data):
+        raise Exception('Clean data must be defined')
+
+    @staticmethod
     def parse_data(data):
         raise Exception('Parse data must be defined')
 
@@ -293,6 +297,12 @@ class SemaApiModel(Model, MessagesMixin):
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
                 return msgs
+
+        try:
+            data = cls.clean_data(data)
+        except Exception as err:
+            msgs.append(cls.get_class_error_msg(str(err)))
+            return msgs
 
         for item in data:
             try:
@@ -388,6 +398,10 @@ class SemaYear(SemaApiModel):
         return data
 
     @staticmethod
+    def clean_data(data):
+        return data
+
+    @staticmethod
     def parse_data(data):
         pk = data
         update_fields = {}
@@ -431,6 +445,10 @@ class SemaMake(SemaApiModel):
             return [item['MakeID'] for item in data]
         except Exception:
             raise
+
+    @staticmethod
+    def clean_data(data):
+        return data
 
     @staticmethod
     def parse_data(data):
@@ -483,6 +501,15 @@ class SemaModel(SemaApiModel):
             raise
 
     @staticmethod
+    def clean_data(data):
+        try:
+            for item in data:
+                del item['BaseVehicleID']
+            return [dict(t) for t in {tuple(item.items()) for item in data}]
+        except Exception:
+            raise
+
+    @staticmethod
     def parse_data(data):
         try:
             pk = data['ModelID']
@@ -529,6 +556,15 @@ class SemaSubmodel(SemaApiModel):
     def get_authorized_pk_list(data):
         try:
             return [item['SubmodelID'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def clean_data(data):
+        try:
+            for item in data:
+                del item['VehicleID']
+            return [dict(t) for t in {tuple(item.items()) for item in data}]
         except Exception:
             raise
 
