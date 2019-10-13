@@ -33,14 +33,10 @@ from .mixins import (
     MessagesMixin,
     PremierProductMixin,
     ProductMixin,
-    SemaBaseVehicleMixin,
     SemaBrandMixin,
     SemaCategoryMixin,
     SemaDatasetMixin,
-    SemaMakeMixin,
-    SemaModelMixin,
     SemaProductMixin,
-    SemaSubmodelMixin,
     SemaVehicleMixin
 )
 
@@ -251,7 +247,7 @@ class SemaApiModel(Model, MessagesMixin):
         }
 
     @classmethod
-    def get_errors(cls, new_only, *args, **filters):
+    def get_api_filter_errors(cls, new_only, *args, **filters):
         errors = []
         if not cls.sema_api_method:
             return errors.append('SEMA API method must be defined')
@@ -260,23 +256,23 @@ class SemaApiModel(Model, MessagesMixin):
         return errors
 
     @staticmethod
-    def get_authorized_pk_list(data):
+    def get_pk_list_from_api_data(data):
         raise Exception('Get authorized PK list must be defined')
 
     @staticmethod
-    def clean_data(data):
-        raise Exception('Clean data must be defined')
+    def clean_api_data(data):
+        raise Exception('Clean API data must be defined')
 
     @staticmethod
-    def parse_data(data):
-        raise Exception('Parse data must be defined')
+    def parse_api_data(data):
+        raise Exception('Parse API data must be defined')
 
     @classmethod
     def import_from_api(cls, new_only=False, *args, **filters):
         msgs = []
 
         try:
-            errors = cls.get_errors(new_only, **filters)
+            errors = cls.get_api_filter_errors(new_only, **filters)
             if errors:
                 msgs.append(cls.get_class_error_msg(errors))
                 return msgs
@@ -292,21 +288,21 @@ class SemaApiModel(Model, MessagesMixin):
 
         if not new_only:
             try:
-                authorized_pks = cls.get_authorized_pk_list(data)
+                authorized_pks = cls.get_pk_list_from_api_data(data)
                 msgs += cls.unauthorize_from_api_data(authorized_pks)
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
                 return msgs
 
         try:
-            data = cls.clean_data(data)
+            data = cls.clean_api_data(data)
         except Exception as err:
             msgs.append(cls.get_class_error_msg(str(err)))
             return msgs
 
         for item in data:
             try:
-                pk, update_fields = cls.parse_data(item)
+                pk, update_fields = cls.parse_api_data(item)
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(f"{item}: {err}"))
                 continue
@@ -387,22 +383,23 @@ class SemaYear(SemaApiModel):
         unique=True
     )
 
-    sema_api_method = 'retrieve_years'  # brand_id=None, dataset_id=None
+    sema_api_method = 'retrieve_years'
+    # brand_id=None, dataset_id=None
 
     @property
     def state(self):
         return super().state
 
     @staticmethod
-    def get_authorized_pk_list(data):
+    def get_pk_list_from_api_data(data):
         return data
 
     @staticmethod
-    def clean_data(data):
+    def clean_api_data(data):
         return data
 
     @staticmethod
-    def parse_data(data):
+    def parse_api_data(data):
         pk = data
         update_fields = {}
         return pk, update_fields
@@ -440,18 +437,18 @@ class SemaMake(SemaApiModel):
         return state
 
     @staticmethod
-    def get_authorized_pk_list(data):
+    def get_pk_list_from_api_data(data):
         try:
             return [item['MakeID'] for item in data]
         except Exception:
             raise
 
     @staticmethod
-    def clean_data(data):
+    def clean_api_data(data):
         return data
 
     @staticmethod
-    def parse_data(data):
+    def parse_api_data(data):
         try:
             pk = data['MakeID']
             update_fields = {
@@ -494,14 +491,14 @@ class SemaModel(SemaApiModel):
         return state
 
     @staticmethod
-    def get_authorized_pk_list(data):
+    def get_pk_list_from_api_data(data):
         try:
             return [item['ModelID'] for item in data]
         except Exception:
             raise
 
     @staticmethod
-    def clean_data(data):
+    def clean_api_data(data):
         try:
             for item in data:
                 del item['BaseVehicleID']
@@ -510,7 +507,7 @@ class SemaModel(SemaApiModel):
             raise
 
     @staticmethod
-    def parse_data(data):
+    def parse_api_data(data):
         try:
             pk = data['ModelID']
             update_fields = {
@@ -553,14 +550,14 @@ class SemaSubmodel(SemaApiModel):
         return state
 
     @staticmethod
-    def get_authorized_pk_list(data):
+    def get_pk_list_from_api_data(data):
         try:
             return [item['SubmodelID'] for item in data]
         except Exception:
             raise
 
     @staticmethod
-    def clean_data(data):
+    def clean_api_data(data):
         try:
             for item in data:
                 del item['VehicleID']
@@ -569,7 +566,7 @@ class SemaSubmodel(SemaApiModel):
             raise
 
     @staticmethod
-    def parse_data(data):
+    def parse_api_data(data):
         try:
             pk = data['SubmodelID']
             update_fields = {
