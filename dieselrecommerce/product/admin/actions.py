@@ -103,8 +103,8 @@ class PremierProductActions(object):
     )
 
 
-class SemaYearActions(object):
-    def import_years_class_action(self, request, queryset):
+class SemaBaseActions(object):
+    def import_full_class_action(self, request, queryset):
         try:
             msgs = self.model.import_from_api()
             for msg in msgs:
@@ -116,14 +116,14 @@ class SemaYearActions(object):
                     messages.error(request, msg)
         except Exception as err:
             messages.error(request, str(err))
-    import_years_class_action.allowed_permissions = ('view',)
-    import_years_class_action.label = 'Import Years from API (Full)'
-    import_years_class_action.short_description = (
+    import_full_class_action.allowed_permissions = ('view',)
+    import_full_class_action.label = 'Full Import from API'
+    import_full_class_action.short_description = (
         'Create, update, authorize, and unauthorize '
-        'all available years from SEMA API'
+        'all available objects from SEMA API'
     )
 
-    def import_new_years_class_action(self, request, queryset):
+    def import_new_class_action(self, request, queryset):
         try:
             msgs = self.model.import_from_api(new_only=True)
             for msg in msgs:
@@ -135,90 +135,28 @@ class SemaYearActions(object):
                     messages.error(request, msg)
         except Exception as err:
             messages.error(request, str(err))
-    import_new_years_class_action.allowed_permissions = ('view',)
-    import_new_years_class_action.label = 'Import Years from API (New only)'
-    import_new_years_class_action.short_description = (
+    import_new_class_action.allowed_permissions = ('view',)
+    import_new_class_action.label = 'Import New from API'
+    import_new_class_action.short_description = (
         'Create new available years from SEMA API '
-        '(does not update, authorize, or unauthorize existing years)'
+        '(does not update, authorize, or unauthorize existing)'
     )
 
 
-class SemaMakeActions(object):
-    def import_makes_class_action(self, request, queryset):
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msgs = self.model.import_makes_from_sema_api(token=token)
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_makes_class_action.allowed_permissions = ('view',)
-    import_makes_class_action.label = 'Import Makes from API'
-    import_makes_class_action.short_description = (
-        'Import all available makes from SEMA API'
-    )
+class SemaYearActions(SemaBaseActions):
+    pass
 
 
-class SemaModelActions(object):
-    def import_models_class_action(self, request, queryset):
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msgs = self.model.import_models_from_sema_api(token)
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_models_class_action.allowed_permissions = ('view',)
-    import_models_class_action.label = 'Import Models from API'
-    import_models_class_action.short_description = (
-        'Import all available models from SEMA API'
-    )
+class SemaMakeActions(SemaBaseActions):
+    pass
 
 
-class SemaSubmodelActions(object):
-    def import_submodels_class_action(self, request, queryset):
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
+class SemaModelActions(SemaBaseActions):
+    pass
 
-        try:
-            msgs = self.model.import_submodels_from_sema_api(token)
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_submodels_class_action.allowed_permissions = ('view',)
-    import_submodels_class_action.label = 'Import Submodels from API'
-    import_submodels_class_action.short_description = (
-        'Import all available submodels from SEMA API'
-    )
+
+class SemaSubmodelActions(SemaBaseActions):
+    pass
 
 
 class SemaBaseVehicleActions(object):

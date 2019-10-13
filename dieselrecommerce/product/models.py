@@ -251,32 +251,56 @@ class SemaApiModel(Model, MessagesMixin):
         }
 
     @classmethod
-    def get_errors(cls, new_only, *args, **kwargs):
+    def get_errors(cls, new_only, *args, **filters):
         errors = []
         if not cls.sema_api_method:
             return errors.append('SEMA API method must be defined')
+        if filters and new_only:
+            return errors.append("New only import cannot be used with filters")
         return errors
+
+    @staticmethod
+    def get_authorized_pk_list(data):
+        raise Exception('Get authorized PK list must be defined')
 
     @staticmethod
     def parse_data(data):
         raise Exception('Parse data must be defined')
 
     @classmethod
-    def import_from_api(cls, new_only=False, *args, **kwargs):
+    def import_from_api(cls, new_only=False, *args, **filters):
         msgs = []
 
-        errors = cls.get_errors(new_only, **kwargs)
-        if errors:
-            msgs.append(cls.get_class_error_msg(errors))
+        try:
+            errors = cls.get_errors(new_only, **filters)
+            if errors:
+                msgs.append(cls.get_class_error_msg(errors))
+                return msgs
+        except Exception as err:
+            msgs.append(cls.get_class_error_msg(str(err)))
             return msgs
 
-        data = getattr(sema_api, cls.sema_api_method)(**kwargs)
+        try:
+            data = getattr(sema_api, cls.sema_api_method)(**filters)
+        except Exception as err:
+            msgs.append(cls.get_class_error_msg(str(err)))
+            return msgs
 
         if not new_only:
-            msgs += cls.unauthorize_from_api_data(data)
+            try:
+                authorized_pks = cls.get_authorized_pk_list(data)
+                msgs += cls.unauthorize_from_api_data(authorized_pks)
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(str(err)))
+                return msgs
 
         for item in data:
-            pk, update_fields = cls.parse_data(item)
+            try:
+                pk, update_fields = cls.parse_data(item)
+            except Exception as err:
+                msgs.append(cls.get_class_error_msg(f"{item}: {err}"))
+                continue
+
             try:
                 obj = cls.objects.get(pk=pk)
                 if not new_only:
@@ -294,9 +318,10 @@ class SemaApiModel(Model, MessagesMixin):
         return msgs
 
     @classmethod
-    def unauthorize_from_api_data(cls, data, include_up_to_date=True):
+    def unauthorize_from_api_data(cls, authorized_pks,
+                                  include_up_to_date=True):
         msgs = []
-        unauthorized = cls.objects.filter(~Q(pk__in=data))
+        unauthorized = cls.objects.filter(~Q(pk__in=authorized_pks))
 
         if include_up_to_date:
             for obj in unauthorized.filter(is_authorized=False):
@@ -328,10 +353,13 @@ class SemaApiModel(Model, MessagesMixin):
     def update_from_api_data(self, include_up_to_date=True, **update_fields):
         try:
             prev = self.state
-            self.is_authorized = True
+            if not self.is_authorized:
+                self.is_authorized = True
+                self.save()
             for attr, value in update_fields.items():
-                setattr(self, attr, value)
-            self.save()
+                if not getattr(self, attr) == value:
+                    setattr(self, attr, value)
+                    self.save()
             self.refresh_from_db()
             new = self.state
             msg = self.get_update_success_msg(prev, new, include_up_to_date)
@@ -355,12 +383,9 @@ class SemaYear(SemaApiModel):
     def state(self):
         return super().state
 
-    @classmethod
-    def get_errors(cls, new_only, *args, **kwargs):
-        errors = super().get_errors(new_only, *args, **kwargs)
-        if (kwargs.get('brand_id') or kwargs.get('dataset_id')) and new_only:
-            return errors.append("New only import cannot be used with filters")
-        return errors
+    @staticmethod
+    def get_authorized_pk_list(data):
+        return data
 
     @staticmethod
     def parse_data(data):
@@ -378,7 +403,7 @@ class SemaYear(SemaApiModel):
         return str(self.year)
 
 
-class SemaMake(Model, SemaMakeMixin):
+class SemaMake(SemaApiModel):
     make_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -386,10 +411,37 @@ class SemaMake(Model, SemaMakeMixin):
     name = CharField(
         max_length=50,
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
+
+    sema_api_method = 'retrieve_makes'
+    # brand_id=None, dataset_id=None, year=None
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Name': self.name
+            }
+        )
+        return state
+
+    @staticmethod
+    def get_authorized_pk_list(data):
+        try:
+            return [item['MakeID'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def parse_data(data):
+        try:
+            pk = data['MakeID']
+            update_fields = {
+                'name': data['MakeName']
+            }
+            return pk, update_fields
+        except Exception:
+            raise
 
     objects = SemaMakeManager()
 
@@ -401,7 +453,7 @@ class SemaMake(Model, SemaMakeMixin):
         return str(self.name)
 
 
-class SemaModel(Model, SemaModelMixin):
+class SemaModel(SemaApiModel):
     model_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -409,10 +461,37 @@ class SemaModel(Model, SemaModelMixin):
     name = CharField(
         max_length=50,
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
+
+    sema_api_method = 'retrieve_models'
+    # brand_id=None, dataset_id=None, year=None, make_id=None
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Name': self.name
+            }
+        )
+        return state
+
+    @staticmethod
+    def get_authorized_pk_list(data):
+        try:
+            return [item['ModelID'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def parse_data(data):
+        try:
+            pk = data['ModelID']
+            update_fields = {
+                'name': data['ModelName']
+            }
+            return pk, update_fields
+        except Exception:
+            raise
 
     objects = SemaModelManager()
 
@@ -424,7 +503,7 @@ class SemaModel(Model, SemaModelMixin):
         return str(self.name)
 
 
-class SemaSubmodel(Model, SemaSubmodelMixin):
+class SemaSubmodel(SemaApiModel):
     submodel_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -432,10 +511,37 @@ class SemaSubmodel(Model, SemaSubmodelMixin):
     name = CharField(
         max_length=50,
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
+
+    sema_api_method = 'retrieve_submodels'
+    # brand_id=None, dataset_id=None, year=None, make_id=None, model_id=None
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Name': self.name
+            }
+        )
+        return state
+
+    @staticmethod
+    def get_authorized_pk_list(data):
+        try:
+            return [item['SubmodelID'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def parse_data(data):
+        try:
+            pk = data['SubmodelID']
+            update_fields = {
+                'name': data['SubmodelName']
+            }
+            return pk, update_fields
+        except Exception:
+            raise
 
     objects = SemaSubmodelManager()
 

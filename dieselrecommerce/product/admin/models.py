@@ -182,8 +182,8 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     )
 
     changelist_actions = (
-        'import_years_class_action',
-        'import_new_years_class_action'
+        'import_full_class_action',
+        'import_new_class_action'
     )
 
     list_display = (
@@ -229,7 +229,8 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     )
 
     changelist_actions = (
-        'import_makes_class_action',
+        'import_full_class_action',
+        'import_new_class_action'
     )
 
     list_display = (
@@ -276,7 +277,8 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     )
 
     changelist_actions = (
-        'import_models_class_action',
+        'import_full_class_action',
+        'import_new_class_action'
     )
 
     list_display = (
@@ -323,7 +325,8 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     )
 
     changelist_actions = (
-        'import_submodels_class_action',
+        'import_full_class_action',
+        'import_new_class_action'
     )
 
     list_display = (
