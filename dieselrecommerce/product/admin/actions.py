@@ -103,17 +103,22 @@ class PremierProductActions(object):
     )
 
 
-class SemaBaseActions(object):
+class BaseActions(object):
+    def display_message(self, request, msg):
+        if msg[:4] == 'Info':
+            messages.warning(request, msg)
+        elif msg[:7] == 'Success':
+            messages.success(request, msg)
+        else:
+            messages.error(request, msg)
+
+
+class SemaBaseActions(BaseActions):
     def import_full_class_action(self, request, queryset):
         try:
             msgs = self.model.import_from_api()
             for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
+                self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
     import_full_class_action.allowed_permissions = ('view',)
@@ -127,18 +132,13 @@ class SemaBaseActions(object):
         try:
             msgs = self.model.import_from_api(new_only=True)
             for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
+                self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
     import_new_class_action.allowed_permissions = ('view',)
     import_new_class_action.label = 'Import New from API'
     import_new_class_action.short_description = (
-        'Create new available years from SEMA API '
+        'Create new available objects from SEMA API '
         '(does not update, authorize, or unauthorize existing)'
     )
 
