@@ -110,7 +110,7 @@ class SemaApi(object):
             'token': self.token,
             'aaia_brandids': brand_id,
             'branddatasetids': dataset_id,
-            'years': year
+            'year': year
         }
 
         try:
@@ -128,7 +128,7 @@ class SemaApi(object):
             'token': self.token,
             'aaia_brandids': brand_id,
             'branddatasetids': dataset_id,
-            'years': year,
+            'year': year,
             'makeid': make_id
         }
 
@@ -147,7 +147,7 @@ class SemaApi(object):
             'token': self.token,
             'aaia_brandids': brand_id,
             'branddatasetids': dataset_id,
-            'years': year,
+            'year': year,
             'makeid': make_id,
             'modelid': model_id
         }
