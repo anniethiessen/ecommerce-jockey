@@ -143,107 +143,65 @@ class SemaBaseActions(BaseActions):
     )
 
 
-class SemaBrandActions(object):
-    def import_brands_class_action(self, request, queryset):
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msgs = self.model.import_brands_from_sema_api(token)
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_brands_class_action.allowed_permissions = ('view',)
-    import_brands_class_action.label = 'Import Brands from API'
-    import_brands_class_action.short_description = (
-        'Import brands from SEMA API'
-    )
+class SemaBrandActions(SemaBaseActions):
+    def import_new_class_action(self, request, queryset):
+        raise Exception('Action not available for this model')
 
 
-class SemaDatasetActions(object):
-    def import_datasets_class_action(self, request, queryset):
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
+class SemaDatasetActions(SemaBaseActions):
+    def import_new_class_action(self, request, queryset):
+        raise Exception('Action not available for this model')
 
-        try:
-            msgs = self.model.import_datasets_from_sema_api(token)
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_datasets_class_action.allowed_permissions = ('view',)
-    import_datasets_class_action.label = 'Import Datasets from API'
-    import_datasets_class_action.short_description = (
-        'Import datasets from SEMA API'
-    )
-
-    def import_products_object_action(self, request, obj):
-        if not obj.is_authorized:
-            messages.error(request, "Dataset needs to be authorized")
-            return
-
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msgs = obj.import_products_from_sema_api(token)
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_products_object_action.allowed_permissions = ('view',)
-    import_products_object_action.label = 'Import Products from API'
-    import_products_object_action.short_description = (
-        'Import products from SEMA API'
-    )
-
-    def import_products_queryset_action(self, request, queryset):
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msgs = queryset.import_products_from_sema_api(token)
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_products_queryset_action.allowed_permissions = ('view',)
-    import_products_queryset_action.short_description = (
-        'Import products from SEMA API for selected %(verbose_name_plural)s'
-    )
+    # def import_products_object_action(self, request, obj):
+    #     if not obj.is_authorized:
+    #         messages.error(request, "Dataset needs to be authorized")
+    #         return
+    #
+    #     try:
+    #         token = self.model.retrieve_sema_api_token()
+    #     except Exception as err:
+    #         messages.error(request, f"Token error: {err}")
+    #         return
+    #
+    #     try:
+    #         msgs = obj.import_products_from_sema_api(token)
+    #         for msg in msgs:
+    #             if msg[:4] == 'Info':
+    #                 messages.info(request, msg)
+    #             elif msg[:7] == 'Success':
+    #                 messages.success(request, msg)
+    #             else:
+    #                 messages.error(request, msg)
+    #     except Exception as err:
+    #         messages.error(request, str(err))
+    # import_products_object_action.allowed_permissions = ('view',)
+    # import_products_object_action.label = 'Import Products from API'
+    # import_products_object_action.short_description = (
+    #     'Import products from SEMA API'
+    # )
+    #
+    # def import_products_queryset_action(self, request, queryset):
+    #     try:
+    #         token = self.model.retrieve_sema_api_token()
+    #     except Exception as err:
+    #         messages.error(request, f"Token error: {err}")
+    #         return
+    #
+    #     try:
+    #         msgs = queryset.import_products_from_sema_api(token)
+    #         for msg in msgs:
+    #             if msg[:4] == 'Info':
+    #                 messages.info(request, msg)
+    #             elif msg[:7] == 'Success':
+    #                 messages.success(request, msg)
+    #             else:
+    #                 messages.error(request, msg)
+    #     except Exception as err:
+    #         messages.error(request, str(err))
+    # import_products_queryset_action.allowed_permissions = ('view',)
+    # import_products_queryset_action.short_description = (
+    #     'Import products from SEMA API for selected %(verbose_name_plural)s'
+    # )
 
 
 class SemaYearActions(SemaBaseActions):

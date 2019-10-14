@@ -374,7 +374,7 @@ class SemaApiModel(Model, MessagesMixin):
         abstract = True
 
 
-class SemaBrand(Model, SemaBrandMixin):
+class SemaBrand(SemaApiModel):
     brand_id = CharField(
         primary_key=True,
         max_length=10,
@@ -383,10 +383,44 @@ class SemaBrand(Model, SemaBrandMixin):
     name = CharField(
         max_length=50,
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
+
+    #
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Name': self.name
+            }
+        )
+        return state
+
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
+        try:
+            return [item['AAIABrandId'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_api_data(**filters):
+        try:
+            data = sema_api.retrieve_brand_datasets()
+            for item in data:
+                del item['DatasetId']
+                del item['DatasetName']
+            return data
+        except Exception:
+            raise
+
+    @staticmethod
+    def parse_api_data(data):
+        pk = data['AAIABrandId']
+        update_fields = {
+            'name': data['BrandName']
+        }
+        return pk, update_fields
 
     objects = SemaBrandManager()
 
@@ -402,7 +436,7 @@ class SemaBrand(Model, SemaBrandMixin):
         return f'{self.brand_id} :: {self.name}'
 
 
-class SemaDataset(Model, SemaDatasetMixin):
+class SemaDataset(SemaApiModel):
     dataset_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -410,15 +444,53 @@ class SemaDataset(Model, SemaDatasetMixin):
     name = CharField(
         max_length=50,
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
     brand = ForeignKey(
         SemaBrand,
         on_delete=CASCADE,
         related_name='sema_datasets'
     )
+
+    # brand_id=None
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Name': self.name,
+                'Brand': str(self.brand)
+            }
+        )
+        return state
+
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
+        try:
+            return [item['DatasetId'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_api_data(**filters):
+        try:
+            data = sema_api.retrieve_brand_datasets()
+            if filters.get('brand_id'):
+                data = [
+                    item for item in data
+                    if item['AAIABrandId'] == filters['brand_id']
+                ]
+            return data
+        except Exception:
+            raise
+
+    @staticmethod
+    def parse_api_data(data):
+        pk = data['DatasetId']
+        update_fields = {
+            'name': data['DatasetName'],
+            'brand': SemaBrand.objects.get(brand_id=data['AAIABrandId'])
+        }
+        return pk, update_fields
 
     objects = SemaDatasetManager()
 
