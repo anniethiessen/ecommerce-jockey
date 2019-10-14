@@ -181,6 +181,8 @@ ADMIN_REORDER = (
 COMPANY_NAME = 'DIESELR Corp.'
 COMPANY_SITE = 'https://www.dieselrcorp.com'
 
+GOOGLE_DRIVE_API_KEY = os.environ['GOOGLE_DRIVE_API_KEY']
+
 PREMIER_BASE_URL = 'https://api.premierwd.com/api/v5'
 PREMIER_API_KEY = os.environ['PREMIER_API_KEY']
 
