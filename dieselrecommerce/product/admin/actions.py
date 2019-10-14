@@ -183,7 +183,7 @@ class SemaBaseVehicleActions(SemaBaseActions):
     import_full_class_action.short_description = (
         'Create, update, authorize, and unauthorize '
         'all available objects from SEMA API. '
-        'WARNING: Years, makes, and models must be up-to-date'
+        'WARNING: Years, makes, make years, and models must be up-to-date'
     )
 
     def import_new_class_action(self, request, queryset):
@@ -191,7 +191,7 @@ class SemaBaseVehicleActions(SemaBaseActions):
     import_new_class_action.short_description = (
         'Create new available objects from SEMA API '
         '(does not update, authorize, or unauthorize existing). '
-        'WARNING: Years, makes, and models must be up-to-date'
+        'WARNING: Years, makes, make years, and models must be up-to-date'
     )
 
 

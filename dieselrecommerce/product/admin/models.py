@@ -454,9 +454,9 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
                                 SemaBaseVehicleActions):
     search_fields = (
         'base_vehicle_id',
-        'year__year',
-        'make__make_id',
-        'make__name',
+        'make_year__year__year',
+        'make_year__make__make_id',
+        'make_year__make__name',
         'model__model_id',
         'model__name'
     )
@@ -469,8 +469,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     list_display = (
         'details_link',
         'base_vehicle_id',
-        'year',
-        'make',
+        'make_year',
         'model',
         'is_authorized'
     )
@@ -481,9 +480,9 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 
     list_filter = (
         'is_authorized',
-        'make',
+        'make_year__make',
         'model',
-        'year'
+        'make_year__year'
     )
 
     fieldsets = (
@@ -496,18 +495,10 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
             }
         ),
         (
-            'Year', {
+            'Make Year', {
                 'fields': (
-                    'year_link',
-                    'year'
-                )
-            }
-        ),
-        (
-            'Make', {
-                'fields': (
-                    'make_link',
-                    'make'
+                    'make_year_link',
+                    'make_year'
                 )
             }
         ),
@@ -523,8 +514,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'details_link',
-        'year_link',
-        'make_link',
+        'make_year_link',
         'model_link'
     )
 
@@ -532,17 +522,11 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
-    def year_link(self, obj):
-        if not obj.year:
+    def make_year_link(self, obj):
+        if not obj.make_year:
             return None
-        return get_change_view_link(obj.year, 'See full year')
-    year_link.short_description = ''
-
-    def make_link(self, obj):
-        if not obj.make:
-            return None
-        return get_change_view_link(obj.make, 'See full make')
-    make_link.short_description = ''
+        return get_change_view_link(obj.make_year, 'See full make year')
+    make_year_link.short_description = ''
 
     def model_link(self, obj):
         if not obj.model:
@@ -555,9 +539,9 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     search_fields = (
         'base_vehicle__base_vehicle_id',
-        'base_vehicle__year__year',
-        'base_vehicle__make__make_id',
-        'base_vehicle__make__name',
+        'base_vehicle__make_year__year__year',
+        'base_vehicle__make_year__make__make_id',
+        'base_vehicle__make_year__make__name',
         'base_vehicle__model__model_id',
         'base_vehicle__model__name',
         'submodel__submodel_id',

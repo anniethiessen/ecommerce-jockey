@@ -689,13 +689,8 @@ class SemaBaseVehicle(SemaApiModel):
         primary_key=True,
         unique=True
     )
-    year = ForeignKey(
-        SemaYear,
-        on_delete=CASCADE,
-        related_name='base_vehicles'
-    )
-    make = ForeignKey(
-        SemaMake,
+    make_year = ForeignKey(
+        SemaMakeYear,
         on_delete=CASCADE,
         related_name='base_vehicles'
     )
@@ -713,8 +708,7 @@ class SemaBaseVehicle(SemaApiModel):
         state = dict(super().state)
         state.update(
             {
-                'Year': str(self.year),
-                'Make': str(self.make),
+                'Make Year': str(self.make_year),
                 'Model': str(self.model)
             }
         )
@@ -729,33 +723,31 @@ class SemaBaseVehicle(SemaApiModel):
 
     @staticmethod
     def get_api_data(**filters):
-        years = (
-            list(filter(None, [filters.get('year')]))
-            or SemaYear.objects.filter(
-                is_authorized=True
-            ).values_list('year', flat=True)
-        )
+        try:
+            make_years = SemaMakeYear.objects.filter(is_authorized=True)
 
-        makes = (
-            list(filter(None, [filters.get('make_id')]))
-            or SemaMake.objects.filter(
-                is_authorized=True
-            ).values_list('make_id', flat=True)
-        )
+            if filters.get('year'):
+                make_years = make_years.filter(year__year=filters.get('year'))
+
+            if filters.get('make_id'):
+                make_years = make_years.filter(
+                    make__make_id=filters.get('make_id')
+                )
+        except Exception:
+            raise
 
         all_data = []
-        for year in years:
-            for make_id in makes:
-                filters['year'] = year
-                filters['make_id'] = make_id
-                try:
-                    data = sema_api.retrieve_models(**filters)
-                    for item in data:
-                        item['year'] = year
-                        item['make_id'] = make_id
-                    all_data += data
-                except Exception:
-                    raise
+        for make_year in make_years:
+            filters['year'] = make_year.year.year
+            filters['make_id'] = make_year.make.make_id
+            try:
+                data = sema_api.retrieve_models(**filters)
+                for item in data:
+                    item['year'] = make_year.year.year
+                    item['make_id'] = make_year.make.make_id
+                all_data += data
+            except Exception:
+                raise
         return all_data
 
     @staticmethod
@@ -763,8 +755,10 @@ class SemaBaseVehicle(SemaApiModel):
         try:
             pk = data['BaseVehicleID']
             update_fields = {
-                'year': SemaYear.objects.get(year=data['year']),
-                'make': SemaMake.objects.get(make_id=data['make_id']),
+                'make_year': SemaMakeYear.objects.get(
+                    year__year=data['year'],
+                    make__make_id=data['make_id']
+                ),
                 'model': SemaModel.objects.get(model_id=data['ModelID'])
             }
             return pk, update_fields
@@ -774,11 +768,11 @@ class SemaBaseVehicle(SemaApiModel):
     objects = SemaBaseVehicleManager()
 
     class Meta:
-        ordering = ['make', 'model', 'year']
+        ordering = ['make_year', 'model']
         verbose_name = 'SEMA base vehicle'
 
     def __str__(self):
-        return f'{self.year} :: {self.make} :: {self.model}'
+        return f'{self.make_year} :: {self.model}'
 
 
 class SemaVehicle(Model, SemaVehicleMixin):
