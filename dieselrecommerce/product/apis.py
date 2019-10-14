@@ -19,6 +19,7 @@ class SemaApi(object):
     def get_json_body(self, response):
         try:
             if response.status_code == requests.codes.conflict:
+                print("Waiting on SEMA API (rate exceeded)")
                 raise ApiRateLimitExceeded
             response.raise_for_status()
             body = json.loads(response.text)
