@@ -739,13 +739,15 @@ class SemaBaseVehicle(SemaApiModel):
 
         all_data = []
         for make_year in make_years:
-            filters['year'] = make_year.year.year
-            filters['make_id'] = make_year.make.make_id
+            year = make_year.year.year
+            make = make_year.make.make_id
+            filters['year'] = year
+            filters['make_id'] = make
             try:
                 data = sema_api.retrieve_models(**filters)
                 for item in data:
-                    item['year'] = make_year.year.year
-                    item['make_id'] = make_year.make.make_id
+                    item['year'] = year
+                    item['make_id'] = make
                 all_data += data
             except Exception:
                 raise
