@@ -580,7 +580,7 @@ class SemaSubmodel(SemaApiModel):
         return str(self.name)
 
 
-class SemaBaseVehicle(Model, SemaBaseVehicleMixin):
+class SemaBaseVehicle(SemaApiModel):
     base_vehicle_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -600,10 +600,72 @@ class SemaBaseVehicle(Model, SemaBaseVehicleMixin):
         on_delete=CASCADE,
         related_name='base_vehicles'
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
+
+    # year, make_id
+    # brand_id=None, dataset_id=None
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Year': str(self.year),
+                'Make': str(self.make),
+                'Model': str(self.model)
+            }
+        )
+        return state
+
+    @staticmethod
+    def get_pk_list_from_api_data(data):
+        try:
+            return [item['BaseVehicleID'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_api_data(**filters):
+        years = (
+            list(filter(None, [filters.get('year')]))
+            or SemaYear.objects.filter(
+                is_authorized=True
+            ).values_list('year', flat=True)
+        )
+
+        makes = (
+            list(filter(None, [filters.get('make_id')]))
+            or SemaMake.objects.filter(
+                is_authorized=True
+            ).values_list('make_id', flat=True)
+        )
+
+        all_data = []
+        for year in years:
+            for make_id in makes:
+                filters['year'] = year
+                filters['make_id'] = make_id
+                try:
+                    data = sema_api.retrieve_models(**filters)
+                    for item in data:
+                        item['year'] = year
+                        item['make_id'] = make_id
+                    all_data += data
+                except Exception:
+                    raise
+        return all_data
+
+    @staticmethod
+    def parse_api_data(data):
+        try:
+            pk = data['BaseVehicleID']
+            update_fields = {
+                'year': SemaYear.objects.get(year=data['year']),
+                'make': SemaMake.objects.get(make_id=data['make_id']),
+                'model': SemaModel.objects.get(model_id=data['ModelID'])
+            }
+            return pk, update_fields
+        except Exception:
+            raise
 
     objects = SemaBaseVehicleManager()
 

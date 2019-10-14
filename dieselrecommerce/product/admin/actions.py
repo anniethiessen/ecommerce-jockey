@@ -159,42 +159,21 @@ class SemaSubmodelActions(SemaBaseActions):
     pass
 
 
-class SemaBaseVehicleActions(object):
-    def import_base_vehicles_class_action(self, request, queryset):
-        from product.models import SemaMake, SemaYear
+class SemaBaseVehicleActions(SemaBaseActions):
+    def import_full_class_action(self, request, queryset):
+        super().import_full_class_action(request, queryset)
+    import_full_class_action.short_description = (
+        'Create, update, authorize, and unauthorize '
+        'all available objects from SEMA API. '
+        'WARNING: Years and makes must be up-to-date'
+    )
 
-        msgs = []
-        years = SemaYear.objects.all()
-        makes = SemaMake.objects.all()
-
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        for make in makes:
-            for year in years:
-                try:
-                    msgs += self.model.import_base_vehicles_from_sema_api(
-                        year=year.year,
-                        make_id=make.make_id,
-                        token=token
-                    )
-                except Exception as err:
-                    msgs.append(self.model.get_class_error_msg(str(err)))
-
-        for msg in msgs:
-            if msg[:4] == 'Info':
-                messages.info(request, msg)
-            elif msg[:7] == 'Success':
-                messages.success(request, msg)
-            else:
-                messages.error(request, msg)
-    import_base_vehicles_class_action.allowed_permissions = ('view',)
-    import_base_vehicles_class_action.label = 'Import Base Vehicles from API'
-    import_base_vehicles_class_action.short_description = (
-        'Import all available base vehicles from SEMA API'
+    def import_new_class_action(self, request, queryset):
+        super().import_new_class_action(request, queryset)
+    import_new_class_action.short_description = (
+        'Create new available objects from SEMA API '
+        '(does not update, authorize, or unauthorize existing). '
+        'WARNING: Years and makes must be up-to-date'
     )
 
 

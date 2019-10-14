@@ -378,7 +378,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     changelist_actions = (
-        'import_base_vehicles_class_action',
+        'import_full_class_action',
+        'import_new_class_action'
     )
 
     list_display = (
