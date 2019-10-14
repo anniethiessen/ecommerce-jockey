@@ -87,6 +87,7 @@ STATIC_URL = '/static/'
 
 
 TIMEOUT = None
+DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 
 
 LANGUAGE_CODE = 'en-us'
