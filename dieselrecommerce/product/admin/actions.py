@@ -143,68 +143,6 @@ class SemaBaseActions(BaseActions):
     )
 
 
-class SemaYearActions(SemaBaseActions):
-    pass
-
-
-class SemaMakeActions(SemaBaseActions):
-    pass
-
-
-class SemaModelActions(SemaBaseActions):
-    pass
-
-
-class SemaSubmodelActions(SemaBaseActions):
-    pass
-
-
-class SemaMakeYearActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Years and makes must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
-
-
-class SemaBaseVehicleActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Years, makes, make years, and models must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
-
-
-class SemaVehicleActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Years, makes, make years, models, and base vehicles '
-        'must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
-
-
 class SemaBrandActions(object):
     def import_brands_class_action(self, request, queryset):
         try:
@@ -306,6 +244,68 @@ class SemaDatasetActions(object):
     import_products_queryset_action.short_description = (
         'Import products from SEMA API for selected %(verbose_name_plural)s'
     )
+
+
+class SemaYearActions(SemaBaseActions):
+    pass
+
+
+class SemaMakeActions(SemaBaseActions):
+    pass
+
+
+class SemaModelActions(SemaBaseActions):
+    pass
+
+
+class SemaSubmodelActions(SemaBaseActions):
+    pass
+
+
+class SemaMakeYearActions(SemaBaseActions):
+    def import_full_class_action(self, request, queryset):
+        super().import_full_class_action(request, queryset)
+    import_full_class_action.allowed_permissions = ('view',)
+    import_full_class_action.label = 'Full Import from API'
+    import_full_class_action.short_description = (
+        'Create, update, authorize, and unauthorize '
+        'all available objects from SEMA API. '
+        'WARNING: Years and makes must be up-to-date'
+    )
+
+    def import_new_class_action(self, request, queryset):
+        raise Exception('Action not available for this model')
+
+
+class SemaBaseVehicleActions(SemaBaseActions):
+    def import_full_class_action(self, request, queryset):
+        super().import_full_class_action(request, queryset)
+    import_full_class_action.allowed_permissions = ('view',)
+    import_full_class_action.label = 'Full Import from API'
+    import_full_class_action.short_description = (
+        'Create, update, authorize, and unauthorize '
+        'all available objects from SEMA API. '
+        'WARNING: Years, makes, make years, and models must be up-to-date'
+    )
+
+    def import_new_class_action(self, request, queryset):
+        raise Exception('Action not available for this model')
+
+
+class SemaVehicleActions(SemaBaseActions):
+    def import_full_class_action(self, request, queryset):
+        super().import_full_class_action(request, queryset)
+    import_full_class_action.allowed_permissions = ('view',)
+    import_full_class_action.label = 'Full Import from API'
+    import_full_class_action.short_description = (
+        'Create, update, authorize, and unauthorize '
+        'all available objects from SEMA API. '
+        'WARNING: Years, makes, make years, models, and base vehicles '
+        'must be up-to-date'
+    )
+
+    def import_new_class_action(self, request, queryset):
+        raise Exception('Action not available for this model')
 
 
 class SemaCategoryActions(object):

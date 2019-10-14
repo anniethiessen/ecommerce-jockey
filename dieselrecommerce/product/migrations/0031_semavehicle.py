@@ -22,6 +22,6 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'SEMA vehicle',
             },
-            bases=(models.Model, product.mixins.SemaVehicleMixin),
+            bases=(models.Model,),
         ),
     ]

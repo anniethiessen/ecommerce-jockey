@@ -37,8 +37,7 @@ from .mixins import (
     SemaBrandMixin,
     SemaCategoryMixin,
     SemaDatasetMixin,
-    SemaProductMixin,
-    SemaVehicleMixin
+    SemaProductMixin
 )
 
 
@@ -373,6 +372,62 @@ class SemaApiModel(Model, MessagesMixin):
 
     class Meta:
         abstract = True
+
+
+class SemaBrand(Model, SemaBrandMixin):
+    brand_id = CharField(
+        primary_key=True,
+        max_length=10,
+        unique=True
+    )
+    name = CharField(
+        max_length=50,
+    )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
+
+    objects = SemaBrandManager()
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'SEMA brand'
+
+    @property
+    def dataset_count(self):
+        return self.sema_datasets.count()
+
+    def __str__(self):
+        return f'{self.brand_id} :: {self.name}'
+
+
+class SemaDataset(Model, SemaDatasetMixin):
+    dataset_id = PositiveIntegerField(
+        primary_key=True,
+        unique=True
+    )
+    name = CharField(
+        max_length=50,
+    )
+    is_authorized = BooleanField(
+        default=False,
+        help_text='brand has given access to dataset'
+    )
+    brand = ForeignKey(
+        SemaBrand,
+        on_delete=CASCADE,
+        related_name='sema_datasets'
+    )
+
+    objects = SemaDatasetManager()
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'SEMA dataset'
+
+    def __str__(self):
+        return f'{self.dataset_id} :: {self.name} :: {self.brand}'
 
 
 class SemaYear(SemaApiModel):
@@ -898,62 +953,6 @@ class SemaVehicle(SemaApiModel):
 
     def __str__(self):
         return f'{self.base_vehicle} :: {self.submodel}'
-
-
-class SemaBrand(Model, SemaBrandMixin):
-    brand_id = CharField(
-        primary_key=True,
-        max_length=10,
-        unique=True
-    )
-    name = CharField(
-        max_length=50,
-    )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
-
-    objects = SemaBrandManager()
-
-    class Meta:
-        ordering = ['name']
-        verbose_name = 'SEMA brand'
-
-    @property
-    def dataset_count(self):
-        return self.sema_datasets.count()
-
-    def __str__(self):
-        return f'{self.brand_id} :: {self.name}'
-
-
-class SemaDataset(Model, SemaDatasetMixin):
-    dataset_id = PositiveIntegerField(
-        primary_key=True,
-        unique=True
-    )
-    name = CharField(
-        max_length=50,
-    )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
-    brand = ForeignKey(
-        SemaBrand,
-        on_delete=CASCADE,
-        related_name='sema_datasets'
-    )
-
-    objects = SemaDatasetManager()
-
-    class Meta:
-        ordering = ['name']
-        verbose_name = 'SEMA dataset'
-
-    def __str__(self):
-        return f'{self.dataset_id} :: {self.name} :: {self.brand}'
 
 
 class SemaCategory(Model, SemaCategoryMixin):

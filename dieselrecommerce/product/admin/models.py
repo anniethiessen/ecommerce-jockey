@@ -177,6 +177,132 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     product_link.short_description = ''
 
 
+@admin.register(SemaBrand)
+class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
+    search_fields = (
+        'brand_id',
+        'name'
+    )
+
+    changelist_actions = (
+        'import_brands_class_action',
+    )
+
+    list_display = (
+        'details_link',
+        'brand_id',
+        'name',
+        'dataset_count',
+        'is_authorized'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_filter = (
+        'is_authorized',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'is_authorized',
+                    'brand_id',
+                    'name'
+                )
+            }
+        ),
+    )
+
+    inlines = (
+        SemaDatasetTabularInline,
+    )
+
+    readonly_fields = (
+        'dataset_count',
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+
+@admin.register(SemaDataset)
+class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
+    search_fields = (
+        'brand__brand_id',
+        'brand__name',
+        'dataset_id',
+        'name'
+    )
+
+    actions = (
+        'import_products_queryset_action',
+    )
+
+    changelist_actions = (
+        'import_datasets_class_action',
+    )
+
+    change_actions = (
+        'import_products_object_action',
+    )
+
+    list_display = (
+        'details_link',
+        'dataset_id',
+        'name',
+        'brand',
+        'is_authorized'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_filter = (
+        'is_authorized',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'is_authorized',
+                    'dataset_id',
+                    'name'
+                )
+            }
+        ),
+        (
+            'Brand', {
+                'fields': (
+                    'brand_link',
+                    'brand'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'brand_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def brand_link(self, obj):
+        if not obj.brand:
+            return None
+        return get_change_view_link(
+            obj.brand, 'See full brand')
+    brand_link.short_description = ''
+
+
 @admin.register(SemaYear)
 class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     search_fields = (
@@ -620,132 +746,6 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
             return None
         return get_change_view_link(obj.submodel, 'See full submodel')
     submodel_link.short_description = ''
-
-
-@admin.register(SemaBrand)
-class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
-    search_fields = (
-        'brand_id',
-        'name'
-    )
-
-    changelist_actions = (
-        'import_brands_class_action',
-    )
-
-    list_display = (
-        'details_link',
-        'brand_id',
-        'name',
-        'dataset_count',
-        'is_authorized'
-    )
-
-    list_display_links = (
-        'details_link',
-    )
-
-    list_filter = (
-        'is_authorized',
-    )
-
-    fieldsets = (
-        (
-            None, {
-                'fields': (
-                    'is_authorized',
-                    'brand_id',
-                    'name'
-                )
-            }
-        ),
-    )
-
-    inlines = (
-        SemaDatasetTabularInline,
-    )
-
-    readonly_fields = (
-        'dataset_count',
-    )
-
-    def details_link(self, obj):
-        return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
-
-
-@admin.register(SemaDataset)
-class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
-    search_fields = (
-        'brand__brand_id',
-        'brand__name',
-        'dataset_id',
-        'name'
-    )
-
-    actions = (
-        'import_products_queryset_action',
-    )
-
-    changelist_actions = (
-        'import_datasets_class_action',
-    )
-
-    change_actions = (
-        'import_products_object_action',
-    )
-
-    list_display = (
-        'details_link',
-        'dataset_id',
-        'name',
-        'brand',
-        'is_authorized'
-    )
-
-    list_display_links = (
-        'details_link',
-    )
-
-    list_filter = (
-        'is_authorized',
-    )
-
-    fieldsets = (
-        (
-            None, {
-                'fields': (
-                    'is_authorized',
-                    'dataset_id',
-                    'name'
-                )
-            }
-        ),
-        (
-            'Brand', {
-                'fields': (
-                    'brand_link',
-                    'brand'
-                )
-            }
-        )
-    )
-
-    readonly_fields = (
-        'details_link',
-        'brand_link'
-    )
-
-    def details_link(self, obj):
-        return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
-
-    def brand_link(self, obj):
-        if not obj.brand:
-            return None
-        return get_change_view_link(
-            obj.brand, 'See full brand')
-    brand_link.short_description = ''
 
 
 @admin.register(SemaCategory)

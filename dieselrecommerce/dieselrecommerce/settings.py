@@ -129,6 +129,20 @@ ADMIN_REORDER = (
         'label': 'sema',
         'models': (
             {
+                'model': 'product.SemaBrand',
+                'label': 'Brands'
+            },
+            {
+                'model': 'product.SemaDataset',
+                'label': 'Datasets'
+            }
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'sema',
+        'models': (
+            {
                 'model': 'product.SemaYear',
                 'label': 'Years'
             },
@@ -143,7 +157,13 @@ ADMIN_REORDER = (
             {
                 'model': 'product.SemaSubmodel',
                 'label': 'Submodels'
-            },
+            }
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'sema',
+        'models': (
             {
                 'model': 'product.SemaMakeYear',
                 'label': 'Make Years'
@@ -155,19 +175,23 @@ ADMIN_REORDER = (
             {
                 'model': 'product.SemaVehicle',
                 'label': 'Vehicles'
-            },
-            {
-                'model': 'product.SemaBrand',
-                'label': 'Brands'
-            },
-            {
-                'model': 'product.SemaDataset',
-                'label': 'Datasets'
-            },
+            }
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'sema',
+        'models': (
             {
                 'model': 'product.SemaCategory',
                 'label': 'Categories'
             },
+        )
+    },
+    {
+        'app': 'product',
+        'label': 'sema',
+        'models': (
             {
                 'model': 'product.SemaProduct',
                 'label': 'Products'

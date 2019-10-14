@@ -114,6 +114,36 @@ class PremierProductQuerySet(QuerySet):
     # </editor-fold>
 
 
+class SemaBrandQuerySet(QuerySet):
+    pass
+
+
+class SemaDatasetQuerySet(QuerySet):
+    def import_products_from_sema_api(self, token=None):
+        msgs = []
+        invalid = self.filter(is_authorized=False)
+        for obj in invalid:
+            msgs.append(
+                obj.get_instance_error_msg("Dataset needs to be authorized")
+            )
+
+        queryset = self.filter(is_authorized=True)
+
+        try:
+            if not token:
+                token = self.model.retrieve_sema_api_token()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        for obj in queryset:
+            try:
+                msgs += obj.import_products_from_sema_api(token)
+            except Exception as err:
+                msgs.append(obj.get_instance_error_msg(str(err)))
+
+        return msgs
+
+
 class SemaYearQuerySet(QuerySet):
     def with_year_data(self):
         return self.annotate(
@@ -143,36 +173,6 @@ class SemaBaseVehicleQuerySet(QuerySet):
 
 class SemaVehicleQuerySet(QuerySet):
     pass
-
-
-class SemaBrandQuerySet(QuerySet):
-    pass
-
-
-class SemaDatasetQuerySet(QuerySet):
-    def import_products_from_sema_api(self, token=None):
-        msgs = []
-        invalid = self.filter(is_authorized=False)
-        for obj in invalid:
-            msgs.append(
-                obj.get_instance_error_msg("Dataset needs to be authorized")
-            )
-
-        queryset = self.filter(is_authorized=True)
-
-        try:
-            if not token:
-                token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        for obj in queryset:
-            try:
-                msgs += obj.import_products_from_sema_api(token)
-            except Exception as err:
-                msgs.append(obj.get_instance_error_msg(str(err)))
-
-        return msgs
 
 
 class SemaCategoryQuerySet(QuerySet):
@@ -229,6 +229,25 @@ class PremierProductManager(Manager):
 
     def update_pricing_from_premier_api(self, token=None):
         return self.get_queryset().update_pricing_from_premier_api(token)
+
+
+class SemaBrandManager(Manager):
+    def get_queryset(self):
+        return SemaBrandQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaDatasetManager(Manager):
+    def get_queryset(self):
+        return SemaDatasetQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def import_products_from_sema_api(self, token=None):
+        return self.get_queryset().import_products_from_sema_api(token)
 
 
 class SemaYearManager(Manager):
@@ -288,25 +307,6 @@ class SemaVehicleManager(Manager):
             self.model,
             using=self._db
         )
-
-
-class SemaBrandManager(Manager):
-    def get_queryset(self):
-        return SemaBrandQuerySet(
-            self.model,
-            using=self._db
-        )
-
-
-class SemaDatasetManager(Manager):
-    def get_queryset(self):
-        return SemaDatasetQuerySet(
-            self.model,
-            using=self._db
-        )
-
-    def import_products_from_sema_api(self, token=None):
-        return self.get_queryset().import_products_from_sema_api(token)
 
 
 class SemaCategoryManager(Manager):
