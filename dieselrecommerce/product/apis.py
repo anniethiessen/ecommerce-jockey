@@ -46,7 +46,7 @@ class SemaApi(object):
         except Exception:
             raise
 
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_token(self):
         url = f'{settings.SEMA_BASE_URL}/token/get'
         params = {
@@ -61,7 +61,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_content_token(self):
         url = f'{settings.SEMA_BASE_URL}/token/getcontenttoken'
         params = {'token': self.token}
@@ -73,7 +73,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_brand_datasets(self):
         url = f'{settings.SEMA_BASE_URL}/export/branddatasets'
         params = {
@@ -87,7 +87,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_years(self, brand_id=None, dataset_id=None):
         url = f'{settings.SEMA_BASE_URL}/lookup/years'
         params = {
@@ -103,7 +103,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_makes(self, brand_id=None, dataset_id=None, year=None):
         url = f'{settings.SEMA_BASE_URL}/lookup/makes'
         params = {
@@ -120,7 +120,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_models(self, brand_id=None, dataset_id=None,
                         year=None, make_id=None):
         url = f'{settings.SEMA_BASE_URL}/lookup/models'
@@ -139,7 +139,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_submodels(self, brand_id=None, dataset_id=None,
                            year=None, make_id=None, model_id=None):
         url = f'{settings.SEMA_BASE_URL}/lookup/submodels'
@@ -159,7 +159,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_engines(self, brand_id=None, dataset_id=None,
                          year=None, make_id=None, model_id=None):
         url = f'{settings.SEMA_BASE_URL}/lookup/engines'
@@ -179,7 +179,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_vehicle_info(self, base_vehicle_id, vehicle_id):
         url = f'{settings.SEMA_BASE_URL}/lookup/expandedvehicleinfo'
         params = {
@@ -195,7 +195,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_categories(self, brand_id=None, dataset_id=None,
                             base_vehicle_id=None, vehicle_id=None,
                             year=None, make_name=None,
@@ -223,7 +223,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_products_by_brand(self, brand_id=None, dataset_id=None,
                                    base_vehicle_id=None, vehicle_id=None,
                                    year=None, make_name=None,
@@ -254,7 +254,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_products_by_category(self, category_id,
                                       include_child_categories=False,
                                       brand_id=None, dataset_id=None,
@@ -289,7 +289,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidContentToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_product_html(self, product_id, include_header_footer=False):
         url = f'{settings.SEMA_BASE_URL}/content/product'
         params = {
@@ -308,7 +308,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_vehicles_by_product(self, brand_id=None, dataset_id=None,
                                      part_number=None, group_by_part=False):
         if not brand_id or dataset_id:
@@ -333,7 +333,7 @@ class SemaApi(object):
             raise
 
     @retry(exceptions=ApiInvalidToken, tries=1)
-    @retry(exceptions=ApiRateLimitExceeded, tries=60, delay=1)
+    @retry(exceptions=ApiRateLimitExceeded, tries=12, delay=5)
     def retrieve_vehicles_by_brand(self, brand_id=None, dataset_id=None):
         if not brand_id or dataset_id:
             raise Exception('Brand ID or dataset ID required')
