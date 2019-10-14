@@ -205,8 +205,8 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         (
             None, {
                 'fields': (
-                    'year',
-                    'is_authorized'
+                    'is_authorized',
+                    'year'
                 )
             }
         ),
