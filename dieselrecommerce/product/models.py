@@ -251,9 +251,9 @@ class SemaApiModel(Model, MessagesMixin):
             return errors.append("New only import cannot be used with filters")
         return errors
 
-    @staticmethod
-    def get_pk_list_from_api_data(data):
-        raise Exception('Get authorized PK list must be defined')
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
+        raise Exception('Get PK list must be defined')
 
     @staticmethod
     def get_api_data(**filters):
@@ -298,7 +298,7 @@ class SemaApiModel(Model, MessagesMixin):
                 continue
 
             try:
-                obj = cls.objects.get(pk=pk)
+                obj = cls.get_object_from_api_data(pk, **update_fields)
                 if not new_only:
                     msgs.append(obj.update_from_api_data(**update_fields))
             except cls.DoesNotExist:
@@ -332,6 +332,13 @@ class SemaApiModel(Model, MessagesMixin):
             msgs.append(obj.get_update_success_msg(previous, new))
 
         return msgs
+
+    @classmethod
+    def get_object_from_api_data(cls, pk, **update_fields):
+        try:
+            return cls.objects.get(pk=pk)
+        except Exception:
+            raise
 
     @classmethod
     def create_from_api_data(cls, pk, **update_fields):
@@ -379,8 +386,8 @@ class SemaYear(SemaApiModel):
     def state(self):
         return super().state
 
-    @staticmethod
-    def get_pk_list_from_api_data(data):
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
         return data
 
     @staticmethod
@@ -427,8 +434,8 @@ class SemaMake(SemaApiModel):
         )
         return state
 
-    @staticmethod
-    def get_pk_list_from_api_data(data):
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
         try:
             return [item['MakeID'] for item in data]
         except Exception:
@@ -483,8 +490,8 @@ class SemaModel(SemaApiModel):
         )
         return state
 
-    @staticmethod
-    def get_pk_list_from_api_data(data):
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
         try:
             return [item['ModelID'] for item in data]
         except Exception:
@@ -542,8 +549,8 @@ class SemaSubmodel(SemaApiModel):
         )
         return state
 
-    @staticmethod
-    def get_pk_list_from_api_data(data):
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
         try:
             return [item['SubmodelID'] for item in data]
         except Exception:
@@ -616,8 +623,8 @@ class SemaBaseVehicle(SemaApiModel):
         )
         return state
 
-    @staticmethod
-    def get_pk_list_from_api_data(data):
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
         try:
             return [item['BaseVehicleID'] for item in data]
         except Exception:
