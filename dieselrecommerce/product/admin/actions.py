@@ -162,6 +162,8 @@ class SemaSubmodelActions(SemaBaseActions):
 class SemaMakeYearActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
         super().import_full_class_action(request, queryset)
+    import_full_class_action.allowed_permissions = ('view',)
+    import_full_class_action.label = 'Full Import from API'
     import_full_class_action.short_description = (
         'Create, update, authorize, and unauthorize '
         'all available objects from SEMA API. '
@@ -170,6 +172,8 @@ class SemaMakeYearActions(SemaBaseActions):
 
     def import_new_class_action(self, request, queryset):
         super().import_new_class_action(request, queryset)
+    import_new_class_action.allowed_permissions = ('view',)
+    import_new_class_action.label = 'Import New from API'
     import_new_class_action.short_description = (
         'Create new available objects from SEMA API '
         '(does not update, authorize, or unauthorize existing). '
@@ -180,6 +184,8 @@ class SemaMakeYearActions(SemaBaseActions):
 class SemaBaseVehicleActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
         super().import_full_class_action(request, queryset)
+    import_full_class_action.allowed_permissions = ('view',)
+    import_full_class_action.label = 'Full Import from API'
     import_full_class_action.short_description = (
         'Create, update, authorize, and unauthorize '
         'all available objects from SEMA API. '
@@ -188,6 +194,8 @@ class SemaBaseVehicleActions(SemaBaseActions):
 
     def import_new_class_action(self, request, queryset):
         super().import_new_class_action(request, queryset)
+    import_new_class_action.allowed_permissions = ('view',)
+    import_new_class_action.label = 'Import New from API'
     import_new_class_action.short_description = (
         'Create new available objects from SEMA API '
         '(does not update, authorize, or unauthorize existing). '
