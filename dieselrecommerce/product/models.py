@@ -678,6 +678,7 @@ class SemaMakeYear(SemaApiModel):
 
     class Meta:
         ordering = ['make', 'year']
+        unique_together = ['make', 'year']
         verbose_name = 'SEMA make year'
 
     def __str__(self):
