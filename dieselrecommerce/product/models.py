@@ -22,6 +22,7 @@ from .managers import (
     SemaCategoryManager,
     SemaDatasetManager,
     SemaMakeManager,
+    SemaMakeYearManager,
     SemaModelManager,
     SemaProductManager,
     SemaSubmodelManager,
@@ -585,6 +586,102 @@ class SemaSubmodel(SemaApiModel):
 
     def __str__(self):
         return str(self.name)
+
+
+class SemaMakeYear(SemaApiModel):
+    year = ForeignKey(
+        SemaYear,
+        on_delete=CASCADE,
+        related_name='make_years'
+    )
+    make = ForeignKey(
+        SemaMake,
+        on_delete=CASCADE,
+        related_name='make_years'
+    )
+
+    # year
+    # brand_id=None, dataset_id=None
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Year': str(self.year),
+                'Make': str(self.make)
+            }
+        )
+        return state
+
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
+        try:
+            pk_list = []
+            for item in data:
+                try:
+                    year_make = cls.objects.get(
+                        year__year=item['year'],
+                        make__make_id=item['MakeID']
+                    )
+                    pk_list.append(year_make.pk)
+                except cls.DoesNotExist:
+                    pass
+            return pk_list
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_api_data(**filters):
+        years = (
+            list(filter(None, [filters.get('year')]))
+            or SemaYear.objects.filter(
+                is_authorized=True
+            ).values_list('year', flat=True)
+        )
+
+        all_data = []
+        for year in years:
+            filters['year'] = year
+            try:
+                data = sema_api.retrieve_makes(**filters)
+                for item in data:
+                    item['year'] = year
+                all_data += data
+            except Exception:
+                raise
+        return all_data
+
+    @staticmethod
+    def parse_api_data(data):
+        try:
+            pk = None
+            update_fields = {
+                'year': SemaYear.objects.get(year=data['year']),
+                'make': SemaMake.objects.get(make_id=data['MakeID']),
+            }
+            return pk, update_fields
+        except Exception:
+            raise
+
+    @classmethod
+    def get_object_from_api_data(cls, pk, **update_fields):
+        try:
+            return cls.objects.get(
+                year=update_fields['year'],
+                make=update_fields['make']
+            )
+        except Exception:
+            raise
+
+    objects = SemaMakeYearManager()
+
+    class Meta:
+        ordering = ['make', 'year']
+        verbose_name = 'SEMA make year'
+
+    def __str__(self):
+        return f'{self.year} :: {self.make}'
 
 
 class SemaBaseVehicle(SemaApiModel):

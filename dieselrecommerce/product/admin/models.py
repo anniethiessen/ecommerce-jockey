@@ -14,6 +14,7 @@ from ..models import (
     SemaCategory,
     SemaDataset,
     SemaMake,
+    SemaMakeYear,
     SemaModel,
     SemaProduct,
     SemaSubmodel,
@@ -29,6 +30,7 @@ from .actions import (
     SemaCategoryActions,
     SemaDatasetActions,
     SemaMakeActions,
+    SemaMakeYearActions,
     SemaModelActions,
     SemaProductActions,
     SemaSubmodelActions,
@@ -363,6 +365,88 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+
+@admin.register(SemaMakeYear)
+class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
+    search_fields = (
+        'year__year',
+        'make__make_id',
+        'make__name'
+    )
+
+    changelist_actions = (
+        'import_full_class_action',
+        'import_new_class_action'
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'year',
+        'make',
+        'is_authorized'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_filter = (
+        'is_authorized',
+        'make',
+        'year'
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'is_authorized',
+                    'id'
+                )
+            }
+        ),
+        (
+            'Year', {
+                'fields': (
+                    'year_link',
+                    'year'
+                )
+            }
+        ),
+        (
+            'Make', {
+                'fields': (
+                    'make_link',
+                    'make'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'id',
+        'year_link',
+        'make_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def year_link(self, obj):
+        if not obj.year:
+            return None
+        return get_change_view_link(obj.year, 'See full year')
+    year_link.short_description = ''
+
+    def make_link(self, obj):
+        if not obj.make:
+            return None
+        return get_change_view_link(obj.make, 'See full make')
+    make_link.short_description = ''
 
 
 @admin.register(SemaBaseVehicle)

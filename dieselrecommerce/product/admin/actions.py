@@ -159,7 +159,7 @@ class SemaSubmodelActions(SemaBaseActions):
     pass
 
 
-class SemaBaseVehicleActions(SemaBaseActions):
+class SemaMakeYearActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
         super().import_full_class_action(request, queryset)
     import_full_class_action.short_description = (
@@ -174,6 +174,24 @@ class SemaBaseVehicleActions(SemaBaseActions):
         'Create new available objects from SEMA API '
         '(does not update, authorize, or unauthorize existing). '
         'WARNING: Years and makes must be up-to-date'
+    )
+
+
+class SemaBaseVehicleActions(SemaBaseActions):
+    def import_full_class_action(self, request, queryset):
+        super().import_full_class_action(request, queryset)
+    import_full_class_action.short_description = (
+        'Create, update, authorize, and unauthorize '
+        'all available objects from SEMA API. '
+        'WARNING: Years, makes, and models must be up-to-date'
+    )
+
+    def import_new_class_action(self, request, queryset):
+        super().import_new_class_action(request, queryset)
+    import_new_class_action.short_description = (
+        'Create new available objects from SEMA API '
+        '(does not update, authorize, or unauthorize existing). '
+        'WARNING: Years, makes, and models must be up-to-date'
     )
 
 

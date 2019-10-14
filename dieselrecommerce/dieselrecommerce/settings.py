@@ -144,6 +144,10 @@ ADMIN_REORDER = (
                 'label': 'Submodels'
             },
             {
+                'model': 'product.SemaMakeYear',
+                'label': 'Make Years'
+            },
+            {
                 'model': 'product.SemaBaseVehicle',
                 'label': 'Base Vehicles'
             },

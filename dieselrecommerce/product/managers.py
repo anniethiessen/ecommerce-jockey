@@ -133,6 +133,10 @@ class SemaSubmodelQuerySet(QuerySet):
     pass
 
 
+class SemaMakeYearQuerySet(QuerySet):
+    pass
+
+
 class SemaBaseVehicleQuerySet(QuerySet):
     pass
 
@@ -257,6 +261,14 @@ class SemaModelManager(Manager):
 class SemaSubmodelManager(Manager):
     def get_queryset(self):
         return SemaSubmodelQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaMakeYearManager(Manager):
+    def get_queryset(self):
+        return SemaMakeYearQuerySet(
             self.model,
             using=self._db
         )
