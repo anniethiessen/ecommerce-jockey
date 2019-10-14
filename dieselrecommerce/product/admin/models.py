@@ -377,7 +377,6 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
 
     changelist_actions = (
         'import_full_class_action',
-        'import_new_class_action'
     )
 
     list_display = (
@@ -463,7 +462,6 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 
     changelist_actions = (
         'import_full_class_action',
-        'import_new_class_action'
     )
 
     list_display = (
@@ -550,7 +548,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     changelist_actions = (
-        'import_vehicles_class_action',
+        'import_full_class_action',
     )
 
     list_display = (
