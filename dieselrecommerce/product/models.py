@@ -238,8 +238,6 @@ class SemaApiModel(Model, MessagesMixin):
         help_text='brand has given access to dataset'
     )
 
-    sema_api_method = None
-
     @property
     def state(self):
         return {
@@ -249,8 +247,6 @@ class SemaApiModel(Model, MessagesMixin):
     @classmethod
     def get_api_filter_errors(cls, new_only, *args, **filters):
         errors = []
-        if not cls.sema_api_method:
-            return errors.append('SEMA API method must be defined')
         if filters and new_only:
             return errors.append("New only import cannot be used with filters")
         return errors
@@ -260,8 +256,8 @@ class SemaApiModel(Model, MessagesMixin):
         raise Exception('Get authorized PK list must be defined')
 
     @staticmethod
-    def clean_api_data(data):
-        raise Exception('Clean API data must be defined')
+    def get_api_data(**filters):
+        raise Exception('Get API data must be defined')
 
     @staticmethod
     def parse_api_data(data):
@@ -281,7 +277,7 @@ class SemaApiModel(Model, MessagesMixin):
             return msgs
 
         try:
-            data = getattr(sema_api, cls.sema_api_method)(**filters)
+            data = cls.get_api_data(**filters)
         except Exception as err:
             msgs.append(cls.get_class_error_msg(str(err)))
             return msgs
@@ -293,12 +289,6 @@ class SemaApiModel(Model, MessagesMixin):
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(str(err)))
                 return msgs
-
-        try:
-            data = cls.clean_api_data(data)
-        except Exception as err:
-            msgs.append(cls.get_class_error_msg(str(err)))
-            return msgs
 
         for item in data:
             try:
@@ -383,7 +373,6 @@ class SemaYear(SemaApiModel):
         unique=True
     )
 
-    sema_api_method = 'retrieve_years'
     # brand_id=None, dataset_id=None
 
     @property
@@ -395,8 +384,11 @@ class SemaYear(SemaApiModel):
         return data
 
     @staticmethod
-    def clean_api_data(data):
-        return data
+    def get_api_data(**filters):
+        try:
+            return sema_api.retrieve_years(**filters)
+        except Exception:
+            raise
 
     @staticmethod
     def parse_api_data(data):
@@ -423,7 +415,6 @@ class SemaMake(SemaApiModel):
         max_length=50,
     )
 
-    sema_api_method = 'retrieve_makes'
     # brand_id=None, dataset_id=None, year=None
 
     @property
@@ -444,8 +435,11 @@ class SemaMake(SemaApiModel):
             raise
 
     @staticmethod
-    def clean_api_data(data):
-        return data
+    def get_api_data(**filters):
+        try:
+            return sema_api.retrieve_makes(**filters)
+        except Exception:
+            raise
 
     @staticmethod
     def parse_api_data(data):
@@ -477,7 +471,6 @@ class SemaModel(SemaApiModel):
         max_length=50,
     )
 
-    sema_api_method = 'retrieve_models'
     # brand_id=None, dataset_id=None, year=None, make_id=None
 
     @property
@@ -498,8 +491,9 @@ class SemaModel(SemaApiModel):
             raise
 
     @staticmethod
-    def clean_api_data(data):
+    def get_api_data(**filters):
         try:
+            data = sema_api.retrieve_models(**filters)
             for item in data:
                 del item['BaseVehicleID']
             return [dict(t) for t in {tuple(item.items()) for item in data}]
@@ -536,7 +530,6 @@ class SemaSubmodel(SemaApiModel):
         max_length=50,
     )
 
-    sema_api_method = 'retrieve_submodels'
     # brand_id=None, dataset_id=None, year=None, make_id=None, model_id=None
 
     @property
@@ -557,8 +550,9 @@ class SemaSubmodel(SemaApiModel):
             raise
 
     @staticmethod
-    def clean_api_data(data):
+    def get_api_data(**filters):
         try:
+            data = sema_api.retrieve_submodels(**filters)
             for item in data:
                 del item['VehicleID']
             return [dict(t) for t in {tuple(item.items()) for item in data}]
