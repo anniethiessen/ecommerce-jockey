@@ -1150,7 +1150,7 @@ class SemaCategory(SemaApiModel):
         return f'{self.parent_category} :: {self.name}'
 
 
-class SemaProduct(Model, SemaProductMixin):
+class SemaProduct(SemaApiModel):
     product_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -1167,10 +1167,71 @@ class SemaProduct(Model, SemaProductMixin):
         blank=True,
         verbose_name='HTML'
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Part': self.part_number,
+                'Dataset': str(self.dataset)
+            }
+        )
+        return state
+
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
+        try:
+            return [item['ProductId'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_api_data(**filters):
+        try:
+            datasets = SemaDataset.objects.filter(is_authorized=True)
+
+            if filters.get('brand_id'):
+                datasets = datasets.filter(
+                    brand__brand_id=filters['brand_id']
+                )
+
+            if filters.get('dataset_id'):
+                datasets = datasets.filter(
+                    dataset_id=filters['dataset_id']
+                )
+
+            if not datasets:
+                raise Exception('No authorized datasets')
+        except Exception:
+            raise
+
+        all_data = []
+        for dataset in datasets:
+            dataset_id = dataset.dataset_id
+            filters['dataset_id'] = dataset_id
+            try:
+                data = sema_api.retrieve_products_by_brand(**filters)
+                for item in data:
+                    item['dataset_id'] = dataset_id
+                all_data += data
+            except Exception:
+                raise
+        return all_data
+
+    @classmethod
+    def parse_api_data(cls, data):
+        try:
+            pk = data['ProductId']
+            update_fields = {
+                'part_number': data['PartNumber'],
+                'dataset': SemaDataset.objects.get(
+                    dataset_id=data['dataset_id']
+                )
+            }
+            return pk, update_fields
+        except Exception:
+            raise
 
     objects = SemaProductManager()
 

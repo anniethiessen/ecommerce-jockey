@@ -831,13 +831,17 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'part_number'
     )
 
-    actions = (
-        'update_html_queryset_action',
+    # actions = (  # TO DO
+    #     'update_html_queryset_action',
+    # )
+
+    changelist_actions = (
+        'import_full_class_action',
     )
 
-    change_actions = (
-        'update_html_object_action',
-    )
+    # change_actions = (  # TO DO
+    #     'update_html_object_action',
+    # )
 
     list_display = (
         'details_link',
