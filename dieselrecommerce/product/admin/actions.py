@@ -295,55 +295,29 @@ class SemaProductActions(SemaBaseActions):
     def import_new_class_action(self, request, queryset):
         raise Exception('Action not available for this model')
 
-    # def update_html_object_action(self, request, obj):
-    #     if not obj.product_id:
-    #         messages.error(request, "SEMA product ID required")
-    #         return
-    #
-    #     try:
-    #         token = self.model.retrieve_sema_api_token()
-    #     except Exception as err:
-    #         messages.error(request, f"Token error: {err}")
-    #         return
-    #
-    #     try:
-    #         msg = obj.update_html_from_sema_api(token)
-    #         if msg[:4] == 'Info':
-    #             messages.info(request, msg)
-    #         elif msg[:7] == 'Success':
-    #             messages.success(request, msg)
-    #         else:
-    #             messages.error(request, msg)
-    #     except Exception as err:
-    #         messages.error(request, str(err))
-    # update_html_object_action.allowed_permissions = ('view',)
-    # update_html_object_action.label = "Update HTML from API"
-    # update_html_object_action.short_description = (
-    #     'Update this SEMA product\'s HTML from SEMA API'
-    # )
-    #
-    # def update_html_queryset_action(self, request, queryset):
-    #     try:
-    #         token = self.model.retrieve_sema_api_token()
-    #     except Exception as err:
-    #         messages.error(request, f"Token error: {err}")
-    #         return
-    #
-    #     try:
-    #         msgs = queryset.update_html_from_sema_api(token)
-    #         for msg in msgs:
-    #             if msg[:4] == 'Info':
-    #                 messages.info(request, msg)
-    #             elif msg[:7] == 'Success':
-    #                 messages.success(request, msg)
-    #             else:
-    #                 messages.error(request, msg)
-    #     except Exception as err:
-    #         messages.error(request, str(err))
-    # update_html_queryset_action.allowed_permissions = ('view',)
-    # update_html_queryset_action.short_description = (
-    #     'Update selected %(verbose_name_plural)s\' HTML from SEMA API'
-    # )
+    def update_html_object_action(self, request, obj):
+        try:
+            msg = obj.update_html_from_api()
+            self.display_message(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_html_object_action.allowed_permissions = ('view',)
+    update_html_object_action.label = "Update HTML from API"
+    update_html_object_action.short_description = (
+        'Update this SEMA product\'s HTML from SEMA API'
+    )
+
+    def update_html_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.update_html_from_api()
+            for msg in msgs:
+                self.display_message(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_html_queryset_action.allowed_permissions = ('view',)
+    update_html_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' HTML from SEMA API'
+    )
 
 
 class ProductActions(object):

@@ -831,17 +831,17 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'part_number'
     )
 
-    # actions = (  # TO DO
-    #     'update_html_queryset_action',
-    # )
+    actions = (
+        'update_html_queryset_action',
+    )
 
     changelist_actions = (
         'import_full_class_action',
     )
 
-    # change_actions = (  # TO DO
-    #     'update_html_object_action',
-    # )
+    change_actions = (
+        'update_html_object_action',
+    )
 
     list_display = (
         'details_link',
@@ -943,10 +943,14 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             return '-----'
         try:
             html = f"<html>\n{obj.html.split('</head>', 1)[1]}"
-            image_class = 'class="main-product-img"'
-            image_width = 'width="300px"'
-            index = html.index(image_class)
-            html = f"{html[:index]}{image_width} {html[index:]}"
+            image_classes = [
+                'main-product-img',
+                'brand-logo'
+            ]
+            image_width = '300px'
+            for image_class in image_classes:
+                index = html.index(f'class="{image_class}"')
+                html = f'{html[:index]}width="{image_width}" {html[index:]}'
             return mark_safe(html)
         except Exception as err:
             return str(err)

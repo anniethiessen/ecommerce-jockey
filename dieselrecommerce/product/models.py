@@ -1232,6 +1232,16 @@ class SemaProduct(SemaApiModel):
         except Exception:
             raise
 
+    def update_html_from_api(self):
+        try:
+            html = sema_api.retrieve_product_html(self.product_id)
+            self.html = html
+            self.save()
+            self.refresh_from_db()
+            return self.get_update_success_msg()
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+
     objects = SemaProductManager()
 
     class Meta:

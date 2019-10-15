@@ -119,29 +119,7 @@ class SemaBrandQuerySet(QuerySet):
 
 
 class SemaDatasetQuerySet(QuerySet):
-    def import_products_from_sema_api(self, token=None):
-        msgs = []
-        invalid = self.filter(is_authorized=False)
-        for obj in invalid:
-            msgs.append(
-                obj.get_instance_error_msg("Dataset needs to be authorized")
-            )
-
-        queryset = self.filter(is_authorized=True)
-
-        try:
-            if not token:
-                token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        for obj in queryset:
-            try:
-                msgs += obj.import_products_from_sema_api(token)
-            except Exception as err:
-                msgs.append(obj.get_instance_error_msg(str(err)))
-
-        return msgs
+    pass
 
 
 class SemaYearQuerySet(QuerySet):
@@ -180,25 +158,12 @@ class SemaCategoryQuerySet(QuerySet):
 
 
 class SemaProductQuerySet(QuerySet):
-    def update_html_from_sema_api(self, token=None):
+    def update_html_from_api(self):
         msgs = []
-        invalid = self.filter(product_id__isnull=True)
-        for obj in invalid:
-            msgs.append(
-                obj.get_instance_error_msg("SEMA product ID required")
-            )
 
-        queryset = self.filter(product_id__isnull=False)
-
-        try:
-            if not token:
-                token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        for obj in queryset:
+        for obj in self:
             try:
-                msgs.append(obj.update_html_from_sema_api(token))
+                msgs.append(obj.update_html_from_api())
             except Exception as err:
                 msgs.append(obj.get_instance_error_msg(str(err)))
 
@@ -245,9 +210,6 @@ class SemaDatasetManager(Manager):
             self.model,
             using=self._db
         )
-
-    def import_products_from_sema_api(self, token=None):
-        return self.get_queryset().import_products_from_sema_api(token)
 
 
 class SemaYearManager(Manager):
@@ -324,5 +286,5 @@ class SemaProductManager(Manager):
             using=self._db
         )
 
-    def update_html_from_sema_api(self, token=None):
-        return self.get_queryset().update_html_from_sema_api(token)
+    def update_html_from_api(self):
+        return self.get_queryset().update_html_from_api()
