@@ -39,6 +39,7 @@ from .actions import (
 )
 from .filters import (
     ByDecade,
+    ByCategoryLevel,
     HasAlbertaInventory,
     HasMissingInventory,
     HasMissingHtml,
@@ -756,7 +757,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     )
 
     changelist_actions = (
-        'import_categories_class_action',
+        'import_full_class_action',
     )
 
     list_display = (
@@ -774,6 +775,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     list_filter = (
         'is_authorized',
+        ByCategoryLevel
     )
 
     fieldsets = (

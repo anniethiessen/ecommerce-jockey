@@ -34,9 +34,6 @@ from .mixins import (
     MessagesMixin,
     PremierProductMixin,
     ProductMixin,
-    SemaBrandMixin,
-    SemaCategoryMixin,
-    SemaDatasetMixin,
     SemaProductMixin
 )
 
@@ -259,8 +256,8 @@ class SemaApiModel(Model, MessagesMixin):
     def get_api_data(**filters):
         raise Exception('Get API data must be defined')
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         raise Exception('Parse API data must be defined')
 
     @classmethod
@@ -290,12 +287,29 @@ class SemaApiModel(Model, MessagesMixin):
                 msgs.append(cls.get_class_error_msg(str(err)))
                 return msgs
 
+        try:
+            msgs += cls.perform_create_update_from_api_data(new_only, data)
+        except Exception as err:
+            msgs.append(cls.get_class_error_msg(str(err)))
+
+        if not msgs:
+            if new_only:
+                msgs.append(cls.get_class_nothing_new_msg())
+            else:
+                msgs.append(cls.get_class_up_to_date_msg())
+        return msgs
+
+    @classmethod
+    def perform_create_update_from_api_data(cls, new_only, data):
+        msgs = []
         for item in data:
             try:
                 pk, update_fields = cls.parse_api_data(item)
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(f"{item}: {err}"))
                 continue
+
+            nested_data = cls.get_nested_data_from_api_data(item)
 
             try:
                 obj = cls.get_object_from_api_data(pk, **update_fields)
@@ -306,12 +320,17 @@ class SemaApiModel(Model, MessagesMixin):
             except Exception as err:
                 msgs.append(cls.get_class_error_msg(f"{item}: {err}"))
 
-        if not msgs:
-            if new_only:
-                msgs.append(cls.get_class_nothing_new_msg())
-            else:
-                msgs.append(cls.get_class_up_to_date_msg())
+            if nested_data:
+                msgs += cls.perform_create_update_from_api_data(
+                    new_only,
+                    nested_data
+                )
+
         return msgs
+
+    @staticmethod
+    def get_nested_data_from_api_data(data):
+        return None
 
     @classmethod
     def unauthorize_from_api_data(cls, authorized_pks,
@@ -414,8 +433,8 @@ class SemaBrand(SemaApiModel):
         except Exception:
             raise
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         pk = data['AAIABrandId']
         update_fields = {
             'name': data['BrandName']
@@ -483,8 +502,8 @@ class SemaDataset(SemaApiModel):
         except Exception:
             raise
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         pk = data['DatasetId']
         update_fields = {
             'name': data['DatasetName'],
@@ -525,8 +544,8 @@ class SemaYear(SemaApiModel):
         except Exception:
             raise
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         pk = data
         update_fields = {}
         return pk, update_fields
@@ -576,8 +595,8 @@ class SemaMake(SemaApiModel):
         except Exception:
             raise
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         try:
             pk = data['MakeID']
             update_fields = {
@@ -635,8 +654,8 @@ class SemaModel(SemaApiModel):
         except Exception:
             raise
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         try:
             pk = data['ModelID']
             update_fields = {
@@ -694,8 +713,8 @@ class SemaSubmodel(SemaApiModel):
         except Exception:
             raise
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         try:
             pk = data['SubmodelID']
             update_fields = {
@@ -784,8 +803,8 @@ class SemaMakeYear(SemaApiModel):
                 raise
         return all_data
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         try:
             pk = None
             update_fields = {
@@ -888,8 +907,8 @@ class SemaBaseVehicle(SemaApiModel):
                 raise
         return all_data
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         try:
             pk = data['BaseVehicleID']
             update_fields = {
@@ -999,8 +1018,8 @@ class SemaVehicle(SemaApiModel):
                 raise
         return all_data
 
-    @staticmethod
-    def parse_api_data(data):
+    @classmethod
+    def parse_api_data(cls, data):
         try:
             pk = data['VehicleID']
             update_fields = {
@@ -1027,7 +1046,7 @@ class SemaVehicle(SemaApiModel):
         return f'{self.base_vehicle} :: {self.submodel}'
 
 
-class SemaCategory(Model, SemaCategoryMixin):
+class SemaCategory(SemaApiModel):
     category_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -1042,10 +1061,77 @@ class SemaCategory(Model, SemaCategoryMixin):
         on_delete=SET_NULL,
         related_name='child_categories'
     )
-    is_authorized = BooleanField(
-        default=False,
-        help_text='brand has given access to dataset'
-    )
+
+    # brand_id or dataset_id
+    # year=None, make_id=None, model_id=None, submodel=None
+    # base_vehicle_id=None, vehicle_id=None
+    # part_number=None, pies_segment=None
+
+    @property
+    def state(self):
+        state = dict(super().state)
+        state.update(
+            {
+                'Name': self.name,
+                'Parent': str(self.parent_category)
+            }
+        )
+        return state
+
+    @classmethod
+    def get_pk_list_from_api_data(cls, data):
+        try:
+            return [item['CategoryId'] for item in data]
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_api_data(**filters):
+        try:
+            datasets = SemaDataset.objects.filter(is_authorized=True)
+
+            if filters.get('brand_id'):
+                datasets = datasets.filter(
+                    brand__brand_id=filters['brand_id']
+                )
+
+            if filters.get('dataset_id'):
+                datasets = datasets.filter(
+                    dataset_id=filters['dataset_id']
+                )
+
+            if not datasets:
+                raise Exception('No authorized datasets')
+        except Exception:
+            raise
+
+        all_data = []
+        for dataset in datasets:
+            filters['dataset_id'] = dataset.dataset_id
+            try:
+                all_data += sema_api.retrieve_categories(**filters)
+            except Exception:
+                raise
+        return all_data
+
+    @classmethod
+    def parse_api_data(cls, data):
+        try:
+            pk = data['CategoryId']
+            update_fields = {
+                'name': data['Name']
+            }
+            if data.get('ParentId'):
+                update_fields['parent_category'] = (
+                    cls.objects.get(category_id=data['ParentId'])
+                )
+            return pk, update_fields
+        except Exception:
+            raise
+
+    @staticmethod
+    def get_nested_data_from_api_data(data):
+        return data['Categories']
 
     objects = SemaCategoryManager()
 

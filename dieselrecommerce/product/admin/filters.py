@@ -85,6 +85,54 @@ class ByDecade(SimpleListFilter):
             return queryset.with_year_data().filter(decade=int(self.value()))
 
 
+class ByCategoryLevel(SimpleListFilter):
+    title = 'category level'
+    parameter_name = 'category_level'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('1', 'Level 1'),
+            ('2', 'Level 2'),
+            ('3', 'Level 3'),
+            ('4', 'Level 4'),
+            ('5', 'Level 5')
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == '1':
+            return queryset.filter(parent_category__isnull=True)
+
+        if self.value() == '2':
+            return queryset.filter(
+                parent_category__isnull=False,
+                parent_category__parent_category__isnull=True,
+            )
+
+        if self.value() == '3':
+            return queryset.filter(
+                parent_category__isnull=False,
+                parent_category__parent_category__isnull=False,
+                parent_category__parent_category__parent_category__isnull=True,
+            )
+
+        if self.value() == '4':
+            return queryset.filter(
+                parent_category__isnull=False,
+                parent_category__parent_category__isnull=False,
+                parent_category__parent_category__parent_category__isnull=False,
+                parent_category__parent_category__parent_category__parent_category__isnull=True
+            )
+
+        if self.value() == '5':
+            return queryset.filter(
+                parent_category__isnull=False,
+                parent_category__parent_category__isnull=False,
+                parent_category__parent_category__parent_category__isnull=False,
+                parent_category__parent_category__parent_category__parent_category__isnull=False,
+                parent_category__parent_category__parent_category__parent_category__parent_category__isnull=True
+            )
+
+
 class HasMissingHtml(SimpleListFilter):
     title = 'has missing HTML'
     parameter_name = 'missing_html'

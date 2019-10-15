@@ -200,7 +200,7 @@ class SemaApi(object):
                             base_vehicle_id=None, vehicle_id=None,
                             year=None, make_name=None,
                             model_name=None, submodel_name=None):
-        if not brand_id or dataset_id:
+        if not (brand_id or dataset_id):
             raise Exception('Brand ID or dataset ID required')
 
         url = f'{settings.SEMA_BASE_URL}/lookup/categories'

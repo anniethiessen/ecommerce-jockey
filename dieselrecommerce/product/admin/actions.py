@@ -266,40 +266,19 @@ class SemaVehicleActions(SemaBaseActions):
         raise Exception('Action not available for this model')
 
 
-class SemaCategoryActions(object):
-    def import_categories_class_action(self, request, queryset):
-        from product.models import SemaDataset
-
-        msgs = []
-        datasets = SemaDataset.objects.all()
-
-        try:
-            token = self.model.retrieve_sema_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        for dataset in datasets:
-            try:
-                msgs += self.model.import_categories_from_sema_api(
-                    dataset_id=dataset.dataset_id,
-                    token=token
-                )
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
-
-        for msg in msgs:
-            if msg[:4] == 'Info':
-                messages.info(request, msg)
-            elif msg[:7] == 'Success':
-                messages.success(request, msg)
-            else:
-                messages.error(request, msg)
-    import_categories_class_action.allowed_permissions = ('view',)
-    import_categories_class_action.label = 'Import Categories from API'
-    import_categories_class_action.short_description = (
-        'Import all available categories from SEMA API'
+class SemaCategoryActions(SemaBaseActions):
+    def import_full_class_action(self, request, queryset):
+        super().import_full_class_action(request, queryset)
+    import_full_class_action.allowed_permissions = ('view',)
+    import_full_class_action.label = 'Full Import from API'
+    import_full_class_action.short_description = (
+        'Create, update, authorize, and unauthorize '
+        'all available objects from SEMA API. '
+        'WARNING: Brands and datasets must be up-to-date'
     )
+
+    def import_new_class_action(self, request, queryset):
+        raise Exception('Action not available for this model')
 
 
 class SemaProductActions(object):
