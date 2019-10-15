@@ -451,7 +451,7 @@ class SemaBrand(SemaApiModel):
         return self.sema_datasets.count()
 
     def __str__(self):
-        return f'{self.brand_id} :: {self.name}'
+        return str(self.name)
 
 
 class SemaDataset(SemaApiModel):
@@ -517,7 +517,7 @@ class SemaDataset(SemaApiModel):
         verbose_name = 'SEMA dataset'
 
     def __str__(self):
-        return f'{self.dataset_id} :: {self.name} :: {self.brand}'
+        return f'{self.brand} :: {self.name}'
 
 
 class SemaYear(SemaApiModel):
