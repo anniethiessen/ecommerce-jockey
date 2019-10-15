@@ -33,8 +33,7 @@ from .mixins import (
     ManufacturerMixin,
     MessagesMixin,
     PremierProductMixin,
-    ProductMixin,
-    SemaProductMixin
+    ProductMixin
 )
 
 

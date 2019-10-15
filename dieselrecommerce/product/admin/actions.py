@@ -292,8 +292,8 @@ class SemaProductActions(SemaBaseActions):
         'WARNING: Brands and datasets must be up-to-date'
     )
 
-    # def import_new_class_action(self, request, queryset):
-    #     raise Exception('Action not available for this model')
+    def import_new_class_action(self, request, queryset):
+        raise Exception('Action not available for this model')
 
     # def update_html_object_action(self, request, obj):
     #     if not obj.product_id:
