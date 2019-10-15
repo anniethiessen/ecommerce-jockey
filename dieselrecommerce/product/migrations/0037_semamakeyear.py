@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import product.mixins
 
 
 class Migration(migrations.Migration):
@@ -24,6 +23,6 @@ class Migration(migrations.Migration):
                 'verbose_name': 'SEMA make year',
                 'ordering': ['make', 'year'],
             },
-            bases=(models.Model, product.mixins.MessagesMixin),
+            bases=(models.Model,),
         ),
     ]

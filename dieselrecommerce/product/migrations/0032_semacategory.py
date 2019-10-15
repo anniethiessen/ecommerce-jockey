@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import product.mixins
 
 
 class Migration(migrations.Migration):
@@ -22,6 +21,6 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'SEMA categories',
             },
-            bases=(models.Model, product.mixins.SemaCategoryMixin),
+            bases=(models.Model,),
         ),
     ]

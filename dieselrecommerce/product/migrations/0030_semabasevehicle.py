@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import product.mixins
 
 
 class Migration(migrations.Migration):
