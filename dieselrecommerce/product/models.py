@@ -14,7 +14,10 @@ from django.db.models import (
     Q
 )
 
-from .apis import SemaApi
+from .apis import (
+    SemaApi,
+    PremierApi
+)
 from .managers import (
     PremierProductManager,
     SemaBaseVehicleManager,
@@ -32,147 +35,15 @@ from .managers import (
 from .mixins import (
     ManufacturerMixin,
     MessagesMixin,
-    PremierProductMixin,
     ProductMixin
 )
 
 
+premier_api = PremierApi()
 sema_api = SemaApi()
 
 
-class PremierProduct(Model, PremierProductMixin):
-    premier_part_number = CharField(
-        max_length=20,
-        unique=True,
-        primary_key=True
-    )
-    vendor_part_number = CharField(
-        max_length=20,
-    )
-    description = CharField(
-        max_length=500
-    )
-    manufacturer = CharField(
-        max_length=50
-    )
-    cost = DecimalField(
-        decimal_places=2,
-        max_digits=10
-    )
-    cost_cad = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='cost CAD'
-    )
-    cost_usd = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='cost USD'
-    )
-    jobber = DecimalField(
-        decimal_places=2,
-        max_digits=10
-    )
-    jobber_cad = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='jobber CAD'
-    )
-    jobber_usd = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='jobber USD'
-    )
-    msrp = DecimalField(
-        decimal_places=2,
-        max_digits=10,
-        verbose_name='MSRP'
-    )
-    msrp_cad = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='MSRP CAD'
-    )
-    msrp_usd = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='MSRP USD'
-    )
-    map = DecimalField(
-        decimal_places=2,
-        max_digits=10,
-        verbose_name='MAP'
-    )
-    map_cad = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='MAP CAD'
-    )
-    map_usd = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='API field',
-        max_digits=10,
-        null=True,
-        verbose_name='MAP USD'
-    )
-    part_status = CharField(
-        max_length=20
-    )
-    weight = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='lbs',
-        max_digits=10,
-        null=True
-    )
-    length = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='in',
-        max_digits=10,
-        null=True
-    )
-    width = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='in',
-        max_digits=10,
-        null=True
-    )
-    height = DecimalField(
-        blank=True,
-        decimal_places=2,
-        help_text='in',
-        max_digits=10,
-        null=True
-    )
-    upc = CharField(
-        blank=True,
-        max_length=50,
-        verbose_name='UPC'
-    )
+class PremierApiProductInventoryModel(Model, MessagesMixin):
     inventory_ab = IntegerField(
         blank=True,
         help_text='API field',
@@ -220,6 +91,296 @@ class PremierProduct(Model, PremierProductMixin):
         help_text='API field',
         null=True,
         verbose_name='Colorado inventory'
+    )
+
+    def clear_inventory_fields(self):
+        self.inventory_ab = None
+        self.inventory_po = None
+        self.inventory_ut = None
+        self.inventory_ky = None
+        self.inventory_tx = None
+        self.inventory_ca = None
+        self.inventory_wa = None
+        self.inventory_co = None
+        self.save()
+
+    @property
+    def inventory_state(self):
+        return {
+            'AB': self.inventory_ab,
+            'PO': self.inventory_po,
+            'UT': self.inventory_ut,
+            'KY': self.inventory_ky,
+            'TX': self.inventory_tx,
+            'CA': self.inventory_ca,
+            'WA': self.inventory_wa,
+            'CO': self.inventory_co
+        }
+
+    @staticmethod
+    def get_api_inventory_data(part_numbers):
+        try:
+            return premier_api.retrieve_product_inventory(part_numbers)
+        except Exception:
+            raise
+
+    @classmethod
+    def parse_api_inventory_data(cls, data):
+        try:
+            update_fields = {}
+            for item in data:
+                field = f'inventory_{item["warehouseCode"][:2].lower()}'
+                update_fields[field] = int(item['quantityAvailable'])
+            return update_fields
+        except Exception:
+            raise
+
+    def update_inventory_from_api(self):
+        if not self.premier_part_number:
+            return self.get_instance_error_msg("Premier Part Number required")
+
+        try:
+            part_numbers = [self.premier_part_number]
+            data = self.get_api_inventory_data(part_numbers)
+            data = data[0]['inventory']
+            update_fields = self.parse_api_inventory_data(data)
+            return self.update_inventory_from_api_data(**update_fields)
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+
+    def update_inventory_from_api_data(self, include_up_to_date=True,
+                                       **update_fields):
+        try:
+            prev = self.inventory_state
+            self.clear_inventory_fields()
+            for attr, value in update_fields.items():
+                if not getattr(self, attr) == value:
+                    setattr(self, attr, value)
+                    self.save()
+            self.refresh_from_db()
+            new = self.inventory_state
+            msg = self.get_update_success_msg(prev, new, include_up_to_date)
+        except Exception as err:
+            msg = self.get_instance_error_msg(f"{update_fields}, {err}")
+        return msg
+
+    class Meta:
+        abstract = True
+
+
+class PremierApiProductPricingModel(Model, MessagesMixin):
+    cost_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='cost CAD'
+    )
+    cost_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='cost USD'
+    )
+    jobber_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='jobber CAD'
+    )
+    jobber_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='jobber USD'
+    )
+    msrp_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MSRP CAD'
+    )
+    msrp_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MSRP USD'
+    )
+    map_cad = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MAP CAD'
+    )
+    map_usd = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='API field',
+        max_digits=10,
+        null=True,
+        verbose_name='MAP USD'
+    )
+
+    def clear_pricing_fields(self):
+        self.cost_cad = None
+        self.cost_usd = None
+        self.jobber_cad = None
+        self.jobber_usd = None
+        self.msrp_cad = None
+        self.msrp_usd = None
+        self.map_cad = None
+        self.map_usd = None
+        self.save()
+
+    @property
+    def pricing_state(self):
+        return {
+            'Cost CAD': self.cost_cad,
+            'Cost USD': self.cost_usd,
+            'Jobber CAD': self.jobber_cad,
+            'Jobber USD': self.jobber_usd,
+            'MSRP CAD': self.msrp_cad,
+            'MSRP USD': self.msrp_usd,
+            'MAP CAD': self.map_cad,
+            'MAP USD': self.map_usd
+        }
+
+    @staticmethod
+    def get_api_pricing_data(part_numbers):
+        try:
+            return premier_api.retrieve_product_pricing(part_numbers)
+        except Exception:
+            raise
+
+    @classmethod
+    def parse_api_pricing_data(cls, data):
+        try:
+            update_fields = {}
+            for item in data:
+                currency = item.pop('currency')
+                item['msrp'] = item.pop('retail')
+                for key, value in item.items():
+                    field = f'{key.lower()}_{currency.lower()}'
+                    update_fields[field] = value
+            return update_fields
+        except Exception:
+            raise
+
+    def update_pricing_from_api(self):
+        if not self.premier_part_number:
+            return self.get_instance_error_msg("Premier Part Number required")
+
+        try:
+            part_numbers = [self.premier_part_number]
+            data = self.get_api_pricing_data(part_numbers)
+            data = data[0]['pricing']
+            update_fields = self.parse_api_pricing_data(data)
+            return self.update_pricing_from_api_data(**update_fields)
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+
+    def update_pricing_from_api_data(self, include_up_to_date=True,
+                                     **update_fields):
+        try:
+            prev = self.pricing_state
+            self.clear_pricing_fields()
+            for attr, value in update_fields.items():
+                if not getattr(self, attr) == value:
+                    setattr(self, attr, value)
+                    self.save()
+            self.refresh_from_db()
+            new = self.pricing_state
+            msg = self.get_update_success_msg(prev, new, include_up_to_date)
+        except Exception as err:
+            msg = self.get_instance_error_msg(f"{update_fields}, {err}")
+        return msg
+
+    class Meta:
+        abstract = True
+
+
+class PremierProduct(PremierApiProductInventoryModel,
+                     PremierApiProductPricingModel):
+    premier_part_number = CharField(
+        max_length=20,
+        unique=True,
+        primary_key=True
+    )
+    vendor_part_number = CharField(
+        max_length=20,
+    )
+    description = CharField(
+        max_length=500
+    )
+    manufacturer = CharField(
+        max_length=50
+    )
+    cost = DecimalField(
+        decimal_places=2,
+        max_digits=10
+    )
+    jobber = DecimalField(
+        decimal_places=2,
+        max_digits=10
+    )
+    msrp = DecimalField(
+        decimal_places=2,
+        max_digits=10,
+        verbose_name='MSRP'
+    )
+    map = DecimalField(
+        decimal_places=2,
+        max_digits=10,
+        verbose_name='MAP'
+    )
+    part_status = CharField(
+        max_length=20
+    )
+    weight = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='lbs',
+        max_digits=10,
+        null=True
+    )
+    length = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='in',
+        max_digits=10,
+        null=True
+    )
+    width = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='in',
+        max_digits=10,
+        null=True
+    )
+    height = DecimalField(
+        blank=True,
+        decimal_places=2,
+        help_text='in',
+        max_digits=10,
+        null=True
+    )
+    upc = CharField(
+        blank=True,
+        max_length=50,
+        verbose_name='UPC'
     )
 
     objects = PremierProductManager()

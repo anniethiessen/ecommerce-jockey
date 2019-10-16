@@ -1,23 +1,22 @@
 from django.contrib import messages
 
 
-class PremierProductActions(object):
+class BaseActions(object):
+    def display_message(self, request, msg):
+        if msg[:4] == 'Info':
+            messages.warning(request, msg)
+        elif msg[:7] == 'Success':
+            messages.success(request, msg)
+        else:
+            messages.error(request, msg)
+
+
+class PremierProductActions(BaseActions):
     def update_inventory_queryset_action(self, request, queryset):
         try:
-            token = self.model.retrieve_premier_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msgs = queryset.update_inventory_from_premier_api(token)
+            msgs = queryset.update_inventory_from_api()
             for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
+                self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
     update_inventory_queryset_action.allowed_permissions = ('view',)
@@ -26,24 +25,9 @@ class PremierProductActions(object):
     )
 
     def update_inventory_object_action(self, request, obj):
-        if not obj.premier_part_number:
-            messages.error(request, "Premier Part Number required")
-            return
-
         try:
-            token = self.model.retrieve_premier_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msg = obj.update_inventory_from_premier_api(token)
-            if msg[:4] == 'Info':
-                messages.info(request, msg)
-            elif msg[:7] == 'Success':
-                messages.success(request, msg)
-            else:
-                messages.error(request, msg)
+            msg = obj.update_inventory_from_api()
+            self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
     update_inventory_object_action.allowed_permissions = ('view',)
@@ -54,20 +38,9 @@ class PremierProductActions(object):
 
     def update_pricing_queryset_action(self, request, queryset):
         try:
-            token = self.model.retrieve_premier_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msgs = queryset.update_pricing_from_premier_api(token)
+            msgs = queryset.update_pricing_from_api()
             for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
+                self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
     update_pricing_queryset_action.allowed_permissions = ('view',)
@@ -76,24 +49,9 @@ class PremierProductActions(object):
     )
 
     def update_pricing_object_action(self, request, obj):
-        if not obj.premier_part_number:
-            messages.error(request, "Premier Part Number required")
-            return
-
         try:
-            token = self.model.retrieve_premier_api_token()
-        except Exception as err:
-            messages.error(request, f"Token error: {err}")
-            return
-
-        try:
-            msg = obj.update_pricing_from_premier_api(token)
-            if msg[:4] == 'Info':
-                messages.info(request, msg)
-            elif msg[:7] == 'Success':
-                messages.success(request, msg)
-            else:
-                messages.error(request, msg)
+            msg = obj.update_pricing_from_api()
+            self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
     update_pricing_object_action.allowed_permissions = ('view',)
@@ -101,16 +59,6 @@ class PremierProductActions(object):
     update_pricing_object_action.short_description = (
         'Update this Premier product\'s pricing from Premier API'
     )
-
-
-class BaseActions(object):
-    def display_message(self, request, msg):
-        if msg[:4] == 'Info':
-            messages.warning(request, msg)
-        elif msg[:7] == 'Success':
-            messages.success(request, msg)
-        else:
-            messages.error(request, msg)
 
 
 class SemaBaseActions(BaseActions):

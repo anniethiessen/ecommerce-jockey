@@ -1,7 +1,11 @@
 from django.db.models import Manager, QuerySet, F, Q
 from django.db.models.functions import Floor
 
+from .apis import PremierApi
 from .utils import chunkify_list
+
+
+premier_api = PremierApi()
 
 
 class PremierProductQuerySet(QuerySet):
@@ -30,8 +34,9 @@ class PremierProductQuerySet(QuerySet):
             inventory_co__isnull=False
         )
 
-    def update_inventory_from_premier_api(self, token=None):
+    def update_inventory_from_api(self):
         msgs = []
+
         invalid = self.filter(premier_part_number__isnull=True)
         for obj in invalid:
             msgs.append(
@@ -44,15 +49,14 @@ class PremierProductQuerySet(QuerySet):
         chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
-                if not token:
-                    token = self.model.retrieve_premier_api_token()
-                response = self.model.retrieve_premier_api_inventory(
-                    chunk, token)
+                response = premier_api.retrieve_product_inventory(chunk)
                 for items in response:
-                    instance = queryset.get(
-                        premier_part_number=items['itemNumber'])
+                    obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['inventory']
-                    msgs.append(instance.update_inventory_from_data(data))
+                    update_fields = obj.parse_api_inventory_data(data)
+                    msgs.append(
+                        obj.update_inventory_from_api_data(**update_fields)
+                    )
             except Exception as err:
                 msgs.append(f'Chunk Error: {chunk}, {err}')
                 continue
@@ -84,8 +88,9 @@ class PremierProductQuerySet(QuerySet):
             map_usd__isnull=False
         )
 
-    def update_pricing_from_premier_api(self, token=None):
+    def update_pricing_from_api(self):
         msgs = []
+
         invalid = self.filter(premier_part_number__isnull=True)
         for obj in invalid:
             msgs.append(
@@ -98,15 +103,14 @@ class PremierProductQuerySet(QuerySet):
         chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
-                if not token:
-                    token = self.model.retrieve_premier_api_token()
-                response = self.model.retrieve_premier_api_pricing(
-                    chunk, token)
+                response = premier_api.retrieve_product_pricing(chunk)
                 for items in response:
-                    instance = queryset.get(
-                        premier_part_number=items['itemNumber'])
+                    obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['pricing']
-                    msgs.append(instance.update_pricing_from_data(data))
+                    update_fields = obj.parse_api_pricing_data(data)
+                    msgs.append(
+                        obj.update_pricing_from_api_data(**update_fields)
+                    )
             except Exception as err:
                 msgs.append(f'Chunk Error: {chunk}, {err}')
                 continue
@@ -183,8 +187,8 @@ class PremierProductManager(Manager):
     def has_missing_inventory(self):
         return self.get_queryset().has_missing_inventory()
 
-    def update_inventory_from_premier_api(self, token=None):
-        return self.get_queryset().update_inventory_from_premier_api(token)
+    def update_inventory_from_api(self):
+        return self.get_queryset().update_inventory_from_api()
 
     def has_all_pricing(self):
         return self.get_queryset().has_all_pricing()
@@ -192,8 +196,8 @@ class PremierProductManager(Manager):
     def has_missing_pricing(self):
         return self.get_queryset().has_missing_pricing()
 
-    def update_pricing_from_premier_api(self, token=None):
-        return self.get_queryset().update_pricing_from_premier_api(token)
+    def update_pricing_from_api(self):
+        return self.get_queryset().update_pricing_from_api()
 
 
 class SemaBrandManager(Manager):
