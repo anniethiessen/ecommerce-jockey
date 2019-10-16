@@ -170,7 +170,19 @@ class SemaSubmodelActions(SemaBaseActions):
 
 class SemaMakeYearActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
+        from product.models import SemaYear
+
+        msgs = []
+        years = SemaYear.objects.filter(is_authorized=True)
+
+        for year in years:
+            try:
+                msgs += self.model.import_from_api(year=year.year)
+            except Exception as err:
+                msgs += year.get_instance_error_msg(str(err))
+
+        for msg in msgs:
+            self.display_message(request, msg)
     import_full_class_action.allowed_permissions = ('view',)
     import_full_class_action.label = 'Full Import from API'
     import_full_class_action.short_description = (
@@ -185,7 +197,22 @@ class SemaMakeYearActions(SemaBaseActions):
 
 class SemaBaseVehicleActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
+        from product.models import SemaMakeYear
+
+        msgs = []
+        make_years = SemaMakeYear.objects.filter(is_authorized=True)
+
+        for make_year in make_years:
+            try:
+                msgs += self.model.import_from_api(
+                    year=make_year.year.year,
+                    make_id=make_year.make.make_id
+                )
+            except Exception as err:
+                msgs += make_year.get_instance_error_msg(str(err))
+
+        for msg in msgs:
+            self.display_message(request, msg)
     import_full_class_action.allowed_permissions = ('view',)
     import_full_class_action.label = 'Full Import from API'
     import_full_class_action.short_description = (
@@ -200,14 +227,30 @@ class SemaBaseVehicleActions(SemaBaseActions):
 
 class SemaVehicleActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
+        from product.models import SemaBaseVehicle
+
+        msgs = []
+        base_vehicles = SemaBaseVehicle.objects.filter(is_authorized=True)
+
+        for base_vehicle in base_vehicles:
+            try:
+                msgs += self.model.import_from_api(
+                    year=base_vehicle.make_year.year.year,
+                    make_id=base_vehicle.make_year.make.make_id,
+                    model_id=base_vehicle.model.model_id
+                )
+            except Exception as err:
+                msgs += base_vehicle.get_instance_error_msg(str(err))
+
+        for msg in msgs:
+            self.display_message(request, msg)
     import_full_class_action.allowed_permissions = ('view',)
     import_full_class_action.label = 'Full Import from API'
     import_full_class_action.short_description = (
         'Create, update, authorize, and unauthorize '
         'all available objects from SEMA API. '
-        'WARNING: Years, makes, make years, models, and base vehicles '
-        'must be up-to-date'
+        'WARNING: Years, makes, make years, models, base vehicles, and '
+        'submodels must be up-to-date'
     )
 
     def import_new_class_action(self, request, queryset):
@@ -216,7 +259,22 @@ class SemaVehicleActions(SemaBaseActions):
 
 class SemaCategoryActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
+        from product.models import SemaDataset
+
+        msgs = []
+        datasets = SemaDataset.objects.filter(is_authorized=True)
+
+        for dataset in datasets:
+            try:
+                msgs += self.model.import_from_api(
+                    brand_id=dataset.brand.brand_id,
+                    dataset_id=dataset.dataset_id
+                )
+            except Exception as err:
+                msgs += dataset.get_instance_error_msg(str(err))
+
+        for msg in msgs:
+            self.display_message(request, msg)
     import_full_class_action.allowed_permissions = ('view',)
     import_full_class_action.label = 'Full Import from API'
     import_full_class_action.short_description = (
@@ -231,7 +289,22 @@ class SemaCategoryActions(SemaBaseActions):
 
 class SemaProductActions(SemaBaseActions):
     def import_full_class_action(self, request, queryset):
-        super().import_full_class_action(request, queryset)
+        from product.models import SemaDataset
+
+        msgs = []
+        datasets = SemaDataset.objects.filter(is_authorized=True)
+
+        for dataset in datasets:
+            try:
+                msgs += self.model.import_from_api(
+                    brand_id=dataset.brand.brand_id,
+                    dataset_id=dataset.dataset_id
+                )
+            except Exception as err:
+                msgs += dataset.get_instance_error_msg(str(err))
+
+        for msg in msgs:
+            self.display_message(request, msg)
     import_full_class_action.allowed_permissions = ('view',)
     import_full_class_action.label = 'Full Import from API'
     import_full_class_action.short_description = (
