@@ -337,7 +337,7 @@ class SemaBaseManager(Manager):
             try:
                 obj = self.get_object_from_api_data(pk, **update_fields)
                 msgs.append(obj.update_from_api_data(**update_fields))
-            except self.DoesNotExist:
+            except self.model.DoesNotExist:
                 msgs.append(self.create_from_api_data(pk, **update_fields))
             except Exception as err:
                 msgs.append(self.model.get_class_error_msg(f"{item}: {err}"))
@@ -633,7 +633,7 @@ class SemaMakeYearManager(SemaBaseManager):
                     year=year.year
                 )
                 for item in data:
-                    item['year_'] = year
+                    item['year_'] = year.year
                 all_data += data
             return self.remove_duplicates_from_api_data(all_data)
         except Exception:
@@ -900,7 +900,7 @@ class SemaProductManager(SemaBaseManager):
                     make_name=make_name,
                     model_name=model_name,
                     submodel_name=submodel_name,
-                    base_vehicle_id=base_vehicle_ids,
+                    base_vehicle_ids=base_vehicle_ids,
                     vehicle_id=vehicle_ids,
                     part_number=part_number,
                     pies_segments=part_number
