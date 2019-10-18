@@ -2,6 +2,15 @@ from django.contrib import messages
 
 
 class BaseActions(object):
+    def display_messages(self, request, msgs, include_info=True):
+        if not include_info:
+            msgs = [msg for msg in msgs if not msg[:4] == 'Info']
+            if not msgs:
+                msgs.append(self.model.get_class_up_to_date_msg())
+
+        for msg in msgs:
+            self.display_message(request, msg)
+
     def display_message(self, request, msg):
         if msg[:4] == 'Info':
             messages.warning(request, msg)
@@ -15,8 +24,7 @@ class PremierProductActions(BaseActions):
     def update_inventory_queryset_action(self, request, queryset):
         try:
             msgs = queryset.update_inventory_from_api()
-            for msg in msgs:
-                self.display_message(request, msg)
+            self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
     update_inventory_queryset_action.allowed_permissions = ('view',)
@@ -39,8 +47,7 @@ class PremierProductActions(BaseActions):
     def update_pricing_queryset_action(self, request, queryset):
         try:
             msgs = queryset.update_pricing_from_api()
-            for msg in msgs:
-                self.display_message(request, msg)
+            self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
     update_pricing_queryset_action.allowed_permissions = ('view',)
@@ -62,43 +69,50 @@ class PremierProductActions(BaseActions):
 
 
 class SemaBaseActions(BaseActions):
-    def import_full_class_action(self, request, queryset):
+    def import_and_unauthorize_class_action(self, request, queryset):
         try:
-            msgs = self.model.import_from_api()
-            for msg in msgs:
-                self.display_message(request, msg)
+            msgs = self.model.objects.import_and_unauthorize_from_api()
+            self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        try:
-            msgs = self.model.import_from_api(new_only=True)
-            for msg in msgs:
-                self.display_message(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    import_new_class_action.allowed_permissions = ('view',)
-    import_new_class_action.label = 'Import New from API'
-    import_new_class_action.short_description = (
-        'Create new available objects from SEMA API '
-        '(does not update, authorize, or unauthorize existing)'
+    import_and_unauthorize_class_action.allowed_permissions = ('view',)
+    import_and_unauthorize_class_action.label = 'Import from API'
+    import_and_unauthorize_class_action.short_description = (
+        'Create or update all available objects from SEMA API. '
+        'Unauthorizes existing objects no longer returned by API. '
+        'WARNING: All related objects must be up-to-date'
     )
 
 
 class SemaBrandActions(SemaBaseActions):
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
+    def import_datasets_object_action(self, request, obj):
+        try:
+            msgs = obj.import_datasets_from_api()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_datasets_object_action.allowed_permissions = ('view',)
+    import_datasets_object_action.label = "Import Datasets from API"
+    import_datasets_object_action.short_description = (
+        'Create or update all available datasets of this brand from SEMA API. '
+        'Does not unauthorizes existing objects no longer returned by API. '
+        'WARNING: Brand must be up-to-date'
+    )
+
+    def import_datasets_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.import_datasets_from_api()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_datasets_queryset_action.allowed_permissions = ('view',)
+    import_datasets_queryset_action.short_description = (
+        'Import datasets for selected %(verbose_name_plural)s\' from SEMA API'
+    )
 
 
 class SemaDatasetActions(SemaBaseActions):
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
+    pass
 
     # def import_products_object_action(self, request, obj):
     #     if not obj.is_authorized:
@@ -169,153 +183,22 @@ class SemaSubmodelActions(SemaBaseActions):
 
 
 class SemaMakeYearActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        from product.models import SemaYear
-
-        msgs = []
-        years = SemaYear.objects.filter(is_authorized=True)
-
-        for year in years:
-            try:
-                msgs += self.model.import_from_api(year=year.year)
-            except Exception as err:
-                msgs += year.get_instance_error_msg(str(err))
-
-        for msg in msgs:
-            self.display_message(request, msg)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Years and makes must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
+    pass
 
 
 class SemaBaseVehicleActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        from product.models import SemaMakeYear
-
-        msgs = []
-        make_years = SemaMakeYear.objects.filter(is_authorized=True)
-
-        for make_year in make_years:
-            try:
-                msgs += self.model.import_from_api(
-                    year=make_year.year.year,
-                    make_id=make_year.make.make_id
-                )
-            except Exception as err:
-                msgs += make_year.get_instance_error_msg(str(err))
-
-        for msg in msgs:
-            self.display_message(request, msg)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Years, makes, make years, and models must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
+    pass
 
 
 class SemaVehicleActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        from product.models import SemaBaseVehicle
-
-        msgs = []
-        base_vehicles = SemaBaseVehicle.objects.filter(is_authorized=True)
-
-        for base_vehicle in base_vehicles:
-            try:
-                msgs += self.model.import_from_api(
-                    year=base_vehicle.make_year.year.year,
-                    make_id=base_vehicle.make_year.make.make_id,
-                    model_id=base_vehicle.model.model_id
-                )
-            except Exception as err:
-                msgs += base_vehicle.get_instance_error_msg(str(err))
-
-        for msg in msgs:
-            self.display_message(request, msg)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Years, makes, make years, models, base vehicles, and '
-        'submodels must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
+    pass
 
 
 class SemaCategoryActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        from product.models import SemaDataset
-
-        msgs = []
-        datasets = SemaDataset.objects.filter(is_authorized=True)
-
-        for dataset in datasets:
-            try:
-                msgs += self.model.import_from_api(
-                    brand_id=dataset.brand.brand_id,
-                    dataset_id=dataset.dataset_id
-                )
-            except Exception as err:
-                msgs += dataset.get_instance_error_msg(str(err))
-
-        for msg in msgs:
-            self.display_message(request, msg)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Brands and datasets must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
+    pass
 
 
 class SemaProductActions(SemaBaseActions):
-    def import_full_class_action(self, request, queryset):
-        from product.models import SemaDataset
-
-        msgs = []
-        datasets = SemaDataset.objects.filter(is_authorized=True)
-
-        for dataset in datasets:
-            try:
-                msgs += self.model.import_from_api(
-                    brand_id=dataset.brand.brand_id,
-                    dataset_id=dataset.dataset_id
-                )
-            except Exception as err:
-                msgs += dataset.get_instance_error_msg(str(err))
-
-        for msg in msgs:
-            self.display_message(request, msg)
-    import_full_class_action.allowed_permissions = ('view',)
-    import_full_class_action.label = 'Full Import from API'
-    import_full_class_action.short_description = (
-        'Create, update, authorize, and unauthorize '
-        'all available objects from SEMA API. '
-        'WARNING: Brands and datasets must be up-to-date'
-    )
-
-    def import_new_class_action(self, request, queryset):
-        raise Exception('Action not available for this model')
-
     def update_html_object_action(self, request, obj):
         try:
             msg = obj.update_html_from_api()
@@ -331,8 +214,7 @@ class SemaProductActions(SemaBaseActions):
     def update_html_queryset_action(self, request, queryset):
         try:
             msgs = queryset.update_html_from_api()
-            for msg in msgs:
-                self.display_message(request, msg)
+            self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
     update_html_queryset_action.allowed_permissions = ('view',)

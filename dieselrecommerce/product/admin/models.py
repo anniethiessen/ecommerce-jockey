@@ -185,8 +185,16 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         'name'
     )
 
+    actions = (
+        'import_datasets_queryset_action',
+    )
+
     changelist_actions = (
-        'import_full_class_action',
+        'import_and_unauthorize_class_action',
+    )
+
+    change_actions = (
+        'import_datasets_object_action',
     )
 
     list_display = (
@@ -244,7 +252,7 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     # )
 
     changelist_actions = (
-        'import_full_class_action',
+        'import_and_unauthorize_class_action',
     )
 
     # change_actions = (
@@ -311,8 +319,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
-        'import_new_class_action'
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -358,8 +365,7 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
-        'import_new_class_action'
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -406,8 +412,7 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
-        'import_new_class_action'
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -454,8 +459,7 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
-        'import_new_class_action'
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -503,7 +507,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -588,7 +592,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     changelist_actions = (
-        'import_full_class_action',
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -675,7 +679,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -757,7 +761,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
+        'import_and_unauthorize_class_action',
     )
 
     list_display = (
@@ -836,7 +840,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     changelist_actions = (
-        'import_full_class_action',
+        'import_and_unauthorize_class_action',
     )
 
     change_actions = (
