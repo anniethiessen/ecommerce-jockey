@@ -1,6 +1,37 @@
 from .models import *
 
 
+def retrieve_sema_api_data():
+    models = [
+        SemaBrand,
+        SemaDataset,
+        SemaYear,
+        SemaMake,
+        SemaModel,
+        SemaSubmodel,
+        SemaMakeYear,
+        SemaBaseVehicle,
+        SemaVehicle,
+        SemaCategory,
+        SemaProduct
+    ]
+
+    data = {}
+    errors = []
+    for index, model in enumerate(models, start=1):
+        print(f'{index}. Retrieving {model._meta.verbose_name.title()}...')
+        try:
+            _data = model.objects.get_api_data()
+            data[model._meta.verbose_name] = _data
+        except Exception as err:
+            errors.append(f'Internal Error: {err}')
+            print('   errored')
+            continue
+        print('   complete')
+
+    return data, errors
+
+
 def perform_sema_api_import_and_unauthorize():
     models = [
         SemaBrand,
@@ -39,3 +70,4 @@ def perform_sema_api_import_and_unauthorize():
 
 
 sema_sync = perform_sema_api_import_and_unauthorize
+sema_data = retrieve_sema_api_data
