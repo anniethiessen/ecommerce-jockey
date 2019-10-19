@@ -889,7 +889,7 @@ class SemaProductManager(SemaBaseManager):
                 for item in data:
                     item['dataset_id_'] = dataset.dataset_id
                 all_data += data
-            return self.remove_duplicates_from_api_data(all_data)
+            return all_data
         except Exception:
             raise
 
