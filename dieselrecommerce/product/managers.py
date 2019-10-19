@@ -73,7 +73,7 @@ class PremierProductQuerySet(QuerySet):
         chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
-                response = self.model.get_api_inventory_data(chunk)
+                response = self.model.objects.get_api_inventory_data(chunk)
                 for items in response:
                     obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['inventory']
@@ -101,7 +101,7 @@ class PremierProductQuerySet(QuerySet):
         chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
-                response = self.model.get_api_inventory_data(chunk)
+                response = self.model.objects.get_api_inventory_data(chunk)
                 for items in response:
                     obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['pricing']
@@ -159,20 +159,7 @@ class SemaMakeYearQuerySet(SemaBaseQuerySet):
 
 
 class SemaBaseVehicleQuerySet(SemaBaseQuerySet):
-    def get_vehicles_api_data(self):
-        from product.models import SemaVehicle
-
-        data = []
-        for base_vehicle in self:
-            try:
-                data += SemaVehicle.objects.get_api_data(
-                    year=base_vehicle.make_year.year.year,
-                    make_id=base_vehicle.make_year.year.year,
-                    model_id=base_vehicle.model.model_id
-                )
-            except Exception:
-                raise
-        return [dict(t) for t in {tuple(item.items()) for item in data}]
+    pass
 
 
 class SemaVehicleQuerySet(SemaBaseQuerySet):
@@ -352,7 +339,7 @@ class SemaBaseManager(Manager):
 
     def create_from_api_data(self, pk, **update_fields):
         try:
-            obj = self.objects.create(
+            obj = self.create(
                 pk=pk,
                 is_authorized=True,
                 **update_fields
@@ -667,7 +654,7 @@ class SemaMakeYearManager(SemaBaseManager):
             for item in data:
                 try:
                     year_make = self.get(
-                        year__year=item['year'],
+                        year__year=item['year_'],
                         make__make_id=item['MakeID']
                     )
                     pk_list.append(year_make.pk)
@@ -739,12 +726,6 @@ class SemaBaseVehicleManager(SemaBaseManager):
             self.model,
             using=self._db
         )
-
-    def get_vehicles_api_data(self):
-        try:
-            return self.get_queryset().get_vehicles_api_data()
-        except Exception:
-            raise
 
 
 class SemaVehicleManager(SemaBaseManager):
@@ -879,7 +860,7 @@ class SemaProductManager(SemaBaseManager):
                      year=None, make_name=None,
                      model_name=None, submodel_name=None,
                      base_vehicle_ids=None, vehicle_ids=None,
-                     part_number=None, pies_segments=None):
+                     part_numbers=None, pies_segments=None):
         from product.models import SemaDataset
 
         datasets = SemaDataset.objects.filter(is_authorized=True)
@@ -901,9 +882,9 @@ class SemaProductManager(SemaBaseManager):
                     model_name=model_name,
                     submodel_name=submodel_name,
                     base_vehicle_ids=base_vehicle_ids,
-                    vehicle_id=vehicle_ids,
-                    part_number=part_number,
-                    pies_segments=part_number
+                    vehicle_ids=vehicle_ids,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments
                 )
                 for item in data:
                     item['dataset_id_'] = dataset.dataset_id
