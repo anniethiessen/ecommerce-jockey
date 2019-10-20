@@ -755,6 +755,11 @@ class SemaProduct(SemaBaseModel):
         blank=True,
         verbose_name='HTML'
     )
+    categories = ManyToManyField(
+        SemaCategory,
+        blank=True,
+        related_name='categories'
+    )
 
     @property
     def state(self):

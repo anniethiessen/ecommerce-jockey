@@ -880,6 +880,13 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             }
         ),
         (
+            'Categories', {
+                'fields': (
+                    'categories',
+                )
+            }
+        ),
+        (
             'HTML', {
                 'fields': (
                     'html',
@@ -896,6 +903,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                 )
             }
         )
+    )
+
+    autocomplete_fields = (
+        'categories',
     )
 
     readonly_fields = (
