@@ -5,6 +5,7 @@ from django.db.models import (
     DecimalField,
     ForeignKey,
     IntegerField,
+    ManyToManyField,
     OneToOneField,
     PositiveIntegerField,
     PositiveSmallIntegerField,
@@ -367,7 +368,12 @@ class SemaBaseModel(Model, MessagesMixin):
                 self.is_authorized = True
                 self.save()
             for attr, value in update_fields.items():
-                if not getattr(self, attr) == value:
+                if isinstance(
+                        self._meta.model._meta.get_field(attr),
+                        ManyToManyField):
+                    getattr(self, attr).add(value)
+                    self.save()
+                elif not getattr(self, attr) == value:
                     setattr(self, attr, value)
                     self.save()
             self.refresh_from_db()
@@ -693,12 +699,11 @@ class SemaCategory(SemaBaseModel):
     name = CharField(
         max_length=50,
     )
-    parent_category = ForeignKey(
+    parent_categories = ManyToManyField(
         'self',
         blank=True,
-        null=True,
-        on_delete=SET_NULL,
-        related_name='child_categories'
+        related_name='child_categories',
+        symmetrical=False
     )
 
     @property
@@ -707,14 +712,20 @@ class SemaCategory(SemaBaseModel):
         state.update(
             {
                 'Name': self.name,
-                'Parent': str(self.parent_category)
+                'Parent': str(self.parent_categories.all())
             }
         )
         return state
 
     @property
+    def parent_category_count(self):
+        return self.parent_categories.all().count()
+    parent_category_count.fget.short_description = 'Parent Count'
+
+    @property
     def child_category_count(self):
         return self.child_categories.all().count()
+    child_category_count.fget.short_description = 'Child Count'
 
     objects = SemaCategoryManager()
 
@@ -724,9 +735,7 @@ class SemaCategory(SemaBaseModel):
         verbose_name_plural = 'SEMA categories'
 
     def __str__(self):
-        if not self.parent_category:
-            return self.name
-        return f'{self.parent_category} :: {self.name}'
+        return self.name
 
 
 class SemaProduct(SemaBaseModel):

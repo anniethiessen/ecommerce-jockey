@@ -835,7 +835,7 @@ class SemaCategoryManager(SemaBaseManager):
                 'name': data['Name']
             }
             if data.get('ParentId'):
-                update_fields['parent_category'] = (
+                update_fields['parent_categories'] = (
                     self.get(category_id=data['ParentId'])
                 )
             return pk, update_fields

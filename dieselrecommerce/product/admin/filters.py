@@ -91,45 +91,28 @@ class ByCategoryLevel(SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return (
-            ('1', 'Level 1'),
-            ('2', 'Level 2'),
-            ('3', 'Level 3'),
-            ('4', 'Level 4'),
-            ('5', 'Level 5')
+            ('1', 'Root'),
+            ('2', 'Branch'),
+            ('3', 'Leaf')
         )
 
     def queryset(self, request, queryset):
         if self.value() == '1':
-            return queryset.filter(parent_category__isnull=True)
+            return queryset.filter(
+                Q(parent_categories=None)
+                & ~Q(child_categories=None)
+            )
 
         if self.value() == '2':
             return queryset.filter(
-                parent_category__isnull=False,
-                parent_category__parent_category__isnull=True,
+                ~Q(parent_categories=None)
+                & ~Q(child_categories=None)
             )
 
         if self.value() == '3':
             return queryset.filter(
-                parent_category__isnull=False,
-                parent_category__parent_category__isnull=False,
-                parent_category__parent_category__parent_category__isnull=True,
-            )
-
-        if self.value() == '4':
-            return queryset.filter(
-                parent_category__isnull=False,
-                parent_category__parent_category__isnull=False,
-                parent_category__parent_category__parent_category__isnull=False,
-                parent_category__parent_category__parent_category__parent_category__isnull=True
-            )
-
-        if self.value() == '5':
-            return queryset.filter(
-                parent_category__isnull=False,
-                parent_category__parent_category__isnull=False,
-                parent_category__parent_category__parent_category__isnull=False,
-                parent_category__parent_category__parent_category__parent_category__isnull=False,
-                parent_category__parent_category__parent_category__parent_category__parent_category__isnull=True
+                ~Q(parent_categories=None)
+                & Q(child_categories=None)
             )
 
 

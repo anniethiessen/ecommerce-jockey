@@ -49,7 +49,8 @@ from .filters import (
     HasSemaProduct
 )
 from .inlines import (
-    SemaCategoryTabularInline,
+    SemaCategoryChildrenTabularInline,
+    SemaCategoryParentsTabularInline,
     SemaDatasetTabularInline
 )
 from .resources import PremierProductResource
@@ -768,9 +769,9 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'details_link',
         'category_id',
         'name',
-        'parent_category',
-        'is_authorized',
-        'child_category_count'
+        'parent_category_count',
+        'child_category_count',
+        'is_authorized'
     )
 
     list_display_links = (
@@ -792,36 +793,22 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
                 )
             }
         ),
-        (
-            'Parent Category', {
-                'fields': (
-                    'parent_category_link',
-                    'parent_category'
-                )
-            }
-        )
     )
 
     readonly_fields = (
         'details_link',
-        'parent_category_link',
+        'parent_category_count',
         'child_category_count'
     )
 
     inlines = (
-        SemaCategoryTabularInline,
+        SemaCategoryParentsTabularInline,
+        SemaCategoryChildrenTabularInline
     )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
-
-    def parent_category_link(self, obj):
-        if not obj.parent_category:
-            return None
-        return get_change_view_link(
-            obj.parent_category, 'See full parent category')
-    parent_category_link.short_description = ''
 
 
 @admin.register(SemaProduct)
