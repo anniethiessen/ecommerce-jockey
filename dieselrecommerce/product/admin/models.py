@@ -41,6 +41,7 @@ from .filters import (
     ByDecade,
     ByCategoryLevel,
     HasAlbertaInventory,
+    HasCategory,
     HasMissingInventory,
     HasMissingHtml,
     HasMissingPricing,
@@ -849,6 +850,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     list_filter = (
         'is_authorized',
         HasProduct,
+        HasCategory,
         HasMissingHtml
     )
 

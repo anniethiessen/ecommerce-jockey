@@ -727,6 +727,16 @@ class SemaCategory(SemaBaseModel):
         return self.child_categories.all().count()
     child_category_count.fget.short_description = 'Child Count'
 
+    @property
+    def level(self):
+        if self.parent_category_count == 0:
+            return '1'
+        else:
+            if self.child_category_count == 0:
+                return '3'
+            else:
+                return '2'
+
     objects = SemaCategoryManager()
 
     class Meta:
@@ -735,7 +745,7 @@ class SemaCategory(SemaBaseModel):
         verbose_name_plural = 'SEMA categories'
 
     def __str__(self):
-        return self.name
+        return f'{self.level}: {self.name}'
 
 
 class SemaProduct(SemaBaseModel):

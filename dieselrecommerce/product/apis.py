@@ -313,7 +313,7 @@ class SemaApi(object):
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
     def retrieve_products_by_category(self, category_id,
-                                      include_child_categories=False,
+                                      include_child_categories=True,
                                       brand_ids=None, dataset_ids=None,
                                       base_vehicle_ids=None, vehicle_ids=None,
                                       year=None, make_name=None,

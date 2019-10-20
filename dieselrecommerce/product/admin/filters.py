@@ -59,6 +59,23 @@ class HasMissingPricing(SimpleListFilter):
             return queryset.has_all_pricing()
 
 
+class HasCategory(SimpleListFilter):
+    title = 'has category'
+    parameter_name = 'categories'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(~Q(categories=None))
+        if self.value() == 'No':
+            return queryset.filter(categories=None)
+
+
 class ByDecade(SimpleListFilter):
     title = 'decade'
     parameter_name = 'year'
