@@ -47,12 +47,15 @@ from .filters import (
     HasMissingPricing,
     HasPremierProduct,
     HasProduct,
-    HasSemaProduct
+    HasSemaProduct,
+    HasVehicle
 )
 from .inlines import (
     SemaCategoryChildrenTabularInline,
     SemaCategoryParentsTabularInline,
-    SemaDatasetTabularInline
+    SemaCategoryProductsTabularInline,
+    SemaDatasetTabularInline,
+    SemaVehicleProductsTabularInline
 )
 from .resources import PremierProductResource
 from .utils import get_change_view_link
@@ -698,7 +701,9 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
 
     list_filter = (
         'is_authorized',
-        'base_vehicle',
+        'base_vehicle__make_year__year',
+        'base_vehicle__make_year__make',
+        'base_vehicle__model',
         'submodel'
     )
 
@@ -733,6 +738,10 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'details_link',
         'base_vehicle_link',
         'submodel_link'
+    )
+
+    inlines = (
+        SemaVehicleProductsTabularInline,
     )
 
     def details_link(self, obj):
@@ -812,7 +821,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     inlines = (
         SemaCategoryParentsTabularInline,
-        SemaCategoryChildrenTabularInline
+        SemaCategoryChildrenTabularInline,
+        SemaCategoryProductsTabularInline
     )
 
     def details_link(self, obj):
@@ -861,6 +871,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'is_authorized',
         HasProduct,
         HasCategory,
+        HasVehicle,
         HasMissingHtml
     )
 

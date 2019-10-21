@@ -809,12 +809,12 @@ class SemaProduct(SemaBaseModel):
     categories = ManyToManyField(
         SemaCategory,
         blank=True,
-        related_name='categories'
+        related_name='products'
     )
     vehicles = ManyToManyField(
         SemaVehicle,
         blank=True,
-        related_name='categories'
+        related_name='products'
     )
 
     @property

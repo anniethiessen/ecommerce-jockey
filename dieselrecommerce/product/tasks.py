@@ -61,6 +61,9 @@ def perform_sema_api_import_unauthorize_and_update():
 
     msgs += SemaProduct.objects.update_categories_from_api()
 
+    for product in SemaProduct.objects.filter(is_authorized=True):
+        msgs += product.update_vehicles_from_api()
+
     info = [msg for msg in msgs if msg[:4] == 'Info']
     success = [msg for msg in msgs if msg[:7] == 'Success']
     error = [

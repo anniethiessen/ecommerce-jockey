@@ -76,6 +76,23 @@ class HasCategory(SimpleListFilter):
             return queryset.filter(categories=None)
 
 
+class HasVehicle(SimpleListFilter):
+    title = 'has vehicle'
+    parameter_name = 'vehicles'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(~Q(vehicles=None))
+        if self.value() == 'No':
+            return queryset.filter(vehicles=None)
+
+
 class ByDecade(SimpleListFilter):
     title = 'decade'
     parameter_name = 'year'

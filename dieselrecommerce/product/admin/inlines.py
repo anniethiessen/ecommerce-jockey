@@ -2,7 +2,8 @@ from django.contrib.admin import TabularInline
 
 from ..models import (
     SemaCategory,
-    SemaDataset
+    SemaDataset,
+    SemaProduct
 )
 from .utils import get_change_view_link
 
@@ -125,3 +126,91 @@ class SemaCategoryChildrenTabularInline(TabularInline):
     def child_category_count_a(self, obj):
         return obj.from_semacategory.child_categories.all().count()
     child_category_count_a.short_description = 'Child count'
+
+
+class SemaCategoryProductsTabularInline(TabularInline):
+    model = SemaProduct.categories.through
+    extra = 0
+    verbose_name_plural = 'Products'
+
+    fields = (
+        'details_link',
+        'product_id_a',
+        'part_number_a',
+        'brand_name_a'
+    )
+
+    readonly_fields = (
+        'details_link',
+        'product_id_a',
+        'part_number_a',
+        'brand_name_a'
+    )
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj.semaproduct, 'Details')
+    details_link.short_description = ''
+
+    def product_id_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semaproduct.product_id
+    product_id_a.short_description = 'Product ID'
+
+    def part_number_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semaproduct.part_number
+    part_number_a.short_description = 'Part Number'
+
+    def brand_name_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semaproduct.dataset.brand.name
+    brand_name_a.short_description = 'Brand'
+
+
+class SemaVehicleProductsTabularInline(TabularInline):
+    model = SemaProduct.vehicles.through
+    extra = 0
+    verbose_name_plural = 'Products'
+
+    fields = (
+        'details_link',
+        'product_id_a',
+        'part_number_a',
+        'brand_name_a'
+    )
+
+    readonly_fields = (
+        'details_link',
+        'product_id_a',
+        'part_number_a',
+        'brand_name_a'
+    )
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj.semaproduct, 'Details')
+    details_link.short_description = ''
+
+    def product_id_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semaproduct.product_id
+    product_id_a.short_description = 'Product ID'
+
+    def part_number_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semaproduct.part_number
+    part_number_a.short_description = 'Part Number'
+
+    def brand_name_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semaproduct.dataset.brand.name
+    brand_name_a.short_description = 'Brand'
