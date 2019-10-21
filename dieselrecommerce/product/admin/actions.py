@@ -321,7 +321,7 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
 
     def update_html_object_action(self, request, obj):
         try:
-            msg = obj.update_html_from_api()
+            msg = obj.perform_product_html_update()
             self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
@@ -333,7 +333,7 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
 
     def update_html_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.update_html_from_api()
+            msgs = queryset.perform_product_html_update()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))

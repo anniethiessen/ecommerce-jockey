@@ -1046,9 +1046,9 @@ class SemaProduct(SemaBaseModel):
         )
         return state
 
-    def update_html_from_api(self):
+    def perform_product_html_update(self):
         try:
-            html = sema_api.retrieve_product_html(self.product_id)
+            html = self.get_product_html_data_from_api()
             self.html = html
             self.save()
             self.refresh_from_db()
@@ -1078,6 +1078,22 @@ class SemaProduct(SemaBaseModel):
         if not msgs:
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
+
+    def get_product_html_data_from_api(self):
+        """
+        Retrieves **product html** data for object by SEMA API object
+        method.
+
+        :rtype: str
+
+        :raises: Exception on SEMA API object method exception
+
+        """
+
+        try:
+            return sema_api.retrieve_product_html(self.product_id)
+        except Exception:
+            raise
 
     def get_vehicles_by_product_data_from_api(self):
         """

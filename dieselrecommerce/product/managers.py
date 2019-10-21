@@ -483,12 +483,12 @@ class SemaCategoryQuerySet(SemaBaseQuerySet):
 
 
 class SemaProductQuerySet(SemaBaseQuerySet):
-    def update_html_from_api(self):
+    def perform_product_html_update(self):
         msgs = []
 
         for obj in self:
             try:
-                msgs.append(obj.update_html_from_api())
+                msgs.append(obj.perform_product_html_update())
             except Exception as err:
                 msgs.append(obj.get_instance_error_msg(str(err)))
 
@@ -1599,8 +1599,8 @@ class SemaProductManager(SemaBaseManager):
             using=self._db
         )
 
-    def update_html_from_api(self):
-        return self.get_queryset().update_html_from_api()
+    def perform_product_html_update(self):
+        return self.get_queryset().perform_product_html_update()
 
     def perform_product_vehicle_update(self):
         """

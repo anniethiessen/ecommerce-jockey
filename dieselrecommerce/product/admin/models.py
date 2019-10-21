@@ -854,7 +854,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     changelist_actions = (
         'import_and_unauthorize_class_action',
-        'update_product_categories_class_action',
+        # 'update_product_categories_class_action',  # TO NOTE: too long
         'update_product_vehicles_class_action'
     )
 
