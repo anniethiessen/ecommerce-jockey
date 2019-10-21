@@ -232,6 +232,18 @@ class SemaProductActions(SemaBaseActions):
         'Update all SEMA product\'s categories from SEMA API'
     )
 
+    def update_vehicles_object_action(self, request, obj):
+        try:
+            msgs = obj.update_vehicles_from_api()
+            self.display_messages(request, msgs)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_vehicles_object_action.allowed_permissions = ('view',)
+    update_vehicles_object_action.label = "Update vehicles from API"
+    update_vehicles_object_action.short_description = (
+        'Update all SEMA product\'s categories from SEMA API'
+    )
+
     def update_html_object_action(self, request, obj):
         try:
             msg = obj.update_html_from_api()

@@ -811,6 +811,11 @@ class SemaProduct(SemaBaseModel):
         blank=True,
         related_name='categories'
     )
+    vehicles = ManyToManyField(
+        SemaVehicle,
+        blank=True,
+        related_name='categories'
+    )
 
     @property
     def state(self):
@@ -832,6 +837,36 @@ class SemaProduct(SemaBaseModel):
             return self.get_update_success_msg()
         except Exception as err:
             return self.get_instance_error_msg(str(err))
+
+    def update_vehicles_from_api(self):
+        msgs = []
+
+        try:
+            data = self.get_vehicle_api_data()
+            msgs += self._meta.model.objects.update_vehicles_from_api_data(
+                data
+            )
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def get_vehicle_api_data(self, group_by_part=False):
+        try:
+            data = sema_api.retrieve_vehicles_by_product(
+                brand_id=self.dataset.brand.brand_id,
+                dataset_id=self.dataset.dataset_id,
+                part_numbers=[self.part_number],
+                group_by_part=group_by_part
+            )
+            for item in data:
+                item['product_id_'] = self.product_id
+            return data
+        except Exception:
+            raise
 
     objects = SemaProductManager()
 

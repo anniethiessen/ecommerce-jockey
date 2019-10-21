@@ -985,5 +985,43 @@ class SemaProductManager(SemaBaseManager):
             msgs.append(self.model.get_class_error_msg(str(err)))
         return msgs
 
+    def update_vehicles_from_api_data(self, data):
+        from product.models import SemaVehicle
+
+        msgs = []
+        try:
+            for item in data:
+                if item.get('product_id_'):
+                    product = self.get(product_id=item['product_id_'])
+                elif item.get('PartNumber'):
+                    product = self.get(part_number=item['PartNumber'])
+                else:
+                    msgs.append(self.model.get_class_error_msg('Invalid part'))
+                    return msgs
+
+                vehicle = SemaVehicle.objects.get(
+                    base_vehicle__make_year__year__year=item['Year'],
+                    base_vehicle__make_year__make__name=item['MakeName'],
+                    base_vehicle__model__name=item['ModelName'],
+                    submodel__name=item['SubmodelName'],
+                )
+                if vehicle in product.vehicles.all():
+                    msgs.append(
+                        product.get_instance_up_to_date_msg(
+                            message=f"{vehicle} already on {product}"
+                        )
+                    )
+                else:
+                    product.vehicles.add(vehicle)
+                    product.save()
+                    msgs.append(
+                        product.get_update_success_msg(
+                            message=f"{vehicle} added to {product}"
+                        )
+                    )
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+        return msgs
+
     def update_html_from_api(self):
         return self.get_queryset().update_html_from_api()

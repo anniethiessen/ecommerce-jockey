@@ -832,7 +832,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     actions = (
-        'update_html_queryset_action',
+        'update_html_queryset_action'
     )
 
     changelist_actions = (
@@ -842,6 +842,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     change_actions = (
         'update_html_object_action',
+        'update_vehicles_object_action'
     )
 
     list_display = (
@@ -898,6 +899,13 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             }
         ),
         (
+            'Vehicles', {
+                'fields': (
+                    'vehicles',
+                )
+            }
+        ),
+        (
             'HTML', {
                 'fields': (
                     'html',
@@ -918,6 +926,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     autocomplete_fields = (
         'categories',
+        'vehicles'
     )
 
     readonly_fields = (

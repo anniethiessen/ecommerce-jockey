@@ -368,7 +368,7 @@ class SemaApi(object):
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
     def retrieve_vehicles_by_product(self, brand_id=None, dataset_id=None,
                                      part_numbers=None, group_by_part=False):
-        if not brand_id or dataset_id:
+        if not (brand_id or dataset_id):
             raise Exception('Brand ID or dataset ID required')
 
         url = f'{settings.SEMA_BASE_URL}/lookup/vehiclesbyproduct'
@@ -385,7 +385,10 @@ class SemaApi(object):
 
         try:
             response = requests.post(url=url, json=data)
-            return self.get_json_body(response)['Vehicles']
+            if group_by_part:
+                return self.get_json_body(response)['Parts']
+            else:
+                return self.get_json_body(response)['Vehicles']
         except Exception:
             raise
 
