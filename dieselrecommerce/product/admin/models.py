@@ -192,14 +192,17 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
     actions = (
         'import_datasets_queryset_action',
+        # 'update_product_vehicles_queryset_action'  # TO NOTE: too long
     )
 
     changelist_actions = (
         'import_and_unauthorize_class_action',
+        # 'update_product_vehicles_class_action'  # TO NOTE: too long
     )
 
     change_actions = (
         'import_datasets_object_action',
+        # 'update_product_vehicles_object_action'  # TO NOTE: too long
     )
 
     list_display = (
@@ -252,17 +255,19 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'name'
     )
 
-    # actions = (
-    #     'import_products_queryset_action',
-    # )
+    actions = (
+        'import_products_queryset_action',
+        # 'update_product_vehicles_queryset_action'  # TO NOTE: too long
+    )
 
     changelist_actions = (
         'import_and_unauthorize_class_action',
+        # 'update_product_vehicles_class_action'  # TO NOTE: too long
     )
 
-    # change_actions = (
-    #     'import_products_object_action',
-    # )
+    change_actions = (
+        # 'update_product_vehicles_object_action',  # TO NOTE: too long
+    )
 
     list_display = (
         'details_link',
@@ -842,17 +847,20 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     actions = (
-        'update_html_queryset_action'
+        'update_html_queryset_action',
+        'update_product_vehicles_queryset_action'
     )
 
     changelist_actions = (
         'import_and_unauthorize_class_action',
-        'update_categories_class_action'
+        'update_categories_class_action',
+        'update_product_vehicles_class_action'
+
     )
 
     change_actions = (
         'update_html_object_action',
-        'update_vehicles_object_action'
+        'update_product_vehicles_object_action'
     )
 
     list_display = (

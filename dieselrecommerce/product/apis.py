@@ -366,10 +366,38 @@ class SemaApi(object):
 
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
-    def retrieve_vehicles_by_product(self, brand_id=None, dataset_id=None,
-                                     part_numbers=None, group_by_part=False):
-        if not (brand_id or dataset_id):
-            raise Exception('Brand ID or dataset ID required')
+    def retrieve_vehicles_by_product(self, brand_id, dataset_id=None,
+                                     part_numbers=None, group_by_part=True):
+        """
+        Retrieves **vehicles by product** data from SEMA API.
+
+        :type brand_id: str
+        :type dataset_id: int
+        :type part_numbers: list
+        :type group_by_part: bool
+        :rtype: list
+
+        :raises: Exception on API request exception
+
+        .. Topic:: Return Format
+
+            [
+                {
+                    "PartNumber": str,
+                    "Vehicles": [
+                        {
+                            "Year": int,
+                            "MakeName": str,
+                            "ModelName": str,
+                            "SubmodelName": str
+                        },
+                        {...}
+                    ]
+                },
+                {...}
+            ]
+
+        """
 
         url = f'{settings.SEMA_BASE_URL}/lookup/vehiclesbyproduct'
         data = {

@@ -84,7 +84,53 @@ class SemaBaseActions(BaseActions):
     )
 
 
-class SemaBrandActions(SemaBaseActions):
+class SemaProductVehicleActions(SemaBaseActions):
+    def update_product_vehicles_class_action(self, request, queryset):
+        try:
+            queryset = queryset.filter(is_authorized=True)
+            msgs = queryset.perform_product_vehicle_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_product_vehicles_class_action.allowed_permissions = ('view',)
+    update_product_vehicles_class_action.label = (
+        "Update Product Vehicles from API"
+    )
+    update_product_vehicles_class_action.short_description = (
+        'Add vehicles to products of available objects from SEMA API. '
+        'Does not remove existing vehicles no longer returned by API. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
+    def update_product_vehicles_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_product_vehicle_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_product_vehicles_queryset_action.allowed_permissions = ('view',)
+    update_product_vehicles_queryset_action.short_description = (
+        'Add vehicles to selected %(verbose_name_plural)s from SEMA API'
+    )
+
+    def update_product_vehicles_object_action(self, request, obj):
+        try:
+            msgs = obj.perform_product_vehicle_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_product_vehicles_object_action.allowed_permissions = ('view',)
+    update_product_vehicles_object_action.label = (
+        "Update Product Vehicles from API"
+    )
+    update_product_vehicles_object_action.short_description = (
+        'Add vehicles to products of this object from SEMA API. '
+        'Does not remove existing vehicles no longer returned by API. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
+
+class SemaBrandActions(SemaProductVehicleActions):
     def import_datasets_object_action(self, request, obj):
         try:
             msgs = obj.import_datasets_from_api()
@@ -111,7 +157,7 @@ class SemaBrandActions(SemaBaseActions):
     )
 
 
-class SemaDatasetActions(SemaBaseActions):
+class SemaDatasetActions(SemaProductVehicleActions):
     pass
 
     # def import_products_object_action(self, request, obj):
@@ -219,7 +265,7 @@ class SemaCategoryActions(SemaBaseActions):
     )
 
 
-class SemaProductActions(SemaBaseActions):
+class SemaProductActions(SemaProductVehicleActions):
     def update_categories_class_action(self, request, queryset):
         try:
             msgs = self.model.objects.update_categories_from_api()
@@ -229,18 +275,6 @@ class SemaProductActions(SemaBaseActions):
     update_categories_class_action.allowed_permissions = ('view',)
     update_categories_class_action.label = "Update categories from API"
     update_categories_class_action.short_description = (
-        'Update all SEMA product\'s categories from SEMA API'
-    )
-
-    def update_vehicles_object_action(self, request, obj):
-        try:
-            msgs = obj.update_vehicles_from_api()
-            self.display_messages(request, msgs)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_vehicles_object_action.allowed_permissions = ('view',)
-    update_vehicles_object_action.label = "Update vehicles from API"
-    update_vehicles_object_action.short_description = (
         'Update all SEMA product\'s categories from SEMA API'
     )
 

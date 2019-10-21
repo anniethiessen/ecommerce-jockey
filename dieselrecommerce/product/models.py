@@ -431,6 +431,76 @@ class SemaBrand(SemaBaseModel):
     def import_datasets_from_api(self):
         return SemaDataset.objects.import_from_api(brand_ids=[self.brand_id])
 
+    def perform_product_vehicle_update(self, dataset_id=None,
+                                       part_numbers=None):
+        """
+        Retrieves **vehicles by product** data for brand object by brand
+        object method and SEMA API object method and retrieves and
+        updates product objects' vehicles by product manager and product
+        object method and returns a list of messages.
+
+        :type dataset_id: int
+        :type part_numbers: list
+        :rtype: list
+
+        """
+
+        msgs = []
+        try:
+            data = self.get_vehicles_by_product_data_from_api(
+                dataset_id=dataset_id,
+                part_numbers=part_numbers
+            )
+            msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+        return msgs
+
+    def get_vehicles_by_product_data_from_api(self, dataset_id=None,
+                                              part_numbers=None):
+        """
+        Retrieves **vehicles by product** data for object by SEMA API
+        object method and adds brand id key to each data item.
+
+        :type dataset_id: int
+        :type part_numbers: list
+        :rtype: list
+
+        :raises: Exception on SEMA API object method exception
+
+        .. Topic:: Return Format
+
+            [
+                {
+                    "PartNumber": str,
+                    "Vehicles": [
+                        {
+                            "Year": int,
+                            "MakeName": str,
+                            "ModelName": str,
+                            "SubmodelName": str
+                        },
+                        {...}
+                    ],
+                    "brand_id_": str
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            data = sema_api.retrieve_vehicles_by_product(
+                brand_id=self.brand_id,
+                dataset_id=dataset_id,
+                part_numbers=part_numbers
+            )
+            for item in data:
+                item['brand_id_'] = self.brand_id
+            return data
+        except Exception:
+            raise
+
     objects = SemaBrandManager()
 
     class Meta:
@@ -465,6 +535,73 @@ class SemaDataset(SemaBaseModel):
             }
         )
         return state
+
+    def perform_product_vehicle_update(self, part_numbers=None):
+        """
+        Retrieves **vehicles by product** data for dataset object by
+        dataset object method, brand object method and SEMA API object
+        method and retrieves and updates product objects' vehicles by
+        product manager and product object method and returns a list of
+        messages.
+
+        :type part_numbers: list
+        :rtype: list
+
+        """
+
+        msgs = []
+        try:
+            data = self.get_vehicles_by_product_data_from_api(
+                part_numbers=part_numbers
+            )
+            msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+        return msgs
+
+    def get_vehicles_by_product_data_from_api(self, part_numbers=None):
+        """
+        Retrieves **vehicles by product** data for object by brand
+        object method and SEMA API object method, and adds dataset id
+        key each data item.
+
+        :type part_numbers: list
+        :rtype: list
+
+        :raises: Exception on brand object method exception
+
+        .. Topic:: Return Format
+
+            [
+                {
+                    "PartNumber": str,
+                    "Vehicles": [
+                        {
+                            "Year": int,
+                            "MakeName": str,
+                            "ModelName": str,
+                            "SubmodelName": str
+                        },
+                        {...}
+                    ],
+                    "brand_id_": str,
+                    "dataset_id_": int
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            data = self.brand.get_vehicles_by_product_data_from_api(
+                dataset_id=self.dataset_id,
+                part_numbers=part_numbers
+            )
+            for item in data:
+                item['dataset_id_'] = self.dataset_id
+            return data
+        except Exception:
+            raise
 
     objects = SemaDatasetManager()
 
@@ -838,35 +975,117 @@ class SemaProduct(SemaBaseModel):
         except Exception as err:
             return self.get_instance_error_msg(str(err))
 
-    def update_vehicles_from_api(self):
-        msgs = []
+    def perform_product_vehicle_update(self):
+        """
+        Retrieves **vehicles by product** data for product object by
+        product object method, dataset object method, brand object
+        method and SEMA API object method and retrieves and updates
+        product objects' vehicles by product manager and product object
+        method and returns a list of messages.
 
+        :rtype: list
+
+        """
+
+        msgs = []
         try:
-            data = self.get_vehicle_api_data()
-            msgs += self._meta.model.objects.update_vehicles_from_api_data(
-                data
-            )
+            data = self.get_vehicles_by_product_data_from_api()
+            msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
-            return msgs
-
-        if not msgs:
-            msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
-    def get_vehicle_api_data(self, group_by_part=False):
+    def get_vehicles_by_product_data_from_api(self):
+        """
+        Retrieves **vehicles by product** data for object by dataset
+        object method, brand object method, and SEMA API object method,
+        and adds product id key each data item.
+
+        :rtype: list
+
+        :raises: Exception on dataset object method exception
+
+        .. Topic:: Return Format
+
+            [
+                {
+                    "PartNumber": str,
+                    "Vehicles": [
+                        {
+                            "Year": int,
+                            "MakeName": str,
+                            "ModelName": str,
+                            "SubmodelName": str
+                        },
+                        {...}
+                    ],
+                    "brand_id_": str,
+                    "dataset_id_": int,
+                    "product_id_": int
+                },
+                {...}
+            ]
+
+        """
+
         try:
-            data = sema_api.retrieve_vehicles_by_product(
-                brand_id=self.dataset.brand.brand_id,
-                dataset_id=self.dataset.dataset_id,
-                part_numbers=[self.part_number],
-                group_by_part=group_by_part
+            data = self.dataset.get_vehicles_by_product_data_from_api(
+                part_numbers=[self.part_number]
             )
             for item in data:
                 item['product_id_'] = self.product_id
             return data
         except Exception:
             raise
+
+    def update_product_vehicles_from_api_data(self, data):
+        """
+        Adds vehicles from data to product object and returns a list of
+        messages.
+
+        :rtype: list
+
+        .. warnings also:: Does not remove vehicles not in data
+
+        .. Topic:: Expected Data Format
+
+            [
+                {
+                    "Year": int,
+                    "MakeName": str,
+                    "ModelName": str,
+                    "SubmodelName": str
+                },
+                {...}
+            ]
+
+        """
+
+        msgs = []
+        for item in data:
+            try:
+                vehicle = SemaVehicle.objects.get_by_names(
+                    year=item['Year'],
+                    make_name=item['MakeName'],
+                    model_name=item['ModelName'],
+                    submodel_name=item['SubmodelName'],
+                )
+                if vehicle in self.vehicles.all():
+                    msgs.append(
+                        self.get_instance_up_to_date_msg(
+                            message=f"{vehicle} already added"
+                        )
+                    )
+                else:
+                    self.vehicles.add(vehicle)
+                    self.save()
+                    msgs.append(
+                        self.get_update_success_msg(message=f"{vehicle} added")
+                    )
+            except Exception as err:
+                msgs.append(self.get_instance_error_msg(f"{item, err}"))
+                continue
+        return msgs
 
     objects = SemaProductManager()
 

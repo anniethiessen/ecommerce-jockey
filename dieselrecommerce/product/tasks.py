@@ -59,10 +59,14 @@ def perform_sema_api_import_unauthorize_and_update():
             continue
         print('   complete')
 
+    print('A. Updating product categories...')
     msgs += SemaProduct.objects.update_categories_from_api()
+    print('   complete')
 
-    for product in SemaProduct.objects.filter(is_authorized=True):
-        msgs += product.update_vehicles_from_api()
+    print('B. Updating product vehicles...')
+    brands = SemaBrand.objects.filter(is_authorized=True)
+    msgs += brands.perform_product_vehicle_update()
+    print('   complete')
 
     info = [msg for msg in msgs if msg[:4] == 'Info']
     success = [msg for msg in msgs if msg[:7] == 'Success']
