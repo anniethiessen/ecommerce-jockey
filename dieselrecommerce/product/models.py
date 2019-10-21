@@ -426,7 +426,7 @@ class SemaBrand(SemaBaseModel):
 
     @property
     def dataset_count(self):
-        return self.sema_datasets.filter(is_authorized=True).count()
+        return self.datasets.filter(is_authorized=True).count()
 
     def import_datasets_from_api(self):
         return SemaDataset.objects.import_from_api(brand_ids=[self.brand_id])
@@ -452,7 +452,7 @@ class SemaDataset(SemaBaseModel):
     brand = ForeignKey(
         SemaBrand,
         on_delete=CASCADE,
-        related_name='sema_datasets'
+        related_name='datasets'
     )
 
     @property
@@ -800,7 +800,7 @@ class SemaProduct(SemaBaseModel):
     dataset = ForeignKey(
         SemaDataset,
         on_delete=CASCADE,
-        related_name='sema_products',
+        related_name='products',
     )
     html = TextField(
         blank=True,
