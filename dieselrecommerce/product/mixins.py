@@ -7,18 +7,16 @@ from django.conf import settings
 
 class MessagesMixin(object):
     @classmethod
-    def get_class_up_to_date_msg(cls):
+    def get_class_up_to_date_msg(cls, message="everything up-to-date"):
         return (
             "Info: "
-            f"{cls._meta.verbose_name.title()}, "
-            "everything up-to-date"
+            f"{cls._meta.verbose_name.title()}, {message}"
         )
 
-    def get_instance_up_to_date_msg(self):
+    def get_instance_up_to_date_msg(self, message="already up-to-date"):
         return (
             "Info: "
-            f"{self._meta.model._meta.verbose_name.title()} {self}, "
-            "already up-to-date"
+            f"{self._meta.model._meta.verbose_name.title()} {self}, {message}"
         )
 
     @classmethod
@@ -46,12 +44,14 @@ class MessagesMixin(object):
         )
 
     def get_update_success_msg(self, previous_data=None, new_data=None,
-                               include_up_to_date=True):
+                               message=None, include_up_to_date=True):
         msg = (
             "Success: "
             f"{self._meta.model._meta.verbose_name.title()} {self} updated"
         )
-        if previous_data and new_data:
+        if message:
+            msg += f', {message}'
+        elif previous_data and new_data:
             changes = ""
             for key, value in new_data.items():
                 if not value == previous_data[key]:

@@ -167,7 +167,25 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
 
 
 class SemaCategoryQuerySet(SemaBaseQuerySet):
-    pass
+    def update_products_from_api(self):
+        from product.models import SemaProduct
+
+        msgs = []
+        try:
+            data = self.get_product_api_data()
+            msgs += SemaProduct.objects.update_categories_from_api_data(data)
+        except Exception as err:
+            msgs += self.model.get_class_error_msg(str(err))
+        return msgs
+
+    def get_product_api_data(self):
+        data = []
+        try:
+            for category in self:
+                data += category.get_product_api_data()
+        except Exception:
+            raise
+        return data
 
 
 class SemaProductQuerySet(SemaBaseQuerySet):
@@ -854,6 +872,15 @@ class SemaCategoryManager(SemaBaseManager):
             using=self._db
         )
 
+    def update_products_from_api(self):
+        return self.get_queryset().update_products_from_api()
+
+    def get_product_api_data(self):
+        try:
+            return self.get_queryset().get_product_api_data()
+        except Exception:
+            raise
+
 
 class SemaProductManager(SemaBaseManager):
     def get_api_data(self, brand_ids=None, dataset_ids=None,
@@ -919,6 +946,44 @@ class SemaProductManager(SemaBaseManager):
             self.model,
             using=self._db
         )
+
+    def update_categories_from_api(self, categories=None):
+        if not categories:
+            from product.models import SemaCategory
+            categories = SemaCategory.objects.filter(is_authorized=True)
+
+        return categories.update_products_from_api()
+
+    def update_categories_from_api_data(self, data):
+        from product.models import SemaCategory
+
+        msgs = []
+        try:
+            for item in data:
+                product = self.get(
+                    product_id=item['ProductId'],
+                    part_number=item['PartNumber']
+                )
+                category = SemaCategory.objects.get(
+                    category_id=item['category_id_']
+                )
+                if category in product.categories.all():
+                    msgs.append(
+                        product.get_instance_up_to_date_msg(
+                            message=f"{category} already on {product}"
+                        )
+                    )
+                else:
+                    product.categories.add(category)
+                    product.save()
+                    msgs.append(
+                        product.get_update_success_msg(
+                            message=f"{category} added to {product}"
+                        )
+                    )
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+        return msgs
 
     def update_html_from_api(self):
         return self.get_queryset().update_html_from_api()

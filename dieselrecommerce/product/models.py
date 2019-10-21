@@ -737,6 +737,47 @@ class SemaCategory(SemaBaseModel):
             else:
                 return '2'
 
+    def update_products_from_api(self):
+        msgs = []
+
+        try:
+            data = self.get_product_api_data()
+            msgs += SemaProduct.objects.update_categories_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def get_product_api_data(self, include_child_categories=True,
+                             brand_ids=None, dataset_ids=None,
+                             base_vehicle_ids=None, vehicle_ids=None,
+                             year=None, make_name=None,
+                             model_name=None, submodel_name=None,
+                             part_numbers=None, pies_segments=None):
+        try:
+            data = sema_api.retrieve_products_by_category(
+                category_id=self.category_id,
+                include_child_categories=include_child_categories,
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments
+            )
+            for item in data:
+                item['category_id_'] = self.category_id
+            return data
+        except Exception:
+            raise
+
     objects = SemaCategoryManager()
 
     class Meta:

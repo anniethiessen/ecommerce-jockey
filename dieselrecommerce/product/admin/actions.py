@@ -195,10 +195,43 @@ class SemaVehicleActions(SemaBaseActions):
 
 
 class SemaCategoryActions(SemaBaseActions):
-    pass
+    def update_products_object_action(self, request, obj):
+        try:
+            msgs = obj.update_products_from_api()
+            self.display_messages(request, msgs)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_products_object_action.allowed_permissions = ('view',)
+    update_products_object_action.label = "Update products from API"
+    update_products_object_action.short_description = (
+        'Update SEMA product\'s for this category from SEMA API'
+    )
+
+    def update_products_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.update_products_from_api()
+            self.display_messages(request, msgs)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_products_queryset_action.allowed_permissions = ('view',)
+    update_products_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' products from SEMA API'
+    )
 
 
 class SemaProductActions(SemaBaseActions):
+    def update_categories_class_action(self, request, queryset):
+        try:
+            msgs = self.model.objects.update_categories_from_api()
+            self.display_messages(request, msgs)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_categories_class_action.allowed_permissions = ('view',)
+    update_categories_class_action.label = "Update categories from API"
+    update_categories_class_action.short_description = (
+        'Update all SEMA product\'s categories from SEMA API'
+    )
+
     def update_html_object_action(self, request, obj):
         try:
             msg = obj.update_html_from_api()

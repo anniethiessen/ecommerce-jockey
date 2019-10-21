@@ -32,7 +32,7 @@ def retrieve_sema_api_data():
     return data, errors
 
 
-def perform_sema_api_import_and_unauthorize():
+def perform_sema_api_import_unauthorize_and_update():
     models = [
         SemaBrand,
         SemaDataset,
@@ -59,6 +59,8 @@ def perform_sema_api_import_and_unauthorize():
             continue
         print('   complete')
 
+    msgs += SemaProduct.objects.update_categories_from_api()
+
     info = [msg for msg in msgs if msg[:4] == 'Info']
     success = [msg for msg in msgs if msg[:7] == 'Success']
     error = [
@@ -69,5 +71,5 @@ def perform_sema_api_import_and_unauthorize():
     return msgs, info, success, error
 
 
-sema_sync = perform_sema_api_import_and_unauthorize
+sema_sync = perform_sema_api_import_unauthorize_and_update
 sema_data = retrieve_sema_api_data

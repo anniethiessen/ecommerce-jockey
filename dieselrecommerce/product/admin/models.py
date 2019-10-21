@@ -762,8 +762,16 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'name'
     )
 
+    actions = (
+        'update_products_queryset_action',
+    )
+
     changelist_actions = (
         'import_and_unauthorize_class_action',
+    )
+
+    change_actions = (
+        'update_products_object_action',
     )
 
     list_display = (
@@ -829,6 +837,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     changelist_actions = (
         'import_and_unauthorize_class_action',
+        'update_categories_class_action'
     )
 
     change_actions = (
