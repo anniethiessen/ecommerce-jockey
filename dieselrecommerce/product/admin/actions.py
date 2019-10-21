@@ -130,6 +130,70 @@ class SemaProductVehicleActions(SemaBaseActions):
     )
 
 
+class SemaCategoryProductActions(SemaBaseActions):
+    def update_category_products_class_action(self, request, queryset):
+        try:
+            queryset = queryset.filter(is_authorized=True)
+            msgs = queryset.perform_product_category_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_category_products_class_action.allowed_permissions = ('view',)
+    update_category_products_class_action.label = (
+        "Update Category Products from API"
+    )
+    update_category_products_class_action.short_description = (
+        'Add products to available categories from SEMA API. '
+        'Does not remove existing products no longer returned by API. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
+    def update_category_products_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_product_category_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_category_products_queryset_action.allowed_permissions = ('view',)
+    update_category_products_queryset_action.short_description = (
+        'Add products to selected %(verbose_name_plural)s from SEMA API'
+    )
+
+    def update_category_products_object_action(self, request, obj):
+        try:
+            msgs = obj.perform_product_category_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_category_products_object_action.allowed_permissions = ('view',)
+    update_category_products_object_action.label = (
+        "Update Category Products from API"
+    )
+    update_category_products_object_action.short_description = (
+        'Add products to this category from SEMA API. '
+        'Does not remove existing products no longer returned by API. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
+    def update_product_categories_class_action(self, request, queryset):
+        from product.models import SemaCategory
+        try:
+            queryset = SemaCategory.objects.filter(is_authorized=True)
+            msgs = queryset.perform_product_category_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_product_categories_class_action.allowed_permissions = ('view',)
+    update_product_categories_class_action.label = (
+        "Update Product Categories from API"
+    )
+    update_product_categories_class_action.short_description = (
+        'Add available categories to products from SEMA API. '
+        'Does not remove existing categories no longer returned by API. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
+
 class SemaBrandActions(SemaProductVehicleActions):
     def import_datasets_object_action(self, request, obj):
         try:
@@ -240,43 +304,20 @@ class SemaVehicleActions(SemaBaseActions):
     pass
 
 
-class SemaCategoryActions(SemaBaseActions):
-    def update_products_object_action(self, request, obj):
-        try:
-            msgs = obj.update_products_from_api()
-            self.display_messages(request, msgs)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_products_object_action.allowed_permissions = ('view',)
-    update_products_object_action.label = "Update products from API"
-    update_products_object_action.short_description = (
-        'Update SEMA product\'s for this category from SEMA API'
-    )
-
-    def update_products_queryset_action(self, request, queryset):
-        try:
-            msgs = queryset.update_products_from_api()
-            self.display_messages(request, msgs)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_products_queryset_action.allowed_permissions = ('view',)
-    update_products_queryset_action.short_description = (
-        'Update selected %(verbose_name_plural)s\' products from SEMA API'
-    )
+class SemaCategoryActions(SemaCategoryProductActions):
+    def update_product_categories_class_action(self, request, queryset):
+        raise Exception("This action is for product class only")
 
 
-class SemaProductActions(SemaProductVehicleActions):
-    def update_categories_class_action(self, request, queryset):
-        try:
-            msgs = self.model.objects.update_categories_from_api()
-            self.display_messages(request, msgs)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_categories_class_action.allowed_permissions = ('view',)
-    update_categories_class_action.label = "Update categories from API"
-    update_categories_class_action.short_description = (
-        'Update all SEMA product\'s categories from SEMA API'
-    )
+class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
+    def update_category_products_class_action(self, request, queryset):
+        raise Exception("This action is for category class only")
+
+    def update_category_products_queryset_action(self, request, queryset):
+        raise Exception("This action is for category querysets only")
+
+    def update_category_products_object_action(self, request, obj):
+        raise Exception("This action is for category objects only")
 
     def update_html_object_action(self, request, obj):
         try:

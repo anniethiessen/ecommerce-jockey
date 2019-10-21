@@ -158,6 +158,9 @@ class SemaBrandQuerySet(SemaBaseQuerySet):
             msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self, dataset_id=None,
@@ -230,6 +233,9 @@ class SemaDatasetQuerySet(SemaBaseQuerySet):
             msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self, part_numbers=None):
@@ -356,25 +362,124 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
 
 
 class SemaCategoryQuerySet(SemaBaseQuerySet):
-    def update_products_from_api(self):
+    def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
+                                        base_vehicle_ids=None,
+                                        vehicle_ids=None, part_numbers=None,
+                                        year=None, make_name=None,
+                                        model_name=None, submodel_name=None,
+                                        pies_segments=None):
+        """
+        Retrieves **products by category** data for category queryset by
+        category queryset method, category object method and SEMA API
+        object method and retrieves and updates product objects'
+        categories by product manager and product object method, and
+        returns a list of messages.
+
+        :type brand_ids: list
+        :type dataset_ids: list
+        :type base_vehicle_ids: list
+        :type vehicle_ids: list
+        :type part_numbers: list
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :type submodel_name: str
+        :type pies_segments: list
+        :rtype: list
+
+        """
+
         from product.models import SemaProduct
 
         msgs = []
         try:
-            data = self.get_product_api_data()
-            msgs += SemaProduct.objects.update_categories_from_api_data(data)
+            data = self.get_products_by_category_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                part_numbers=part_numbers,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                pies_segments=pies_segments
+            )
+            msgs += SemaProduct.objects.update_product_categories_from_api_data(
+                data
+            )
         except Exception as err:
-            msgs += self.model.get_class_error_msg(str(err))
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def get_product_api_data(self):
-        data = []
+    def get_products_by_category_data_from_api(self, brand_ids=None,
+                                               dataset_ids=None,
+                                               base_vehicle_ids=None,
+                                               vehicle_ids=None,
+                                               part_numbers=None,
+                                               year=None,
+                                               make_name=None,
+                                               model_name=None,
+                                               submodel_name=None,
+                                               pies_segments=None):
+        """
+        Retrieves and concatenates **products by category** data for
+        category queryset by category object method, and SEMA API object
+        method.
+
+        :type brand_ids: list
+        :type dataset_ids: list
+        :type base_vehicle_ids: list
+        :type vehicle_ids: list
+        :type part_numbers: list
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :type submodel_name: str
+        :type pies_segments: list
+        :rtype: list
+
+        :raises: Exception on category object method exception
+
+        .. warnings also:: Filtering by year, make, model, or submodel
+        requires all four
+
+        .. Topic:: Return Format
+
+            [
+                {
+                    "ProductId": int,
+                    "PartNumber": str,
+                    "PiesAttributes": [],
+                    "category_id_" int
+                },
+                {...}
+            ]
+
+        """
+
         try:
+            data = []
             for category in self:
-                data += category.get_product_api_data()
+                data += category.get_products_by_category_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    part_numbers=part_numbers,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    pies_segments=pies_segments
+                )
+            return data
         except Exception:
             raise
-        return data
 
 
 class SemaProductQuerySet(SemaBaseQuerySet):
@@ -408,6 +513,9 @@ class SemaProductQuerySet(SemaBaseQuerySet):
             msgs += self.model.objects.update_product_vehicles_from_api_data(data)
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self):
@@ -721,6 +829,9 @@ class SemaBrandManager(SemaBaseManager):
             )
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self, dataset_id=None,
@@ -822,6 +933,9 @@ class SemaDatasetManager(SemaBaseManager):
             )
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self, part_numbers=None):
@@ -1309,12 +1423,113 @@ class SemaCategoryManager(SemaBaseManager):
             using=self._db
         )
 
-    def update_products_from_api(self):
-        return self.get_queryset().update_products_from_api()
+    def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
+                                        base_vehicle_ids=None,
+                                        vehicle_ids=None, part_numbers=None,
+                                        year=None, make_name=None,
+                                        model_name=None, submodel_name=None,
+                                        pies_segments=None):
+        """
+        Retrieves category queryset and **products by category** data
+        for queryset by category queryset method, category object method
+        and SEMA API object method and retrieves and updates product
+        objects' categories by product manager and product object method,
+        and returns a list of messages.
 
-    def get_product_api_data(self):
+        :type brand_ids: list
+        :type dataset_ids: list
+        :type base_vehicle_ids: list
+        :type vehicle_ids: list
+        :type part_numbers: list
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :type submodel_name: str
+        :type pies_segments: list
+        :rtype: list
+
+        """
+
+        msgs = []
         try:
-            return self.get_queryset().get_product_api_data()
+            msgs += self.get_queryset().perform_product_category_update(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                part_numbers=part_numbers,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                pies_segments=pies_segments
+            )
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def get_products_by_category_data_from_api(self, brand_ids=None,
+                                               dataset_ids=None,
+                                               base_vehicle_ids=None,
+                                               vehicle_ids=None,
+                                               part_numbers=None,
+                                               year=None, make_name=None,
+                                               model_name=None,
+                                               submodel_name=None,
+                                               pies_segments=None):
+        """
+        Retrieves category queryset and returns **products by category**
+        data for queryset by category queryset method, category object
+        method, and SEMA API object method.
+
+        :type brand_ids: list
+        :type dataset_ids: list
+        :type base_vehicle_ids: list
+        :type vehicle_ids: list
+        :type part_numbers: list
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :type submodel_name: str
+        :type pies_segments: list
+        :rtype: list
+
+        :raises: Exception on category queryset method exception
+
+        .. warnings also:: Filtering by year, make, model, or submodel
+        requires all four
+
+        .. Topic:: Return Format
+
+            [
+                {
+                    "ProductId": int,
+                    "PartNumber": str,
+                    "PiesAttributes": [],
+                    "category_id_" int
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().get_products_by_category_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                part_numbers=part_numbers,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                pies_segments=pies_segments
+            )
         except Exception:
             raise
 
@@ -1384,44 +1599,6 @@ class SemaProductManager(SemaBaseManager):
             using=self._db
         )
 
-    def update_categories_from_api(self, categories=None):
-        if not categories:
-            from product.models import SemaCategory
-            categories = SemaCategory.objects.filter(is_authorized=True)
-
-        return categories.update_products_from_api()
-
-    def update_categories_from_api_data(self, data):
-        from product.models import SemaCategory
-
-        msgs = []
-        try:
-            for item in data:
-                product = self.get(
-                    product_id=item['ProductId'],
-                    part_number=item['PartNumber']
-                )
-                category = SemaCategory.objects.get(
-                    category_id=item['category_id_']
-                )
-                if category in product.categories.all():
-                    msgs.append(
-                        product.get_instance_up_to_date_msg(
-                            message=f"{category} already on {product}"
-                        )
-                    )
-                else:
-                    product.categories.add(category)
-                    product.save()
-                    msgs.append(
-                        product.get_update_success_msg(
-                            message=f"{category} added to {product}"
-                        )
-                    )
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-        return msgs
-
     def update_html_from_api(self):
         return self.get_queryset().update_html_from_api()
 
@@ -1443,6 +1620,63 @@ class SemaProductManager(SemaBaseManager):
             msgs += self.get_queryset().perform_product_vehicle_update()
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
+                                        base_vehicle_ids=None,
+                                        vehicle_ids=None, part_numbers=None,
+                                        year=None, make_name=None,
+                                        model_name=None, submodel_name=None,
+                                        pies_segments=None):
+        """
+        Retrieves **products by category** data for available categories
+        by category queryset method, category object method and SEMA API
+        object method and retrieves and updates product objects'
+        categories by product manager and product object method, and
+        returns a list of messages.
+
+        :type brand_ids: list
+        :type dataset_ids: list
+        :type base_vehicle_ids: list
+        :type vehicle_ids: list
+        :type part_numbers: list
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :type submodel_name: str
+        :type pies_segments: list
+        :rtype: list
+
+        """
+        from product.models import SemaCategory
+
+        msgs = []
+        try:
+            categories = SemaCategory.objects.filter(is_authorized=True)
+            data = categories.get_products_by_category_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                part_numbers=part_numbers,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                pies_segments=pies_segments
+            )
+            msgs += self.update_product_categories_from_api_data(
+                data
+            )
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self):
@@ -1529,4 +1763,52 @@ class SemaProductManager(SemaBaseManager):
                     continue
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
+        return msgs
+
+    def update_product_categories_from_api_data(self, data):
+        """
+        Retrieves product object by data product id, updates
+        product vehicles by product object method, and returns a list
+        of messages.
+
+        :rtype: list
+
+        .. warnings also:: Does not remove categories not in data
+
+        .. Topic:: Expected Data Format
+
+            [
+                {
+                    "ProductId": int,
+                    "PartNumber": str,
+                    "PiesAttributes": [],
+                    "category_id_" int
+                },
+                {...}
+            ]
+
+        """
+
+        msgs = []
+        products_categories = defaultdict(list)
+        for item in data:
+            try:
+                products_categories[item['ProductId']].append(
+                    item['category_id_']
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+                return msgs
+
+        for product_id, categories in products_categories.items():
+            try:
+                product = self.get(product_id=product_id)
+                msgs += product.update_product_categories_from_api_data(
+                    categories
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(
+                    f"{product_id}, {err}")
+                )
+                continue
         return msgs

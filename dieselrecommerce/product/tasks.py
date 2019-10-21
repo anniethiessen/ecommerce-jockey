@@ -60,7 +60,7 @@ def perform_sema_api_import_unauthorize_and_update():
         print('   complete')
 
     print('A. Updating product categories...')
-    msgs += SemaProduct.objects.update_categories_from_api()
+    msgs += SemaCategory.objects.perform_product_category_update()
     print('   complete')
 
     print('B. Updating product vehicles...')

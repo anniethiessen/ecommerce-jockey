@@ -454,6 +454,9 @@ class SemaBrand(SemaBaseModel):
             msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self, dataset_id=None,
@@ -557,6 +560,9 @@ class SemaDataset(SemaBaseModel):
             msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self, part_numbers=None):
@@ -874,12 +880,49 @@ class SemaCategory(SemaBaseModel):
             else:
                 return '2'
 
-    def update_products_from_api(self):
-        msgs = []
+    def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
+                                        base_vehicle_ids=None,
+                                        vehicle_ids=None, part_numbers=None,
+                                        year=None, make_name=None,
+                                        model_name=None, submodel_name=None,
+                                        pies_segments=None):
+        """
+        Retrieves **products by category** data for category object by
+        category object method and SEMA API object method and retrieves
+        and updates product objects' categories by product manager and
+        product object method, and returns a list of messages.
 
+        :type brand_ids: list
+        :type dataset_ids: list
+        :type base_vehicle_ids: list
+        :type vehicle_ids: list
+        :type part_numbers: list
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :type submodel_name: str
+        :type pies_segments: list
+        :rtype: list
+
+        """
+
+        msgs = []
         try:
-            data = self.get_product_api_data()
-            msgs += SemaProduct.objects.update_categories_from_api_data(data)
+            data = self.get_products_by_category_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                part_numbers=part_numbers,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                pies_segments=pies_segments
+            )
+            msgs += SemaProduct.objects.update_product_categories_from_api_data(
+                data
+            )
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
             return msgs
@@ -888,16 +931,54 @@ class SemaCategory(SemaBaseModel):
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
-    def get_product_api_data(self, include_child_categories=True,
-                             brand_ids=None, dataset_ids=None,
-                             base_vehicle_ids=None, vehicle_ids=None,
-                             year=None, make_name=None,
-                             model_name=None, submodel_name=None,
-                             part_numbers=None, pies_segments=None):
+    def get_products_by_category_data_from_api(self,
+                                               brand_ids=None,
+                                               dataset_ids=None,
+                                               base_vehicle_ids=None,
+                                               vehicle_ids=None,
+                                               part_numbers=None,
+                                               year=None, make_name=None,
+                                               model_name=None,
+                                               submodel_name=None,
+                                               pies_segments=None):
+        """
+        Retrieves **products by category** data for object by SEMA API
+        object method and adds category id key to each data item.
+
+        :type brand_ids: list
+        :type dataset_ids: list
+        :type base_vehicle_ids: list
+        :type vehicle_ids: list
+        :type part_numbers: list
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :type submodel_name: str
+        :type pies_segments: list
+        :rtype: list
+
+        :raises: Exception on SEMA API object method exception
+
+        .. warnings also:: Filtering by year, make, model, or submodel
+        requires all four
+
+        .. Topic:: Return Format
+
+            [
+                {
+                    "ProductId": int,
+                    "PartNumber": str,
+                    "PiesAttributes": [],
+                    "category_id_" int
+                },
+                {...}
+            ]
+
+        """
+
         try:
             data = sema_api.retrieve_products_by_category(
                 category_id=self.category_id,
-                include_child_categories=include_child_categories,
                 brand_ids=brand_ids,
                 dataset_ids=dataset_ids,
                 base_vehicle_ids=base_vehicle_ids,
@@ -993,6 +1074,9 @@ class SemaProduct(SemaBaseModel):
             msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
     def get_vehicles_by_product_data_from_api(self):
@@ -1043,6 +1127,7 @@ class SemaProduct(SemaBaseModel):
         Adds vehicles from data to product object and returns a list of
         messages.
 
+        :type data: list
         :rtype: list
 
         .. warnings also:: Does not remove vehicles not in data
@@ -1081,6 +1166,47 @@ class SemaProduct(SemaBaseModel):
                     self.save()
                     msgs.append(
                         self.get_update_success_msg(message=f"{vehicle} added")
+                    )
+            except Exception as err:
+                msgs.append(self.get_instance_error_msg(f"{item, err}"))
+                continue
+        return msgs
+
+    def update_product_categories_from_api_data(self, data):
+        """
+        Adds categories from data to product object and returns a list
+        of messages.
+
+        :type data: list
+        :rtype: list
+
+        .. warnings also:: Does not remove categories not in data
+
+        .. Topic:: Expected Data Format
+
+            [5, 845, 3453]
+
+        """
+
+        msgs = []
+        for item in data:
+            try:
+                category = SemaCategory.objects.get(
+                    category_id=item
+                )
+                if category in self.categories.all():
+                    msgs.append(
+                        self.get_instance_up_to_date_msg(
+                            message=f"{category} already added"
+                        )
+                    )
+                else:
+                    self.categories.add(category)
+                    self.save()
+                    msgs.append(
+                        self.get_update_success_msg(
+                            message=f"{category} added"
+                        )
                     )
             except Exception as err:
                 msgs.append(self.get_instance_error_msg(f"{item, err}"))

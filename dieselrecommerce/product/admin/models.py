@@ -265,9 +265,9 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         # 'update_product_vehicles_class_action'  # TO NOTE: too long
     )
 
-    change_actions = (
-        # 'update_product_vehicles_object_action',  # TO NOTE: too long
-    )
+    # change_actions = (
+    #     'update_product_vehicles_object_action',  # TO NOTE: too long
+    # )
 
     list_display = (
         'details_link',
@@ -777,15 +777,16 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     )
 
     actions = (
-        'update_products_queryset_action',
+        'update_category_products_queryset_action',
     )
 
     changelist_actions = (
         'import_and_unauthorize_class_action',
+        'update_category_products_class_action'
     )
 
     change_actions = (
-        'update_products_object_action',
+        'update_category_products_object_action',
     )
 
     list_display = (
@@ -853,9 +854,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     changelist_actions = (
         'import_and_unauthorize_class_action',
-        'update_categories_class_action',
+        'update_product_categories_class_action',
         'update_product_vehicles_class_action'
-
     )
 
     change_actions = (
