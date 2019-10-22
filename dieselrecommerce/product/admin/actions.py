@@ -20,6 +20,47 @@ class BaseActions(object):
             messages.error(request, msg)
 
 
+class VendorActions(BaseActions):
+    def check_unlinked_vendors_class_action(self, request, queryset):
+        try:
+            msgs = self.model.objects.check_unlinked_vendors()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    check_unlinked_vendors_class_action.allowed_permissions = ('view',)
+    check_unlinked_vendors_class_action.label = 'Check for vendors'
+    check_unlinked_vendors_class_action.short_description = (
+        'Check if any unlinked Premier manufacturers and SEMA brands exist')
+
+
+class ProductActions(BaseActions):
+    def create_products_class_action(self, request, queryset):
+        msgs = []
+        try:
+            msgs = self.model.objects.create_products_from_premier_products()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+        self.display_messages(request, msgs, include_info=False)
+    create_products_class_action.allowed_permissions = ('view',)
+    create_products_class_action.label = 'Create products'
+    create_products_class_action.short_description = (
+        'Create products from relevant Premier products'
+    )
+
+    def link_products_class_action(self, request, queryset):
+        msgs = []
+        try:
+            msgs = self.model.objects.link_products()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    link_products_class_action.allowed_permissions = ('view',)
+    link_products_class_action.label = 'Link products'
+    link_products_class_action.short_description = (
+        'Create product if Premier product and Sema product exist'
+    )
+
+
 class PremierProductActions(BaseActions):
     def update_inventory_queryset_action(self, request, queryset):
         try:
@@ -341,66 +382,3 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
     update_html_queryset_action.short_description = (
         'Update selected %(verbose_name_plural)s\' HTML from SEMA API'
     )
-
-
-class ProductActions(BaseActions):
-    def create_products_class_action(self, request, queryset):
-        from product.models import PremierProduct
-        msgs = []
-        try:
-            premier_products = PremierProduct.objects.filter(is_relevant=True)
-            for premier_product in premier_products:
-                try:
-                    obj = self.model.objects.get(
-                        premier_product=premier_product
-                    )
-                    msgs.append(
-                        obj.get_instance_up_to_date_msg(
-                            message=f'{obj} already exists'
-                        )
-                    )
-                except self.model.DoesNotExist:
-                    obj = self.model.objects.create(
-                        premier_product=premier_product
-                    )
-                    msgs.append(obj.get_create_success_msg())
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-        self.display_messages(request, msgs, include_info=False)
-    create_products_class_action.allowed_permissions = ('view',)
-    create_products_class_action.label = 'Create products'
-    create_products_class_action.short_description = (
-        'Create products from relevant Premier products'
-    )
-
-    def link_products_class_action(self, request, queryset):
-        msgs = []
-        try:
-            msgs = self.model.objects.link_products()
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    link_products_class_action.allowed_permissions = ('view',)
-    link_products_class_action.label = 'Link products'
-    link_products_class_action.short_description = (
-        'Create product if Premier product and Sema product exist'
-    )
-
-
-class ManufacturerActions(object):
-    def check_unlinked_manufacturers_class_action(self, request, queryset):
-        try:
-            msgs = self.model.check_unlinked_manufacturers()
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    check_unlinked_manufacturers_class_action.allowed_permissions = ('view',)
-    check_unlinked_manufacturers_class_action.label = 'Check manufacturers'
-    check_unlinked_manufacturers_class_action.short_description = (
-        'Check if any unlinked Premier manufacturers and SEMA brands exist')

@@ -29,12 +29,55 @@ from .managers import (
     SemaProductManager,
     SemaSubmodelManager,
     SemaYearManager,
-    SemaVehicleManager
+    SemaVehicleManager,
+    VendorManager
 )
-from .mixins import (
-    ManufacturerMixin,
-    MessagesMixin
-)
+from .mixins import MessagesMixin
+
+
+class Vendor(Model, MessagesMixin):
+    premier_manufacturer = OneToOneField(
+        'PremierManufacturer',
+        on_delete=CASCADE
+    )
+    sema_brand = OneToOneField(
+        'SemaBrand',
+        on_delete=CASCADE,
+        verbose_name='SEMA brand'
+    )
+
+    objects = VendorManager()
+
+    def __str__(self):
+        return f'{self.premier_manufacturer.name} :: {self.sema_brand.name}'
+
+
+class Product(Model, MessagesMixin):
+    premier_product = OneToOneField(
+        'PremierProduct',
+        blank=True,
+        null=True,
+        related_name='product',
+        on_delete=SET_NULL
+    )
+    sema_product = ForeignKey(
+        'SemaProduct',
+        blank=True,
+        null=True,
+        related_name='products',
+        on_delete=SET_NULL,
+        verbose_name='SEMA product'
+    )
+
+    objects = ProductManager()
+
+    def __str__(self):
+        s = str(self.pk)
+        if self.premier_product:
+            s = ' :: '.join([s, str(self.premier_product)])
+        if self.sema_product:
+            s = ' :: '.join([s, str(self.sema_product)])
+        return s
 
 
 class PremierApiProductInventoryModel(Model, MessagesMixin):
@@ -1405,51 +1448,3 @@ class SemaProduct(SemaBaseModel):
 
     def __str__(self):
         return f'{self.product_id} :: {self.dataset}'
-
-
-class Product(Model, MessagesMixin):
-    premier_product = OneToOneField(
-        PremierProduct,
-        blank=True,
-        null=True,
-        related_name='product',
-        on_delete=SET_NULL
-    )
-    sema_product = ForeignKey(
-        SemaProduct,
-        blank=True,
-        null=True,
-        related_name='product',
-        on_delete=SET_NULL,
-        verbose_name='SEMA product'
-    )
-
-    objects = ProductManager()
-
-    def __str__(self):
-        s = str(self.pk)
-        if self.premier_product:
-            s = ' :: '.join([s, str(self.premier_product)])
-        if self.sema_product:
-            s = ' :: '.join([s, str(self.sema_product)])
-        return s
-
-
-class Manufacturer(Model, ManufacturerMixin):
-    premier_manufacturer = CharField(
-        max_length=50,
-        unique=True
-    )
-    sema_brand = CharField(
-        max_length=50,
-        unique=True,
-        verbose_name='SEMA brand'
-    )
-
-    def __str__(self):
-        s = str(self.pk)
-        if self.premier_manufacturer:
-            s = ' :: '.join([s, self.premier_manufacturer])
-        if self.sema_brand:
-            s = ' :: '.join([s, self.sema_brand])
-        return s

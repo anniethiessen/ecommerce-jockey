@@ -11,6 +11,10 @@ premier_api = PremierApi()
 sema_api = SemaApi()
 
 
+class VendorQuerySet(QuerySet):
+    pass
+
+
 class ProductQuerySet(QuerySet):
     pass
 
@@ -569,15 +573,87 @@ class SemaProductQuerySet(SemaBaseQuerySet):
             raise
 
 
-class ProductManager(Manager):
+class VendorManager(Manager):
+    def check_unlinked_vendors(self):
+        from product.models import PremierManufacturer, SemaBrand
+
+        msgs = []
+
+        premier_manufacturers = PremierManufacturer.objects.all()
+        sema_brands = SemaBrand.objects.filter(is_authorized=True)
+        vendors = self.model.objects.all()
+
+        for manufacturer in premier_manufacturers:
+            try:
+                vendor = self.model.objects.get(
+                    premier_manufacturer=manufacturer
+                )
+                msgs.append(
+                    manufacturer.get_instance_up_to_date_msg(
+                        message='Already exists'
+                    )
+                )
+            except self.model.DoesNotExist:
+                msgs.append(
+                    manufacturer.get_instance_error_msg('Does not exist')
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+
+        for brand in sema_brands:
+            try:
+                vendor = self.model.objects.get(sema_brand=brand)
+                msgs.append(
+                    brand.get_instance_up_to_date_msg(
+                        message='Already exists'
+                    )
+                )
+            except self.model.DoesNotExist:
+                msgs.append(
+                    brand.get_instance_error_msg('Does not exist')
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+
+        return msgs
+
     def get_queryset(self):
-        return ProductQuerySet(
+        return VendorQuerySet(
             self.model,
             using=self._db
         )
 
+
+class ProductManager(Manager):
+    def create_products_from_premier_products(self):
+        from product.models import PremierProduct
+
+        msgs = []
+
+        try:
+            premier_products = PremierProduct.objects.filter(is_relevant=True)
+            for premier_product in premier_products:
+                try:
+                    product = self.model.objects.get(
+                        premier_product=premier_product
+                    )
+                    msgs.append(
+                        product.get_instance_up_to_date_msg(
+                            message=f'Already exists'
+                        )
+                    )
+                except self.model.DoesNotExist:
+                    product = self.model.objects.create(
+                        premier_product=premier_product
+                    )
+                    msgs.append(product.get_create_success_msg())
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        return msgs
+
     def link_products(self):
-        from product.models import PremierProduct, SemaProduct, Manufacturer
+        from product.models import PremierProduct, SemaProduct, Vendor
 
         msgs = []
         premier_products = self.model.objects.filter(
@@ -591,11 +667,11 @@ class ProductManager(Manager):
 
         for product in premier_products:
             try:
-                manufacturer = Manufacturer.objects.get(
+                vendor = Vendor.objects.get(
                     premier_manufacturer=product.premier_product.manufacturer
                 )
                 sema_product = SemaProduct.objects.get(
-                    dataset__brand__name=manufacturer.sema_brand,
+                    dataset__brand=vendor.sema_brand,
                     part_number=product.premier_product.vendor_part_number,
                 )
                 product.sema_product = sema_product
@@ -605,10 +681,10 @@ class ProductManager(Manager):
                         message=f"{sema_product} added to {product}"
                     )
                 )
-            except Manufacturer.DoesNotExist:
+            except Vendor.DoesNotExist:
                 msgs.append(
                     product.premier_product.get_instance_error_msg(
-                        "Manufacturer does not exist"
+                        "Vendor does not exist"
                     )
                 )
             except SemaProduct.DoesNotExist:
@@ -622,11 +698,11 @@ class ProductManager(Manager):
 
         for product in sema_products:
             try:
-                manufacturer = Manufacturer.objects.get(
-                    sema_brand=product.sema_product.dataset.brand.name
+                vendor = Vendor.objects.get(
+                    sema_brand=product.sema_product.dataset.brand
                 )
                 premier_product = PremierProduct.objects.get(
-                    manufacturer=manufacturer.premier_manufacturer,
+                    manufacturer=vendor.premier_manufacturer,
                     vendor_part_number=product.sema_product.part_number
                 )
                 product.premier_product = premier_product
@@ -636,10 +712,10 @@ class ProductManager(Manager):
                         message=f"{premier_product} added to {product}"
                     )
                 )
-            except Manufacturer.DoesNotExist:
+            except Vendor.DoesNotExist:
                 msgs.append(
                     product.sema_product.dataset.brand.get_instance_error_msg(
-                        "Manufacturer does not exist"
+                        "Vendor does not exist"
                     )
                 )
             except PremierProduct.DoesNotExist:
@@ -651,7 +727,15 @@ class ProductManager(Manager):
             except Exception as err:
                 msgs.append(product.get_instance_error_msg(str(err)))
 
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
+
+    def get_queryset(self):
+        return ProductQuerySet(
+            self.model,
+            using=self._db
+        )
 
 
 class PremierProductManager(Manager):
