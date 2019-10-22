@@ -11,6 +11,10 @@ premier_api = PremierApi()
 sema_api = SemaApi()
 
 
+class ProductQuerySet(QuerySet):
+    pass
+
+
 class PremierProductQuerySet(QuerySet):
     def has_missing_inventory_data(self):
         return self.filter(
@@ -563,6 +567,91 @@ class SemaProductQuerySet(SemaBaseQuerySet):
             return data
         except Exception:
             raise
+
+
+class ProductManager(Manager):
+    def get_queryset(self):
+        return ProductQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def link_products(self):
+        from product.models import PremierProduct, SemaProduct, Manufacturer
+
+        msgs = []
+        premier_products = self.model.objects.filter(
+            premier_product__isnull=False,
+            sema_product__isnull=True
+        )
+        sema_products = self.model.objects.filter(
+            sema_product__isnull=False,
+            premier_product__isnull=True
+        )
+
+        for product in premier_products:
+            try:
+                manufacturer = Manufacturer.objects.get(
+                    premier_manufacturer=product.premier_product.manufacturer
+                )
+                sema_product = SemaProduct.objects.get(
+                    dataset__brand__name=manufacturer.sema_brand,
+                    part_number=product.premier_product.vendor_part_number,
+                )
+                product.sema_product = sema_product
+                product.save()
+                msgs.append(
+                    product.get_update_success_msg(
+                        message=f"{sema_product} added to {product}"
+                    )
+                )
+            except Manufacturer.DoesNotExist:
+                msgs.append(
+                    product.premier_product.get_instance_error_msg(
+                        "Manufacturer does not exist"
+                    )
+                )
+            except SemaProduct.DoesNotExist:
+                msgs.append(
+                    product.premier_product.get_instance_error_msg(
+                        "SEMA product does not exist"
+                    )
+                )
+            except Exception as err:
+                msgs.append(product.get_instance_error_msg(str(err)))
+
+        for product in sema_products:
+            try:
+                manufacturer = Manufacturer.objects.get(
+                    sema_brand=product.sema_product.dataset.brand.name
+                )
+                premier_product = PremierProduct.objects.get(
+                    manufacturer=manufacturer.premier_manufacturer,
+                    vendor_part_number=product.sema_product.part_number
+                )
+                product.premier_product = premier_product
+                product.save()
+                msgs.append(
+                    product.get_update_success_msg(
+                        message=f"{premier_product} added to {product}"
+                    )
+                )
+            except Manufacturer.DoesNotExist:
+                msgs.append(
+                    product.sema_product.dataset.brand.get_instance_error_msg(
+                        "Manufacturer does not exist"
+                    )
+                )
+            except PremierProduct.DoesNotExist:
+                msgs.append(
+                    product.sema_product.get_instance_error_msg(
+                        "Premier product does not exist"
+                    )
+                )
+            except Exception as err:
+                msgs.append(product.get_instance_error_msg(str(err)))
+
+        return msgs
 
 
 class PremierProductManager(Manager):

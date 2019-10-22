@@ -17,6 +17,7 @@ from django.db.models import (
 from .managers import (
     sema_api,
     PremierProductManager,
+    ProductManager,
     SemaBaseManager,
     SemaBaseVehicleManager,
     SemaBrandManager,
@@ -32,8 +33,7 @@ from .managers import (
 )
 from .mixins import (
     ManufacturerMixin,
-    MessagesMixin,
-    ProductMixin
+    MessagesMixin
 )
 
 
@@ -341,6 +341,9 @@ class PremierProduct(PremierApiProductInventoryModel,
         blank=True,
         max_length=50,
         verbose_name='UPC'
+    )
+    is_relevant = BooleanField(
+        default=False
     )
 
     objects = PremierProductManager()
@@ -1083,9 +1086,6 @@ class SemaProduct(SemaBaseModel):
         blank=True,
         related_name='products'
     )
-    is_relevant = BooleanField(
-        default=False
-    )
 
     @property
     def state(self):
@@ -1391,7 +1391,7 @@ class SemaProduct(SemaBaseModel):
         return f'{self.product_id} :: {self.dataset}'
 
 
-class Product(Model, ProductMixin):
+class Product(Model, MessagesMixin):
     premier_product = OneToOneField(
         PremierProduct,
         blank=True,
@@ -1407,6 +1407,8 @@ class Product(Model, ProductMixin):
         on_delete=SET_NULL,
         verbose_name='SEMA product'
     )
+
+    objects = ProductManager()
 
     def __str__(self):
         s = str(self.pk)

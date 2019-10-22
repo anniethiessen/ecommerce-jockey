@@ -34,17 +34,17 @@ def retrieve_sema_api_data():
 
 def perform_sema_api_import_unauthorize_and_update():
     models = [
-        # SemaBrand,
-        # SemaDataset,
-        # SemaYear,
-        # SemaMake,
-        # SemaModel,
-        # SemaSubmodel,
-        # SemaMakeYear,
-        # SemaBaseVehicle,
-        # SemaVehicle,
-        # SemaCategory,
-        # SemaProduct
+        SemaBrand,
+        SemaDataset,
+        SemaYear,
+        SemaMake,
+        SemaModel,
+        SemaSubmodel,
+        SemaMakeYear,
+        SemaBaseVehicle,
+        SemaVehicle,
+        SemaCategory,
+        SemaProduct
     ]
 
     msgs = []
@@ -59,10 +59,10 @@ def perform_sema_api_import_unauthorize_and_update():
             continue
         print('   complete')
 
-    # print('A. Updating product categories...')
-    # categories = SemaCategory.objects.filter(is_authorized=True)
-    # msgs += categories.perform_product_category_update()
-    # print('   complete')
+    print('A. Updating product categories...')
+    categories = SemaCategory.objects.filter(is_authorized=True)
+    msgs += categories.perform_product_category_update()
+    print('   complete')
 
     print('B. Updating product vehicles...')
     brands = SemaBrand.objects.filter(is_authorized=True)

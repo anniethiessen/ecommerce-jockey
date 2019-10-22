@@ -343,17 +343,41 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
     )
 
 
-class ProductActions(object):
-    def link_products_class_action(self, request, queryset):
+class ProductActions(BaseActions):
+    def create_products_class_action(self, request, queryset):
+        from product.models import PremierProduct
+        msgs = []
         try:
-            msgs = self.model.link_products()
-            for msg in msgs:
-                if msg[:4] == 'Info':
-                    messages.info(request, msg)
-                elif msg[:7] == 'Success':
-                    messages.success(request, msg)
-                else:
-                    messages.error(request, msg)
+            premier_products = PremierProduct.objects.filter(is_relevant=True)
+            for premier_product in premier_products:
+                try:
+                    obj = self.model.objects.get(
+                        premier_product=premier_product
+                    )
+                    msgs.append(
+                        obj.get_instance_up_to_date_msg(
+                            message=f'{obj} already exists'
+                        )
+                    )
+                except self.model.DoesNotExist:
+                    obj = self.model.objects.create(
+                        premier_product=premier_product
+                    )
+                    msgs.append(obj.get_create_success_msg())
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+        self.display_messages(request, msgs, include_info=False)
+    create_products_class_action.allowed_permissions = ('view',)
+    create_products_class_action.label = 'Create products'
+    create_products_class_action.short_description = (
+        'Create products from relevant Premier products'
+    )
+
+    def link_products_class_action(self, request, queryset):
+        msgs = []
+        try:
+            msgs = self.model.objects.link_products()
+            self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
     link_products_class_action.allowed_permissions = ('view',)

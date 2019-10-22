@@ -1,10 +1,3 @@
-import json
-
-import requests
-
-from django.conf import settings
-
-
 class MessagesMixin(object):
     @classmethod
     def get_class_up_to_date_msg(cls, message="everything up-to-date"):
@@ -64,63 +57,6 @@ class MessagesMixin(object):
             else:
                 msg = None
         return msg
-
-
-class ProductMixin(MessagesMixin):
-    @classmethod
-    def link_products(cls):
-        from product.models import PremierProduct, SemaProduct, Manufacturer
-
-        msgs = []
-        premier_products = PremierProduct.objects.filter(product__isnull=True)
-        sema_products = SemaProduct.objects.filter(product__isnull=True)
-
-        # for premier_product in premier_products:
-        #     try:
-        #         manufacturer = Manufacturer.objects.get(
-        #             premier_manufacturer=premier_product.manufacturer)
-        #         sema_product = sema_products.get(
-        #             dataset__brand__name=manufacturer.sema_brand,
-        #             part_number=premier_product.vendor_part_number,
-        #         )
-        #         product = cls.objects.get_or_create(
-        #             premier_product=premier_product,
-        #             sema_product=sema_product
-        #         )
-        #         msgs.append(product.get_create_success_msg())
-        #     except Manufacturer.DoesNotExist:
-        #         msgs.append(premier_product.get_instance_error_msg(
-        #             "Premier manufacturer does not exist"))
-        #     except SemaProduct.DoesNotExist:
-        #         msgs.append(premier_product.get_instance_error_msg(
-        #             "SEMA product does not exist"))
-        #     except Exception as err:
-        #         msgs.append(premier_product.get_instance_error_msg(str(err)))
-
-        for sema_product in sema_products:
-            try:
-                manufacturer = Manufacturer.objects.get(
-                    sema_brand=sema_product.dataset.brand.name)
-                matching_products = premier_products.filter(
-                    manufacturer=manufacturer.premier_manufacturer,
-                    vendor_part_number=sema_product.part_number
-                )
-                for premier_product in matching_products:
-                    product = cls.objects.create(
-                        premier_product=premier_product,
-                        sema_product=sema_product
-                    )
-                    msgs.append(product.get_create_success_msg())
-            except Manufacturer.DoesNotExist:
-                msgs.append(sema_product.get_instance_error_msg(
-                    "SEMA brand does not exist"))
-            except PremierProduct.DoesNotExist:
-                msgs.append(sema_product.get_instance_error_msg(
-                    "Premier product does not exist"))
-            except Exception as err:
-                msgs.append(sema_product.get_instance_error_msg(str(err)))
-
-        return msgs
 
 
 class ManufacturerMixin(MessagesMixin):

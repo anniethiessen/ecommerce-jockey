@@ -97,14 +97,20 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'cost',
         'jobber',
         'msrp',
-        'map'
+        'map',
+        'is_relevant'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+    )
+
     list_filter = (
+        'is_relevant',
         HasProduct,
         'manufacturer',
         'part_status',
@@ -118,6 +124,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             None, {
                 'fields': (
                     'product_link',
+                    'is_relevant',
                     'premier_part_number',
                     'description',
                     'manufacturer',
@@ -185,6 +192,43 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             return '-----'
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += (
+                'premier_part_number',
+                'description',
+                'manufacturer',
+                'vendor_part_number',
+                'part_status',
+                'upc',
+                'cost',
+                'cost_cad',
+                'cost_usd',
+                'jobber',
+                'jobber_cad',
+                'jobber_usd',
+                'msrp',
+                'msrp_cad',
+                'msrp_usd',
+                'map',
+                'map_cad',
+                'map_usd',
+                'weight',
+                'length',
+                'width',
+                'height',
+                'inventory_ab',
+                'inventory_po',
+                'inventory_ut',
+                'inventory_ky',
+                'inventory_tx',
+                'inventory_ca',
+                'inventory_wa',
+                'inventory_co'
+            )
+        return readonly_fields
 
 
 @admin.register(SemaBrand)
@@ -977,22 +1021,16 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'product_id',
         'part_number',
         'dataset',
-        'is_authorized',
-        'is_relevant'
+        'is_authorized'
     )
 
     list_display_links = (
         'details_link',
     )
 
-    list_editable = (
-        'is_relevant',
-    )
-
     list_filter = (
         HasProduct,
         'is_authorized',
-        'is_relevant',
         ('dataset', RelatedOnlyFieldListFilter),
         HasCategory,
         HasVehicle,
@@ -1004,7 +1042,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             None, {
                 'fields': (
                     'product_link',
-                    'is_relevant',
                     'is_authorized',
                     'product_id',
                     'part_number'
@@ -1117,20 +1154,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         except Exception as err:
             return str(err)
 
-    def get_readonly_fields(self, request, obj=None):
-        readonly_fields = super().get_readonly_fields(request, obj)
-        if not request.user.is_superuser:
-            readonly_fields += (
-                'is_authorized',
-                'product_id',
-                'part_number',
-                'dataset',
-                'categories',
-                'vehicles',
-                'html'
-            )
-        return readonly_fields
-
 
 @admin.register(Product)
 class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
@@ -1155,7 +1178,8 @@ class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
     )
 
     changelist_actions = (
-        'link_products_class_action',
+        'create_products_class_action',
+        'link_products_class_action'
     )
 
     list_display = (
