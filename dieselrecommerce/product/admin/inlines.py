@@ -120,7 +120,8 @@ class SemaVehicleTabularInline(TabularInline):
         'base_vehicle',
         'submodel',
         'product_count',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant'
     )
 
     readonly_fields = (
@@ -340,6 +341,7 @@ class SemaProductTabularInline(TabularInline):
         'part_number',
         'dataset',
         'is_authorized',
+        'is_relevant'
     )
 
     readonly_fields = (

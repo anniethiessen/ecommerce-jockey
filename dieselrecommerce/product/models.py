@@ -848,6 +848,9 @@ class SemaVehicle(SemaBaseModel):
         on_delete=CASCADE,
         related_name='vehicles'
     )
+    is_relevant = BooleanField(
+        default=False
+    )
 
     @property
     def state(self):

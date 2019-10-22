@@ -777,11 +777,16 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'base_vehicle',
         'submodel',
         'product_count',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant'
     )
 
     list_display_links = (
         'details_link',
+    )
+
+    list_editable = (
+        'is_relevant',
     )
 
     list_filter = (
@@ -796,6 +801,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         (
             None, {
                 'fields': (
+                    'is_relevant',
                     'is_authorized',
                     'vehicle_id'
                 )
@@ -853,6 +859,17 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
             return None
         return get_change_view_link(obj.submodel, 'See full submodel')
     submodel_link.short_description = ''
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += (
+                'is_authorized',
+                'vehicle_id',
+                'base_vehicle',
+                'submodel'
+            )
+        return readonly_fields
 
 
 @admin.register(SemaCategory)
@@ -968,6 +985,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+    )
+
     list_filter = (
         HasProduct,
         'is_authorized',
@@ -983,8 +1004,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             None, {
                 'fields': (
                     'product_link',
-                    'is_authorized',
                     'is_relevant',
+                    'is_authorized',
                     'product_id',
                     'part_number'
                 )
@@ -1095,6 +1116,20 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             return mark_safe(html)
         except Exception as err:
             return str(err)
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += (
+                'is_authorized',
+                'product_id',
+                'part_number',
+                'dataset',
+                'categories',
+                'vehicles',
+                'html'
+            )
+        return readonly_fields
 
 
 @admin.register(Product)
