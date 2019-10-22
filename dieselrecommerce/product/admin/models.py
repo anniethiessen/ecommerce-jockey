@@ -7,6 +7,7 @@ from django.utils.safestring import mark_safe
 
 from ..models import (
     Manufacturer,
+    PremierManufacturer,
     PremierProduct,
     Product,
     SemaBaseVehicle,
@@ -51,6 +52,7 @@ from .filters import (
     HasVehicle
 )
 from .inlines import (
+    PremierProductTabularInline,
     SemaBaseVehicleTabularInline,
     SemaCategoryChildrenTabularInline,
     SemaCategoryParentsTabularInline,
@@ -65,16 +67,63 @@ from .resources import PremierProductResource
 from .utils import get_change_view_link
 
 
+@admin.register(PremierManufacturer)
+class PremierManufacturerModelAdmin(ModelAdmin):
+    search_fields = (
+        'name',
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'name',
+        'product_count'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'id',
+                    'name'
+                )
+            }
+        ),
+    )
+
+    readonly_fields = (
+        'id',
+        'product_count',
+        'details_link'
+    )
+
+    inlines = (
+        PremierProductTabularInline,
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+
 @admin.register(PremierProduct)
 class PremierProductModelAdmin(ImportMixin, ObjectActions,
                                ModelAdmin, PremierProductActions):
     resource_class = PremierProductResource
 
+    list_select_related = (
+        'manufacturer',
+    )
+
     search_fields = (
         'premier_part_number',
         'vendor_part_number',
         'description',
-        'manufacturer',
+        'manufacturer__name',
         'upc'
     )
 
@@ -112,7 +161,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     list_filter = (
         'is_relevant',
         HasProduct,
-        'manufacturer',
+        'manufacturer__name',
         'part_status',
         HasApiInventory,
         HasApiPricing,
@@ -127,10 +176,17 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                     'is_relevant',
                     'premier_part_number',
                     'description',
-                    'manufacturer',
                     'vendor_part_number',
                     'part_status',
                     'upc'
+                )
+            }
+        ),
+        (
+            'Manufacturer', {
+                'fields': (
+                    'manufacturer_link',
+                    'manufacturer'
                 )
             }
         ),
@@ -180,6 +236,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
 
     readonly_fields = (
         'details_link',
+        'manufacturer_link',
         'product_link'
     )
 
@@ -192,6 +249,15 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             return '-----'
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
+
+    def manufacturer_link(self, obj):
+        if not obj.manufacturer:
+            return '-----'
+        return get_change_view_link(
+            obj.manufacturer,
+            'See all full manufacturer'
+        )
+    manufacturer_link.short_description = ''
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -1166,7 +1232,7 @@ class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
         'premier_product__premier_part_number',
         'premier_product__vendor_part_number',
         'premier_product__description',
-        'premier_product__manufacturer',
+        'premier_product__manufacturer__name',
         'premier_product__upc',
         'sema_product__dataset__brand__brand_id',
         'sema_product__dataset__brand__name',

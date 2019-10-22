@@ -110,14 +110,18 @@ ADMIN_REORDER = (
         'app': 'product',
         'label': 'dieselr',
         'models': (
-            'product.Product',
-            'product.Manufacturer'
+            'product.Manufacturer',
+            'product.Product'
         )
     },
     {
         'app': 'product',
         'label': 'premier',
         'models': (
+            {
+                'model': 'product.PremierManufacturer',
+                'label': 'Manufacturers'
+            },
             {
                 'model': 'product.PremierProduct',
                 'label': 'Products'
@@ -135,13 +139,7 @@ ADMIN_REORDER = (
             {
                 'model': 'product.SemaDataset',
                 'label': 'Datasets'
-            }
-        )
-    },
-    {
-        'app': 'product',
-        'label': 'sema',
-        'models': (
+            },
             {
                 'model': 'product.SemaYear',
                 'label': 'Years'
@@ -157,13 +155,7 @@ ADMIN_REORDER = (
             {
                 'model': 'product.SemaSubmodel',
                 'label': 'Submodels'
-            }
-        )
-    },
-    {
-        'app': 'product',
-        'label': 'sema',
-        'models': (
+            },
             {
                 'model': 'product.SemaMakeYear',
                 'label': 'Make Years'
@@ -175,27 +167,15 @@ ADMIN_REORDER = (
             {
                 'model': 'product.SemaVehicle',
                 'label': 'Vehicles'
-            }
-        )
-    },
-    {
-        'app': 'product',
-        'label': 'sema',
-        'models': (
+            },
             {
                 'model': 'product.SemaCategory',
                 'label': 'Categories'
             },
-        )
-    },
-    {
-        'app': 'product',
-        'label': 'sema',
-        'models': (
             {
                 'model': 'product.SemaProduct',
                 'label': 'Products'
-            },
+            }
         )
     }
 )

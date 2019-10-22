@@ -272,6 +272,21 @@ class PremierApiProductPricingModel(Model, MessagesMixin):
         abstract = True
 
 
+class PremierManufacturer(Model, MessagesMixin):
+    name = CharField(
+        max_length=50,
+        unique=True
+    )
+
+    @property
+    def product_count(self):
+        return self.products.count()
+    product_count.fget.short_description = 'Product Count'
+
+    def __str__(self):
+        return self.name
+
+
 class PremierProduct(PremierApiProductInventoryModel,
                      PremierApiProductPricingModel):
     premier_part_number = CharField(
@@ -285,8 +300,10 @@ class PremierProduct(PremierApiProductInventoryModel,
     description = CharField(
         max_length=500
     )
-    manufacturer = CharField(
-        max_length=50
+    manufacturer = ForeignKey(
+        PremierManufacturer,
+        on_delete=CASCADE,
+        related_name='products'
     )
     cost = DecimalField(
         decimal_places=2,
@@ -349,7 +366,7 @@ class PremierProduct(PremierApiProductInventoryModel,
     objects = PremierProductManager()
 
     def __str__(self):
-        return f'{self.premier_part_number} :: {self.manufacturer}'
+        return f'{self.premier_part_number} :: {self.manufacturer.name}'
 
 
 class SemaBaseModel(Model, MessagesMixin):
