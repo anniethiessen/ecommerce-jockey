@@ -1217,6 +1217,103 @@ class SemaProduct(SemaBaseModel):
                     model_name=item['ModelName'],
                     submodel_name=item['SubmodelName'],
                 )
+            except SemaVehicle.DoesNotExist:
+                from random import randint
+                try:
+                    year, created = SemaYear.objects.get_or_create(
+                        year=item['Year'],
+                        defaults={'is_authorized': False}
+                    )
+                    if created:
+                        print(f'Created year {year}')
+
+                    try:
+                        make = SemaMake.objects.get(name=item['MakeName'])
+                    except SemaMake.DoesNotExist:
+                        pk = randint(1000000, 9999999)
+                        while SemaMake.objects.filter(pk=pk).exists():
+                            pk = randint(1000000, 9999999)
+                        make = SemaMake.objects.create(
+                            make_id=pk,
+                            name=item['MakeName'],
+                            is_authorized=False
+                        )
+                        print(f'Created make {make}')
+
+                    make_year, created = SemaMakeYear.objects.get_or_create(
+                        year=year,
+                        make=make,
+                        defaults={'is_authorized': False}
+                    )
+                    if created:
+                        print(f'Created make year {make_year}')
+
+                    try:
+                        model = SemaModel.objects.get(
+                            name=item['ModelName']
+                        )
+                    except SemaModel.DoesNotExist:
+                        pk = randint(1000000, 9999999)
+                        while SemaModel.objects.filter(pk=pk).exists():
+                            pk = randint(1000000, 9999999)
+                        model = SemaModel.objects.create(
+                            model_id=pk,
+                            name=item['ModelName'],
+                            is_authorized=False
+                        )
+                        print(f'Created model {model}')
+
+                    try:
+                        base_vehicle = SemaBaseVehicle.objects.get(
+                            make_year=make_year,
+                            model=model
+                        )
+                    except SemaBaseVehicle.DoesNotExist:
+                        pk = randint(1000000, 9999999)
+                        while SemaBaseVehicle.objects.filter(pk=pk).exists():
+                            pk = randint(1000000, 9999999)
+                        base_vehicle = SemaBaseVehicle.objects.create(
+                            base_vehicle_id=pk,
+                            make_year=make_year,
+                            model=model
+                        )
+                        print(f'Created base vehicle {base_vehicle}')
+
+                    try:
+                        submodel = SemaSubmodel.objects.get(
+                            name=item['SubmodelName']
+                        )
+                    except SemaSubmodel.DoesNotExist:
+                        pk = randint(1000000, 9999999)
+                        while SemaSubmodel.objects.filter(pk=pk).exists():
+                            pk = randint(1000000, 9999999)
+                        submodel = SemaSubmodel.objects.create(
+                            submodel_id=pk,
+                            name=item['SubmodelName'],
+                            is_authorized=False
+                        )
+                        print(f'Created submodel {submodel}')
+
+                    pk = randint(1000000, 9999999)
+                    while SemaVehicle.objects.filter(pk=pk).exists():
+                        pk = randint(1000000, 9999999)
+                    vehicle = SemaVehicle.objects.create(
+                        vehicle_id=pk,
+                        base_vehicle=base_vehicle,
+                        submodel=submodel,
+                        is_authorized=False
+                    )
+                    print(f'Created vehicle {vehicle}')
+                except Exception as err:
+                    msgs.append(
+                        self.get_instance_error_msg(f"{item}, {err}")
+                    )
+                    continue
+            except Exception as err:
+                msgs.append(self.get_instance_error_msg(f"{item}, {err}"))
+                continue
+
+            try:
                 if vehicle in self.vehicles.all():
                     msgs.append(
                         self.get_instance_up_to_date_msg(
@@ -1230,7 +1327,7 @@ class SemaProduct(SemaBaseModel):
                         self.get_update_success_msg(message=f"{vehicle} added")
                     )
             except Exception as err:
-                msgs.append(self.get_instance_error_msg(f"{item, err}"))
+                msgs.append(self.get_instance_error_msg(f"{item}, {err}"))
                 continue
         return msgs
 
