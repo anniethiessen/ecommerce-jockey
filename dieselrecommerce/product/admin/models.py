@@ -2,7 +2,7 @@ from django_object_actions import BaseDjangoObjectActions as ObjectActions
 from import_export.admin import ImportMixin
 
 from django.contrib import admin
-from django.contrib.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin, RelatedOnlyFieldListFilter
 from django.utils.safestring import mark_safe
 
 from ..models import (
@@ -42,20 +42,24 @@ from .filters import (
     ByCategoryLevel,
     HasAlbertaInventory,
     HasCategory,
-    HasMissingInventory,
-    HasMissingHtml,
-    HasMissingPricing,
+    HasApiInventory,
+    HasHtml,
+    HasApiPricing,
     HasPremierProduct,
     HasProduct,
     HasSemaProduct,
     HasVehicle
 )
 from .inlines import (
+    SemaBaseVehicleTabularInline,
     SemaCategoryChildrenTabularInline,
     SemaCategoryParentsTabularInline,
     SemaCategoryProductsTabularInline,
     SemaDatasetTabularInline,
-    SemaVehicleProductsTabularInline
+    SemaMakeYearTabularInline,
+    SemaProductTabularInline,
+    SemaVehicleProductsTabularInline,
+    SemaVehicleTabularInline
 )
 from .resources import PremierProductResource
 from .utils import get_change_view_link
@@ -104,8 +108,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         HasProduct,
         'manufacturer',
         'part_status',
-        HasMissingInventory,
-        HasMissingPricing,
+        HasApiInventory,
+        HasApiPricing,
         HasAlbertaInventory
     )
 
@@ -248,6 +252,10 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
 @admin.register(SemaDataset)
 class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
+    list_select_related = (
+        'brand',
+    )
+
     search_fields = (
         'brand__brand_id',
         'brand__name',
@@ -312,6 +320,14 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'brand_link'
     )
 
+    autocomplete_fields = (
+        'brand',
+    )
+
+    inlines = (
+        SemaProductTabularInline,
+    )
+
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
@@ -366,6 +382,10 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         'details_link'
     )
 
+    inlines = (
+        SemaMakeYearTabularInline,
+    )
+
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
@@ -413,6 +433,10 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     readonly_fields = (
         'make_year_count',
         'details_link'
+    )
+
+    inlines = (
+        SemaMakeYearTabularInline,
     )
 
     def details_link(self, obj):
@@ -464,6 +488,10 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'details_link',
     )
 
+    inlines = (
+        SemaBaseVehicleTabularInline,
+    )
+
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
@@ -513,6 +541,10 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'details_link',
     )
 
+    inlines = (
+        SemaVehicleTabularInline,
+    )
+
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
@@ -520,6 +552,11 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
 
 @admin.register(SemaMakeYear)
 class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
+    list_select_related = (
+        'year',
+        'make'
+    )
+
     search_fields = (
         'year__year',
         'make__make_id',
@@ -545,8 +582,8 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
 
     list_filter = (
         'is_authorized',
-        'make',
-        'year'
+        ('make', RelatedOnlyFieldListFilter),
+        ('year', RelatedOnlyFieldListFilter)
     )
 
     fieldsets = (
@@ -584,6 +621,15 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'make_link'
     )
 
+    autocomplete_fields = (
+        'year',
+        'make'
+    )
+
+    inlines = (
+        SemaBaseVehicleTabularInline,
+    )
+
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
@@ -604,6 +650,11 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
 @admin.register(SemaBaseVehicle)
 class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
                                 SemaBaseVehicleActions):
+    list_select_related = (
+        'make_year',
+        'model'
+    )
+
     search_fields = (
         'base_vehicle_id',
         'make_year__year__year',
@@ -632,9 +683,9 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 
     list_filter = (
         'is_authorized',
-        'make_year__make',
-        'model',
-        'make_year__year'
+        ('make_year__make', RelatedOnlyFieldListFilter),
+        ('model', RelatedOnlyFieldListFilter),
+        ('make_year__year', RelatedOnlyFieldListFilter)
     )
 
     fieldsets = (
@@ -671,6 +722,15 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'model_link'
     )
 
+    autocomplete_fields = (
+        'make_year',
+        'model'
+    )
+
+    inlines = (
+        SemaVehicleTabularInline,
+    )
+
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
@@ -690,6 +750,11 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 
 @admin.register(SemaVehicle)
 class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
+    list_select_related = (
+        'base_vehicle',
+        'submodel'
+    )
+
     search_fields = (
         'base_vehicle__base_vehicle_id',
         'base_vehicle__make_year__year__year',
@@ -721,10 +786,10 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
 
     list_filter = (
         'is_authorized',
-        'base_vehicle__make_year__year',
-        'base_vehicle__make_year__make',
-        'base_vehicle__model',
-        'submodel'
+        ('base_vehicle__make_year__year', RelatedOnlyFieldListFilter),
+        ('base_vehicle__make_year__make', RelatedOnlyFieldListFilter),
+        ('base_vehicle__model', RelatedOnlyFieldListFilter),
+        ('submodel', RelatedOnlyFieldListFilter)
     )
 
     fieldsets = (
@@ -759,6 +824,11 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'product_count',
         'base_vehicle_link',
         'submodel_link'
+    )
+
+    autocomplete_fields = (
+        'base_vehicle',
+        'submodel'
     )
 
     inlines = (
@@ -856,6 +926,10 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
 @admin.register(SemaProduct)
 class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
+    list_select_related = (
+        'dataset',
+    )
+
     search_fields = (
         'dataset__brand__brand_id',
         'dataset__brand__name',
@@ -894,11 +968,12 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     list_filter = (
-        'is_authorized',
         HasProduct,
+        'is_authorized',
+        ('dataset', RelatedOnlyFieldListFilter),
         HasCategory,
         HasVehicle,
-        HasMissingHtml
+        HasHtml
     )
 
     fieldsets = (
@@ -939,6 +1014,9 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             'Vehicles', {
                 'fields': (
                     'vehicles',
+                ),
+                'classes': (
+                    'collapse',
                 )
             }
         ),
@@ -962,6 +1040,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     autocomplete_fields = (
+        'dataset',
         'categories',
         'vehicles'
     )
@@ -1017,6 +1096,11 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
 @admin.register(Product)
 class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
+    list_select_related = (
+        'premier_product',
+        'sema_product'
+    )
+
     search_fields = (
         'premier_product__premier_part_number',
         'premier_product__vendor_part_number',
@@ -1083,6 +1167,11 @@ class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
         'id',
         'premier_product_link',
         'sema_product_link'
+    )
+
+    autocomplete_fields = (
+        'premier_product',
+        'sema_product'
     )
 
     def details_link(self, obj):

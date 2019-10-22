@@ -2,9 +2,9 @@ from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
 
 
-class HasMissingInventory(SimpleListFilter):
-    title = 'has missing inventory'
-    parameter_name = 'missing_inventory'
+class HasApiInventory(SimpleListFilter):
+    title = 'has API inventory'
+    parameter_name = 'inventory'
 
     def lookups(self, request, model_admin):
         return (
@@ -14,9 +14,9 @@ class HasMissingInventory(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
-            return queryset.has_missing_inventory()
+            return queryset.has_all_inventory_data()
         if self.value() == 'No':
-            return queryset.has_all_inventory()
+            return queryset.has_missing_inventory_data()
 
 
 class HasAlbertaInventory(SimpleListFilter):
@@ -42,9 +42,9 @@ class HasAlbertaInventory(SimpleListFilter):
             )
 
 
-class HasMissingPricing(SimpleListFilter):
-    title = 'has missing pricing'
-    parameter_name = 'missing_pricing'
+class HasApiPricing(SimpleListFilter):
+    title = 'has API pricing'
+    parameter_name = 'pricing'
 
     def lookups(self, request, model_admin):
         return (
@@ -54,9 +54,9 @@ class HasMissingPricing(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
-            return queryset.has_missing_pricing()
+            return queryset.has_all_pricing_data()
         if self.value() == 'No':
-            return queryset.has_all_pricing()
+            return queryset.has_missing_pricing_data()
 
 
 class HasCategory(SimpleListFilter):
@@ -150,9 +150,9 @@ class ByCategoryLevel(SimpleListFilter):
             )
 
 
-class HasMissingHtml(SimpleListFilter):
-    title = 'has missing HTML'
-    parameter_name = 'missing_html'
+class HasHtml(SimpleListFilter):
+    title = 'has HTML'
+    parameter_name = 'html'
 
     def lookups(self, request, model_admin):
         return (
@@ -163,13 +163,13 @@ class HasMissingHtml(SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
             return queryset.filter(
-                Q(html__isnull=True)
-                | Q(html='')
+                Q(html__isnull=False)
+                & ~Q(html='')
             )
         if self.value() == 'No':
             return queryset.filter(
-                Q(html__isnull=False)
-                & ~Q(html='')
+                Q(html__isnull=True)
+                | Q(html='')
             )
 
 

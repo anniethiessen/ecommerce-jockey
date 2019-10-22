@@ -12,7 +12,7 @@ sema_api = SemaApi()
 
 
 class PremierProductQuerySet(QuerySet):
-    def has_missing_inventory(self):
+    def has_missing_inventory_data(self):
         return self.filter(
             Q(inventory_ab__isnull=True)
             | Q(inventory_po__isnull=True)
@@ -24,7 +24,7 @@ class PremierProductQuerySet(QuerySet):
             | Q(inventory_co__isnull=True)
         )
 
-    def has_all_inventory(self):
+    def has_all_inventory_data(self):
         return self.filter(
             inventory_ab__isnull=False,
             inventory_po__isnull=False,
@@ -36,7 +36,7 @@ class PremierProductQuerySet(QuerySet):
             inventory_co__isnull=False
         )
 
-    def has_missing_pricing(self):
+    def has_missing_pricing_data(self):
         return self.filter(
             Q(cost_cad__isnull=True)
             | Q(cost_usd__isnull=True)
@@ -48,7 +48,7 @@ class PremierProductQuerySet(QuerySet):
             | Q(map_usd__isnull=True)
         )
 
-    def has_all_pricing(self):
+    def has_all_pricing_data(self):
         return self.filter(
             cost_cad__isnull=False,
             cost_usd__isnull=False,
@@ -611,17 +611,17 @@ class PremierProductManager(Manager):
             using=self._db
         )
 
-    def has_all_inventory(self):
-        return self.get_queryset().has_all_inventory()
+    def has_all_inventory_data(self):
+        return self.get_queryset().has_all_inventory_data()
 
-    def has_missing_inventory(self):
-        return self.get_queryset().has_missing_inventory()
+    def has_missing_inventory_data(self):
+        return self.get_queryset().has_missing_inventory_data()
 
-    def has_all_pricing(self):
-        return self.get_queryset().has_all_pricing()
+    def has_all_pricing_data(self):
+        return self.get_queryset().has_all_pricing_data()
 
-    def has_missing_pricing(self):
-        return self.get_queryset().has_missing_pricing()
+    def has_missing_pricing_data(self):
+        return self.get_queryset().has_missing_pricing_data()
 
     def update_inventory_from_api(self):
         return self.get_queryset().update_inventory_from_api()
