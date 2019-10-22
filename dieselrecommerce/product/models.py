@@ -427,6 +427,7 @@ class SemaBrand(SemaBaseModel):
     @property
     def dataset_count(self):
         return self.datasets.filter(is_authorized=True).count()
+    dataset_count.fget.short_description = 'Dataset Count'
 
     def import_datasets_from_api(self):
         return SemaDataset.objects.import_from_api(brand_ids=[self.brand_id])
@@ -539,6 +540,11 @@ class SemaDataset(SemaBaseModel):
         )
         return state
 
+    @property
+    def product_count(self):
+        return self.products.filter(is_authorized=True).count()
+    product_count.fget.short_description = 'Product Count'
+
     def perform_product_vehicle_update(self, part_numbers=None):
         """
         Retrieves **vehicles by product** data for dataset object by
@@ -629,6 +635,11 @@ class SemaYear(SemaBaseModel):
     def state(self):
         return super().state
 
+    @property
+    def make_year_count(self):
+        return self.make_years.filter(is_authorized=True).count()
+    make_year_count.fget.short_description = 'Make Year Count'
+
     objects = SemaYearManager()
 
     class Meta:
@@ -657,6 +668,11 @@ class SemaMake(SemaBaseModel):
             }
         )
         return state
+
+    @property
+    def make_year_count(self):
+        return self.make_years.filter(is_authorized=True).count()
+    make_year_count.fget.short_description = 'Make Year Count'
 
     objects = SemaMakeManager()
 
@@ -687,6 +703,11 @@ class SemaModel(SemaBaseModel):
         )
         return state
 
+    @property
+    def base_vehicle_count(self):
+        return self.base_vehicles.filter(is_authorized=True).count()
+    base_vehicle_count.fget.short_description = 'Base Vehicle Count'
+
     objects = SemaModelManager()
 
     class Meta:
@@ -715,6 +736,11 @@ class SemaSubmodel(SemaBaseModel):
             }
         )
         return state
+
+    @property
+    def vehicle_count(self):
+        return self.vehicles.filter(is_authorized=True).count()
+    vehicle_count.fget.short_description = 'Vehicle Count'
 
     objects = SemaSubmodelManager()
 
@@ -748,6 +774,11 @@ class SemaMakeYear(SemaBaseModel):
             }
         )
         return state
+
+    @property
+    def base_vehicle_count(self):
+        return self.base_vehicles.filter(is_authorized=True).count()
+    base_vehicle_count.fget.short_description = 'Base Vehicle Count'
 
     objects = SemaMakeYearManager()
 
@@ -787,6 +818,11 @@ class SemaBaseVehicle(SemaBaseModel):
         )
         return state
 
+    @property
+    def vehicle_count(self):
+        return self.vehicles.filter(is_authorized=True).count()
+    vehicle_count.fget.short_description = 'Vehicle Count'
+
     objects = SemaBaseVehicleManager()
 
     class Meta:
@@ -823,6 +859,11 @@ class SemaVehicle(SemaBaseModel):
             }
         )
         return state
+
+    @property
+    def product_count(self):
+        return self.products.filter(is_authorized=True).count()
+    product_count.fget.short_description = 'Product Count'
 
     objects = SemaVehicleManager()
 
@@ -861,13 +902,18 @@ class SemaCategory(SemaBaseModel):
         return state
 
     @property
+    def product_count(self):
+        return self.products.filter(is_authorized=True).count()
+    product_count.fget.short_description = 'Product Count'
+
+    @property
     def parent_category_count(self):
-        return self.parent_categories.all().count()
+        return self.parent_categories.filter(is_authorized=True).count()
     parent_category_count.fget.short_description = 'Parent Count'
 
     @property
     def child_category_count(self):
-        return self.child_categories.all().count()
+        return self.child_categories.filter(is_authorized=True).count()
     child_category_count.fget.short_description = 'Child Count'
 
     @property

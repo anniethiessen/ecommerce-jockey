@@ -274,6 +274,7 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'dataset_id',
         'name',
         'brand',
+        'product_count',
         'is_authorized'
     )
 
@@ -306,6 +307,7 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     )
 
     readonly_fields = (
+        'product_count',
         'details_link',
         'brand_link'
     )
@@ -335,6 +337,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     list_display = (
         'details_link',
         'year',
+        'make_year_count',
         'is_authorized'
     )
 
@@ -359,7 +362,8 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     )
 
     readonly_fields = (
-        'details_link',
+        'make_year_count',
+        'details_link'
     )
 
     def details_link(self, obj):
@@ -382,6 +386,7 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
         'details_link',
         'make_id',
         'name',
+        'make_year_count',
         'is_authorized'
     )
 
@@ -406,7 +411,8 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     )
 
     readonly_fields = (
-        'details_link',
+        'make_year_count',
+        'details_link'
     )
 
     def details_link(self, obj):
@@ -429,6 +435,7 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'details_link',
         'model_id',
         'name',
+        'base_vehicle_count',
         'is_authorized'
     )
 
@@ -453,6 +460,7 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     )
 
     readonly_fields = (
+        'base_vehicle_count',
         'details_link',
     )
 
@@ -476,6 +484,7 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'details_link',
         'submodel_id',
         'name',
+        'vehicle_count',
         'is_authorized'
     )
 
@@ -500,6 +509,7 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     )
 
     readonly_fields = (
+        'vehicle_count',
         'details_link',
     )
 
@@ -525,6 +535,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'id',
         'year',
         'make',
+        'base_vehicle_count',
         'is_authorized'
     )
 
@@ -566,8 +577,9 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
     )
 
     readonly_fields = (
-        'details_link',
         'id',
+        'base_vehicle_count',
+        'details_link',
         'year_link',
         'make_link'
     )
@@ -610,6 +622,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'base_vehicle_id',
         'make_year',
         'model',
+        'vehicle_count',
         'is_authorized'
     )
 
@@ -652,6 +665,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     readonly_fields = (
+        'vehicle_count',
         'details_link',
         'make_year_link',
         'model_link'
@@ -697,6 +711,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'vehicle_id',
         'base_vehicle',
         'submodel',
+        'product_count',
         'is_authorized'
     )
 
@@ -741,6 +756,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
 
     readonly_fields = (
         'details_link',
+        'product_count',
         'base_vehicle_link',
         'submodel_link'
     )
@@ -795,6 +811,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'name',
         'parent_category_count',
         'child_category_count',
+        'product_count',
         'is_authorized'
     )
 
@@ -820,9 +837,10 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     )
 
     readonly_fields = (
-        'details_link',
         'parent_category_count',
-        'child_category_count'
+        'child_category_count',
+        'product_count',
+        'details_link'
     )
 
     inlines = (
@@ -855,7 +873,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     changelist_actions = (
         'import_and_unauthorize_class_action',
         # 'update_product_categories_class_action',  # TO NOTE: too long
-        'update_product_vehicles_class_action'
+        # 'update_product_vehicles_class_action'  # TO NOTE: too long
     )
 
     change_actions = (
