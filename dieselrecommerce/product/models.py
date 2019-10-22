@@ -1219,6 +1219,7 @@ class SemaProduct(SemaBaseModel):
                 )
             except SemaVehicle.DoesNotExist:
                 from random import randint
+                from django.core.exceptions import MultipleObjectsReturned
                 try:
                     year, created = SemaYear.objects.get_or_create(
                         year=item['Year'],
@@ -1262,6 +1263,8 @@ class SemaProduct(SemaBaseModel):
                             is_authorized=False
                         )
                         print(f'Created model {model}')
+                    except MultipleObjectsReturned:
+                        model = SemaModel.objects.get(pk=2489)
 
                     try:
                         base_vehicle = SemaBaseVehicle.objects.get(
