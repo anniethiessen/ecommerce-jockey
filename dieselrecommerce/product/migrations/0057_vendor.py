@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import product.mixins
 
 
 class Migration(migrations.Migration):
@@ -19,6 +18,6 @@ class Migration(migrations.Migration):
                 ('premier_manufacturer', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='product.PremierManufacturer')),
                 ('sema_brand', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='product.SemaBrand', verbose_name='SEMA brand')),
             ],
-            bases=(models.Model, product.mixins.MessagesMixin),
+            bases=(models.Model,),
         ),
     ]

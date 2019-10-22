@@ -1,23 +1,6 @@
 from django.contrib import messages
 
-
-class BaseActions(object):
-    def display_messages(self, request, msgs, include_info=True):
-        if not include_info:
-            msgs = [msg for msg in msgs if not msg[:4] == 'Info']
-            if not msgs:
-                msgs.append(self.model.get_class_up_to_date_msg())
-
-        for msg in msgs:
-            self.display_message(request, msg)
-
-    def display_message(self, request, msg):
-        if msg[:4] == 'Info':
-            messages.warning(request, msg)
-        elif msg[:7] == 'Success':
-            messages.success(request, msg)
-        else:
-            messages.error(request, msg)
+from core.admin.actions import BaseActions
 
 
 class VendorActions(BaseActions):
@@ -58,54 +41,6 @@ class ProductActions(BaseActions):
     link_products_class_action.label = 'Link products'
     link_products_class_action.short_description = (
         'Create product if Premier product and Sema product exist'
-    )
-
-
-class PremierProductActions(BaseActions):
-    def update_inventory_queryset_action(self, request, queryset):
-        try:
-            msgs = queryset.update_inventory_from_api()
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_inventory_queryset_action.allowed_permissions = ('view',)
-    update_inventory_queryset_action.short_description = (
-        'Update selected %(verbose_name_plural)s\' inventory from Premier API'
-    )
-
-    def update_inventory_object_action(self, request, obj):
-        try:
-            msg = obj.update_inventory_from_api()
-            self.display_message(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_inventory_object_action.allowed_permissions = ('view',)
-    update_inventory_object_action.label = "Update Inventory from API"
-    update_inventory_object_action.short_description = (
-        'Update this Premier product\'s inventory from Premier API'
-    )
-
-    def update_pricing_queryset_action(self, request, queryset):
-        try:
-            msgs = queryset.update_pricing_from_api()
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_pricing_queryset_action.allowed_permissions = ('view',)
-    update_pricing_queryset_action.short_description = (
-        'Update selected %(verbose_name_plural)s\' pricing from Premier API'
-    )
-
-    def update_pricing_object_action(self, request, obj):
-        try:
-            msg = obj.update_pricing_from_api()
-            self.display_message(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_pricing_object_action.allowed_permissions = ('view',)
-    update_pricing_object_action.label = "Update Pricing from API"
-    update_pricing_object_action.short_description = (
-        'Update this Premier product\'s pricing from Premier API'
     )
 
 

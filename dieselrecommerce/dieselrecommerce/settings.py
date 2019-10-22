@@ -16,7 +16,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'product.apps.ProductAppConfig',
+    'product.apps.ProductAppConfig',  # TODO
+    'core.apps.CoreAppConfig',
+    'main.apps.MainAppConfig',
+    'premier.apps.PremierAppConfig',
+    'sema.apps.SemaAppConfig',
+    'shopify.apps.ShopifyAppConfig',
     'admin_reorder',
     'import_export'
 ]
@@ -115,15 +120,15 @@ ADMIN_REORDER = (
         )
     },
     {
-        'app': 'product',
+        'app': 'premier',
         'label': 'premier',
         'models': (
             {
-                'model': 'product.PremierManufacturer',
+                'model': 'premier.PremierManufacturer',
                 'label': 'Manufacturers'
             },
             {
-                'model': 'product.PremierProduct',
+                'model': 'premier.PremierProduct',
                 'label': 'Products'
             },
         )

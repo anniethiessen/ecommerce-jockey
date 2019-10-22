@@ -2,9 +2,8 @@ from import_export.fields import Field
 from import_export.resources import ModelResource
 from import_export.widgets import ForeignKeyWidget
 
+from core.admin.widgets import RoundedDecimalWidget
 from ..models import PremierManufacturer, PremierProduct
-
-from .widgets import RoundedDecimalWidget
 
 
 class PremierProductResource(ModelResource):
