@@ -960,7 +960,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'product_id',
         'part_number',
         'dataset',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant'
     )
 
     list_display_links = (
@@ -970,6 +971,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     list_filter = (
         HasProduct,
         'is_authorized',
+        'is_relevant',
         ('dataset', RelatedOnlyFieldListFilter),
         HasCategory,
         HasVehicle,
@@ -982,6 +984,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                 'fields': (
                     'product_link',
                     'is_authorized',
+                    'is_relevant',
                     'product_id',
                     'part_number'
                 )

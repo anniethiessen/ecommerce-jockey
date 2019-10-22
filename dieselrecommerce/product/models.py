@@ -1080,6 +1080,9 @@ class SemaProduct(SemaBaseModel):
         blank=True,
         related_name='products'
     )
+    is_relevant = BooleanField(
+        default=False
+    )
 
     @property
     def state(self):
