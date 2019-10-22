@@ -1224,6 +1224,7 @@ class SemaProduct(SemaBaseModel):
                     submodel_name=item['SubmodelName'],
                 )
             except SemaVehicle.DoesNotExist:
+                # FIXME
                 from random import randint
                 from django.core.exceptions import MultipleObjectsReturned
                 try:
@@ -1269,8 +1270,6 @@ class SemaProduct(SemaBaseModel):
                             is_authorized=False
                         )
                         print(f'Created model {model}')
-                    except MultipleObjectsReturned:
-                        model = SemaModel.objects.get(pk=2489)
 
                     try:
                         base_vehicle = SemaBaseVehicle.objects.get(
