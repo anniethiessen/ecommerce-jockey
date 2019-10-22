@@ -1,4 +1,4 @@
-from product.models import *
+from sema.models import *
 
 
 def retrieve_sema_api_data():
