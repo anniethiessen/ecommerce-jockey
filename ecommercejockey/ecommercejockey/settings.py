@@ -97,8 +97,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-ROOT_URLCONF = 'ecommerce.urls'
-WSGI_APPLICATION = 'ecommerce.wsgi.application'
+ROOT_URLCONF = 'ecommercejockey.urls'
+WSGI_APPLICATION = 'ecommercejockey.wsgi.application'
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = '/static/'
