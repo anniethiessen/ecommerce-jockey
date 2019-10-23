@@ -5,7 +5,7 @@ import sys
 def main():
     os.environ.setdefault(
         'DJANGO_SETTINGS_MODULE',
-        'dieselrecommerce.settings'
+        'ecommerce.settings'
     )
 
     try:
