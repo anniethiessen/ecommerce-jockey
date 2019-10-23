@@ -87,6 +87,19 @@ class ItemManager(Manager):
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
 
+        try:
+            products = self.model.objects.all()
+            for product in products:
+                if (product.premier_product and
+                        not product.premier_product.is_relevant):
+                    msgs.append(
+                        product.get_instance_error_msg(
+                            'Premier product not relevant'
+                        )
+                    )
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
         return msgs
 
     def link_products(self):
