@@ -81,3 +81,23 @@ def perform_sema_api_import_unauthorize_and_update():
 
 sema_sync = perform_sema_api_import_unauthorize_and_update
 sema_data = retrieve_sema_api_data
+
+
+# TODO
+# sema classes update (when new brands)
+#
+# create items
+# premier inventory update (if item)
+# premier pricing update (if item)
+# sema html update (if item)
+#
+# WARN:
+# item missing prices
+# item missing inventory
+# item missing html
+# item inventory in alberta updated to 0
+# incomplete items
+#
+# INFO:
+# non item premier products with inventory in Alberta
+# item with new category
