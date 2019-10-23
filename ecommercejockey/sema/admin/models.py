@@ -730,17 +730,6 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         return get_change_view_link(obj.submodel, 'See full submodel')
     submodel_link.short_description = ''
 
-    def get_readonly_fields(self, request, obj=None):
-        readonly_fields = super().get_readonly_fields(request, obj)
-        if not request.user.is_superuser:
-            readonly_fields += (
-                'is_authorized',
-                'vehicle_id',
-                'base_vehicle',
-                'submodel'
-            )
-        return readonly_fields
-
 
 @admin.register(SemaCategory)
 class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
