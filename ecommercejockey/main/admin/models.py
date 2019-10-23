@@ -29,7 +29,8 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     search_fields = (
         'premier_manufacturer__name',
         'sema_brand__brand_id',
-        'sema_brand__name'
+        'sema_brand__name',
+        'slug'
     )
 
     changelist_actions = (
@@ -40,7 +41,8 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'details_link',
         'id',
         'premier_manufacturer',
-        'sema_brand'
+        'sema_brand',
+        'slug'
     )
 
     list_display_links = (
@@ -52,6 +54,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
             None, {
                 'fields': (
                     'id',
+                    'slug'
                 )
             }
         ),

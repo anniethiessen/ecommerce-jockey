@@ -1,5 +1,6 @@
 from django.db.models import (
     Model,
+    CharField,
     ForeignKey,
     OneToOneField,
     TextField,
@@ -33,6 +34,10 @@ class Vendor(Model, MessagesMixin):
         on_delete=CASCADE,
         verbose_name='SEMA brand',
         related_name='vendor'
+    )
+    slug = CharField(
+        max_length=20,
+        unique=True
     )
 
     objects = VendorManager()
