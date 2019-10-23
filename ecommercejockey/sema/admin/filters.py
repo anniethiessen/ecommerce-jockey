@@ -128,6 +128,6 @@ class HasProduct(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
-            return queryset.filter(product__isnull=False)
+            return queryset.filter(items__isnull=False)
         if self.value() == 'No':
-            return queryset.filter(product__isnull=True)
+            return queryset.filter(items__isnull=True)
