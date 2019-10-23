@@ -1,9 +1,9 @@
 from django.contrib import messages
 
-from core.admin.actions import BaseActions
+from core.admin.actions import RelevancyActions
 
 
-class PremierProductActions(BaseActions):
+class PremierProductActions(RelevancyActions):
     def update_inventory_queryset_action(self, request, queryset):
         try:
             msgs = queryset.update_inventory_from_api()

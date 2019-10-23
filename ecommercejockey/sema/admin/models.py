@@ -632,6 +632,11 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'vehicle_id'
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     changelist_actions = (
         'import_and_unauthorize_class_action',
     )

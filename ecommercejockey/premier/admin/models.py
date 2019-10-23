@@ -82,7 +82,9 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
 
     actions = (
         'update_inventory_queryset_action',
-        'update_pricing_queryset_action'
+        'update_pricing_queryset_action',
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     change_actions = (
