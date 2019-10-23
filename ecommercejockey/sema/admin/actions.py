@@ -1,6 +1,6 @@
 from django.contrib import messages
 
-from core.admin.actions import BaseActions
+from core.admin.actions import BaseActions, RelevancyActions
 
 
 class SemaBaseActions(BaseActions):
@@ -235,7 +235,7 @@ class SemaBaseVehicleActions(SemaBaseActions):
     pass
 
 
-class SemaVehicleActions(SemaBaseActions):
+class SemaVehicleActions(SemaBaseActions, RelevancyActions):
     pass
 
 
