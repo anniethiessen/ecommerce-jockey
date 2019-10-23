@@ -16,7 +16,7 @@ from sema.models import (
     SemaProduct
 )
 from .managers import (
-    ProductManager,
+    ItemManager,
     VendorManager
 )
 
@@ -24,12 +24,14 @@ from .managers import (
 class Vendor(Model, MessagesMixin):
     premier_manufacturer = OneToOneField(
         PremierManufacturer,
-        on_delete=CASCADE
+        on_delete=CASCADE,
+        related_name='vendor'
     )
     sema_brand = OneToOneField(
         SemaBrand,
         on_delete=CASCADE,
-        verbose_name='SEMA brand'
+        verbose_name='SEMA brand',
+        related_name='vendor'
     )
 
     objects = VendorManager()
@@ -38,24 +40,24 @@ class Vendor(Model, MessagesMixin):
         return f'{self.premier_manufacturer.name} :: {self.sema_brand.name}'
 
 
-class Product(Model, MessagesMixin):
+class Item(Model, MessagesMixin):
     premier_product = OneToOneField(
         PremierProduct,
         blank=True,
         null=True,
-        related_name='product',
+        related_name='item',
         on_delete=SET_NULL
     )
     sema_product = ForeignKey(
         SemaProduct,
         blank=True,
         null=True,
-        related_name='products',
+        related_name='items',
         on_delete=SET_NULL,
         verbose_name='SEMA product'
     )
 
-    objects = ProductManager()
+    objects = ItemManager()
 
     def __str__(self):
         s = str(self.pk)

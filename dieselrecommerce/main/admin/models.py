@@ -5,11 +5,11 @@ from django.contrib.admin import ModelAdmin
 
 from core.admin.utils import get_change_view_link
 from ..models import (
-    Product,
+    Item,
     Vendor
 )
 from .actions import (
-    ProductActions,
+    ItemActions,
     VendorActions
 )
 from .filters import (
@@ -99,8 +99,8 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     sema_brand_link.short_description = ''
 
 
-@admin.register(Product)
-class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
+@admin.register(Item)
+class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     list_select_related = (
         'premier_product',
         'sema_product'
@@ -122,7 +122,7 @@ class ProductModelAdmin(ObjectActions, ModelAdmin, ProductActions):
     )
 
     changelist_actions = (
-        'create_products_class_action',
+        'create_items_class_action',
         'link_products_class_action'
     )
 

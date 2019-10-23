@@ -1,6 +1,20 @@
 import os
 
 
+COMPANY_NAME = 'DIESELR Corp.'
+COMPANY_NICKNAME = 'dieselr'
+COMPANY_SITE = 'https://www.dieselrcorp.com'
+
+GOOGLE_DRIVE_API_KEY = os.environ['GOOGLE_DRIVE_API_KEY']
+
+PREMIER_BASE_URL = 'https://api.premierwd.com/api/v5'
+PREMIER_API_KEY = os.environ['PREMIER_API_KEY']
+
+SEMA_BASE_URL = 'https://sdc.semadatacoop.org/sdcapi'
+SEMA_USERNAME = 'AThiessen'
+SEMA_PASSWORD = os.environ['SEMA_PASSWORD']
+
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ['SECRET_KEY']
 
@@ -16,7 +30,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'product.apps.ProductAppConfig',  # TODO
     'core.apps.CoreAppConfig',
     'main.apps.MainAppConfig',
     'premier.apps.PremierAppConfig',
@@ -112,11 +125,11 @@ ADMIN_REORDER = (
         )
     },
     {
-        'app': 'product',
-        'label': 'dieselr',
+        'app': 'main',
+        'label': COMPANY_NICKNAME,
         'models': (
-            'product.Vendor',
-            'product.Product'
+            'main.Vendor',
+            'main.Item'
         )
     },
     {
@@ -184,17 +197,3 @@ ADMIN_REORDER = (
         )
     }
 )
-
-
-# --- CONSTANTS ---
-COMPANY_NAME = 'DIESELR Corp.'
-COMPANY_SITE = 'https://www.dieselrcorp.com'
-
-GOOGLE_DRIVE_API_KEY = os.environ['GOOGLE_DRIVE_API_KEY']
-
-PREMIER_BASE_URL = 'https://api.premierwd.com/api/v5'
-PREMIER_API_KEY = os.environ['PREMIER_API_KEY']
-
-SEMA_BASE_URL = 'https://sdc.semadatacoop.org/sdcapi'
-SEMA_USERNAME = 'AThiessen'
-SEMA_PASSWORD = os.environ['SEMA_PASSWORD']

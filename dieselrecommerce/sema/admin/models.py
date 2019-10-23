@@ -862,7 +862,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         (
             None, {
                 'fields': (
-                    'product_link',
                     'is_authorized',
                     'product_id',
                     'part_number'
@@ -929,7 +928,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     readonly_fields = (
         'details_link',
-        'product_link',
         'dataset_link',
         'brand_link',
         'brand_a',
@@ -939,12 +937,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
-
-    def product_link(self, obj):
-        if not hasattr(obj, 'product'):
-            return '-----'
-        return get_change_view_link(obj.product, 'See full product')
-    product_link.short_description = ''
 
     def dataset_link(self, obj):
         return get_change_view_link(obj.dataset, 'See full dataset')

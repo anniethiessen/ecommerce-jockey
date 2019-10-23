@@ -16,18 +16,18 @@ class VendorActions(BaseActions):
         'Check if any unlinked Premier manufacturers and SEMA brands exist')
 
 
-class ProductActions(BaseActions):
-    def create_products_class_action(self, request, queryset):
+class ItemActions(BaseActions):
+    def create_items_class_action(self, request, queryset):
         msgs = []
         try:
             msgs = self.model.objects.create_products_from_premier_products()
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
         self.display_messages(request, msgs, include_info=False)
-    create_products_class_action.allowed_permissions = ('view',)
-    create_products_class_action.label = 'Create products'
-    create_products_class_action.short_description = (
-        'Create products from relevant Premier products'
+    create_items_class_action.allowed_permissions = ('view',)
+    create_items_class_action.label = 'Create items'
+    create_items_class_action.short_description = (
+        'Create items from relevant Premier products'
     )
 
     def link_products_class_action(self, request, queryset):

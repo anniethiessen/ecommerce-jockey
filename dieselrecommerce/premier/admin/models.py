@@ -125,7 +125,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         (
             None, {
                 'fields': (
-                    'product_link',
+                    'item_link',
                     'is_relevant',
                     'premier_part_number',
                     'description',
@@ -190,18 +190,18 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     readonly_fields = (
         'details_link',
         'manufacturer_link',
-        'product_link'
+        'item_link'
     )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
-    def product_link(self, obj):
-        if not hasattr(obj, 'product'):
+    def item_link(self, obj):
+        if not hasattr(obj, 'item'):
             return '-----'
-        return get_change_view_link(obj.product, 'See full product')
-    product_link.short_description = ''
+        return get_change_view_link(obj.item, 'See full item')
+    item_link.short_description = ''
 
     def manufacturer_link(self, obj):
         if not obj.manufacturer:

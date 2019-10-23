@@ -5,14 +5,14 @@ class VendorQuerySet(QuerySet):
     pass
 
 
-class ProductQuerySet(QuerySet):
+class ItemQuerySet(QuerySet):
     pass
 
 
 class VendorManager(Manager):
     def check_unlinked_vendors(self):
         from premier.models import PremierManufacturer
-        from product.models import SemaBrand
+        from .models import SemaBrand
 
         msgs = []
 
@@ -61,7 +61,7 @@ class VendorManager(Manager):
         )
 
 
-class ProductManager(Manager):
+class ItemManager(Manager):
     def create_products_from_premier_products(self):
         from premier.models import PremierProduct
 
@@ -91,7 +91,7 @@ class ProductManager(Manager):
 
     def link_products(self):
         from premier.models import PremierProduct
-        from product.models import SemaProduct, Vendor
+        from .models import SemaProduct, Vendor
 
         msgs = []
         premier_products = self.model.objects.filter(
@@ -170,7 +170,7 @@ class ProductManager(Manager):
         return msgs
 
     def get_queryset(self):
-        return ProductQuerySet(
+        return ItemQuerySet(
             self.model,
             using=self._db
         )
