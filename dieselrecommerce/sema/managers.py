@@ -36,7 +36,7 @@ class SemaBrandQuerySet(SemaBaseQuerySet):
 
         """
 
-        from product.models import SemaProduct
+        from .models import SemaProduct
 
         msgs = []
         try:
@@ -112,7 +112,7 @@ class SemaDatasetQuerySet(SemaBaseQuerySet):
 
         """
 
-        from product.models import SemaProduct
+        from .models import SemaProduct
 
         msgs = []
         try:
@@ -278,7 +278,7 @@ class SemaCategoryQuerySet(SemaBaseQuerySet):
 
         """
 
-        from product.models import SemaProduct
+        from .models import SemaProduct
 
         msgs = []
         try:
@@ -715,7 +715,7 @@ class SemaDatasetManager(SemaBaseManager):
             raise
 
     def parse_api_data(self, data):
-        from product.models import SemaBrand
+        from .models import SemaBrand
 
         pk = data['DatasetId']
         update_fields = {
@@ -1193,7 +1193,7 @@ class SemaCategoryManager(SemaBaseManager):
                      year=None, make_name=None,
                      model_name=None, submodel_name=None,
                      base_vehicle_ids=None, vehicle_ids=None):
-        from product.models import SemaBrand, SemaDataset
+        from .models import SemaBrand, SemaDataset
 
         brands = SemaBrand.objects.filter(is_authorized=True)
         datasets = SemaDataset.objects.filter(is_authorized=True)
@@ -1364,7 +1364,7 @@ class SemaProductManager(SemaBaseManager):
                      model_name=None, submodel_name=None,
                      base_vehicle_ids=None, vehicle_ids=None,
                      part_numbers=None, pies_segments=None):
-        from product.models import SemaDataset
+        from .models import SemaDataset
 
         datasets = SemaDataset.objects.filter(is_authorized=True)
         if brand_ids:
@@ -1397,7 +1397,7 @@ class SemaProductManager(SemaBaseManager):
             raise
 
     def parse_api_data(self, data):
-        from product.models import SemaDataset
+        from .models import SemaDataset
 
         try:
             pk = data['ProductId']

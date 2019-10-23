@@ -100,8 +100,7 @@ class PremierApiProductInventoryModel(Model, MessagesMixin):
         except Exception as err:
             return self.get_instance_error_msg(str(err))
 
-    def update_inventory_from_api_data(self, include_up_to_date=True,
-                                       **update_fields):
+    def update_inventory_from_api_data(self, **update_fields):
         try:
             prev = self.inventory_state
             self.clear_inventory_fields()
@@ -111,7 +110,7 @@ class PremierApiProductInventoryModel(Model, MessagesMixin):
                     self.save()
             self.refresh_from_db()
             new = self.inventory_state
-            msg = self.get_update_success_msg(prev, new, include_up_to_date)
+            msg = self.get_update_success_msg(previous_data=prev, new_data=new)
         except Exception as err:
             msg = self.get_instance_error_msg(f"{update_fields}, {err}")
         return msg
@@ -232,7 +231,7 @@ class PremierApiProductPricingModel(Model, MessagesMixin):
                     self.save()
             self.refresh_from_db()
             new = self.pricing_state
-            msg = self.get_update_success_msg(prev, new)
+            msg = self.get_update_success_msg(previous_data=prev, new_data=new)
         except Exception as err:
             msg = self.get_instance_error_msg(f"{update_fields}, {err}")
         return msg

@@ -61,7 +61,7 @@ class SemaBaseModel(Model, MessagesMixin):
                     self.save()
             self.refresh_from_db()
             new = self.state
-            msg = self.get_update_success_msg(prev, new)
+            msg = self.get_update_success_msg(previous_data=prev, new_data=new)
         except Exception as err:
             msg = self.get_instance_error_msg(f"{update_fields}, {err}")
         return msg
@@ -74,7 +74,10 @@ class SemaBaseModel(Model, MessagesMixin):
                 self.save()
                 self.refresh_from_db()
                 new = self.state
-                msg = self.get_update_success_msg(previous, new)
+                msg = self.get_update_success_msg(
+                    previous_data=previous,
+                    new_data=new
+                )
             else:
                 msg = self.get_instance_up_to_date_msg()
         except Exception as err:
