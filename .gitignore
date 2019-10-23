@@ -1,8 +1,5 @@
 .idea/*
 *.sqlite3
-*.xlsx
-*.csv
-env_vars.txt
-premier_imports/
-*/static/
-*/media/
+env/*
+*/static/*
+*/media/*
