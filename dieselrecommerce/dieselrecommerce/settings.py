@@ -1,9 +1,9 @@
 import os
 
 
-COMPANY_NAME = 'DIESELR Corp.'
-COMPANY_NICKNAME = 'dieselr'
-COMPANY_SITE = 'https://www.dieselrcorp.com'
+COMPANY_NAME = os.environ['COMPANY_NAME']
+COMPANY_NICKNAME = os.environ.get('COMPANY_NICKNAME', COMPANY_NAME)
+COMPANY_SITE = os.environ.get('COMPANY_SITE')
 
 GOOGLE_DRIVE_API_KEY = os.environ['GOOGLE_DRIVE_API_KEY']
 
@@ -11,7 +11,7 @@ PREMIER_BASE_URL = 'https://api.premierwd.com/api/v5'
 PREMIER_API_KEY = os.environ['PREMIER_API_KEY']
 
 SEMA_BASE_URL = 'https://sdc.semadatacoop.org/sdcapi'
-SEMA_USERNAME = 'AThiessen'
+SEMA_USERNAME = os.environ['SEMA_USERNAME']
 SEMA_PASSWORD = os.environ['SEMA_PASSWORD']
 
 
