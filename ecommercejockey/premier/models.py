@@ -1,15 +1,55 @@
+import os
+from shutil import move
+
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFill
+
+from django.conf import settings
 from django.db.models import (
     Model,
     BooleanField,
     CharField,
     DecimalField,
     ForeignKey,
+    ImageField,
     IntegerField,
     CASCADE
 )
 
-from .managers import PremierProductManager
 from core.mixins import MessagesMixin
+from .managers import PremierProductManager
+from .utils import (
+    premier_manufacturer_image_path,
+    premier_product_image_path
+)
+
+
+class PremierManufacturer(Model, MessagesMixin):
+    name = CharField(
+        max_length=50,
+        unique=True
+    )
+    primary_image = ImageField(
+        blank=True,
+        null=True,
+        upload_to=premier_manufacturer_image_path
+    )
+    primary_image_thumbnail = ImageSpecField(
+        [
+            ResizeToFill(100, 100)
+        ],
+        source='primary_image',
+        format='JPEG',
+        options={'quality': 50}
+    )
+
+    @property
+    def product_count(self):
+        return self.products.count()
+    product_count.fget.short_description = 'Product Count'
+
+    def __str__(self):
+        return self.name
 
 
 class PremierApiProductInventoryModel(Model, MessagesMixin):
@@ -240,23 +280,8 @@ class PremierApiProductPricingModel(Model, MessagesMixin):
         abstract = True
 
 
-class PremierManufacturer(Model, MessagesMixin):
-    name = CharField(
-        max_length=50,
-        unique=True
-    )
-
-    @property
-    def product_count(self):
-        return self.products.count()
-    product_count.fget.short_description = 'Product Count'
-
-    def __str__(self):
-        return self.name
-
-
 class PremierProduct(PremierApiProductInventoryModel,
-                     PremierApiProductPricingModel):  # TODO add images
+                     PremierApiProductPricingModel):
     premier_part_number = CharField(
         max_length=20,
         unique=True,
@@ -327,9 +352,53 @@ class PremierProduct(PremierApiProductInventoryModel,
         max_length=50,
         verbose_name='UPC'
     )
+    primary_image = ImageField(
+        blank=True,
+        null=True,
+        upload_to=premier_product_image_path
+    )
+    primary_image_thumbnail = ImageSpecField(
+        [
+            ResizeToFill(100, 100)
+        ],
+        source='primary_image',
+        format='JPEG',
+        options={'quality': 50}
+    )
     is_relevant = BooleanField(
         default=False
     )
+
+    def update_primary_image_from_media_root(self):
+        try:
+            bucket_path = os.path.join(
+                settings.MEDIA_ROOT,
+                'premier',
+                self.manufacturer.vendor.slug,
+                'bucket',
+                self.vendor_part_number + '.jpg'
+            )
+            image_path = os.path.join(
+                settings.MEDIA_ROOT,
+                premier_product_image_path(
+                    self,
+                    self.vendor_part_number
+                ) + '.jpg'
+            )
+            if os.path.exists(bucket_path):
+                move(bucket_path, image_path)
+                self.primary_image = image_path
+                self.save()
+                msg = self.get_update_success_msg('Image updated from bucket')
+            elif os.path.exists(image_path):
+                self.primary_image = image_path
+                self.save()
+                msg = self.get_update_success_msg('Image updated')
+            else:
+                msg = self.get_instance_error_msg('Image does not exist')
+        except Exception as err:
+            msg = self.get_instance_error_msg(str(err))
+        return msg
 
     objects = PremierProductManager()
 

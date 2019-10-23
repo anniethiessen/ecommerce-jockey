@@ -36,7 +36,8 @@ INSTALLED_APPS = [
     'sema.apps.SemaAppConfig',
     'shopify.apps.ShopifyAppConfig',
     'admin_reorder',
-    'import_export'
+    'import_export',
+    'imagekit'
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -100,6 +101,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ROOT_URLCONF = 'ecommercejockey.urls'
 WSGI_APPLICATION = 'ecommercejockey.wsgi.application'
 
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = '/media/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATIC_URL = '/static/'
 

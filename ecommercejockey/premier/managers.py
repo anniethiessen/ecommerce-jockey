@@ -101,6 +101,16 @@ class PremierProductQuerySet(QuerySet):
                 continue
         return msgs
 
+    def update_primary_image_from_media_root(self):
+        msgs = []
+        for obj in self:
+            try:
+                msgs.append(obj.update_primary_image_from_media_root())
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+                continue
+        return msgs
+
 
 class PremierProductManager(Manager):
     @staticmethod
@@ -165,3 +175,11 @@ class PremierProductManager(Manager):
 
     def update_pricing_from_api(self):
         return self.get_queryset().update_pricing_from_api()
+
+    def update_primary_image_from_media_root(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().update_primary_image_from_media_root()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+        return msgs

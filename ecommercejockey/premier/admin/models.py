@@ -1,4 +1,5 @@
 from django_object_actions import BaseDjangoObjectActions as ObjectActions
+from imagekit.admin import AdminThumbnail
 from import_export.admin import ImportMixin
 
 from django.contrib import admin
@@ -14,9 +15,10 @@ from .filters import (
     HasAlbertaInventory,
     HasApiInventory,
     HasApiPricing,
+    HasPrimaryImage,
     HasProduct
 )
-from .inlines import PremierProductTabularInline
+# from .inlines import PremierProductTabularInline
 from .resources import PremierProductResource
 
 
@@ -30,7 +32,8 @@ class PremierManufacturerModelAdmin(ModelAdmin):
         'details_link',
         'id',
         'name',
-        'product_count'
+        'product_count',
+        'primary_image_preview'
     )
 
     list_display_links = (
@@ -46,21 +49,34 @@ class PremierManufacturerModelAdmin(ModelAdmin):
                 )
             }
         ),
+        (
+            'Images', {
+                'fields': (
+                    ('primary_image', 'primary_image_preview'),
+                )
+            }
+        ),
     )
 
     readonly_fields = (
         'id',
         'product_count',
-        'details_link'
+        'details_link',
+        'primary_image_preview'
     )
 
-    inlines = (
-        PremierProductTabularInline,
-    )
+    # inlines = (
+    #     PremierProductTabularInline,  # TO NOTE: too long
+    # )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    primary_image_preview = AdminThumbnail(
+        image_field='primary_image_thumbnail'
+    )
+    primary_image_preview.short_description = 'primary image'
 
 
 @admin.register(PremierProduct)
@@ -84,12 +100,14 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'update_inventory_queryset_action',
         'update_pricing_queryset_action',
         'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
+        'mark_as_irrelevant_queryset_action',
+        'update_primary_image_queryset_action'
     )
 
     change_actions = (
         'update_inventory_object_action',
-        'update_pricing_object_action'
+        'update_pricing_object_action',
+        'update_primary_image_object_action'
     )
 
     list_display = (
@@ -102,6 +120,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'jobber',
         'msrp',
         'map',
+        'primary_image_preview',
         'is_relevant'
     )
 
@@ -120,7 +139,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'part_status',
         HasApiInventory,
         HasApiPricing,
-        HasAlbertaInventory
+        HasAlbertaInventory,
+        HasPrimaryImage
     )
 
     fieldsets = (
@@ -160,7 +180,10 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                     'map',
                     'map_cad',
                     'map_usd'
-                )
+                ),
+                'classes': (
+                    'collapse',
+                ),
             }
         ),
         (
@@ -170,7 +193,10 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                     'length',
                     'width',
                     'height'
-                )
+                ),
+                'classes': (
+                    'collapse',
+                ),
             }
         ),
         (
@@ -184,6 +210,16 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                     'inventory_ca',
                     'inventory_wa',
                     'inventory_co'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Images', {
+                'fields': (
+                    ('primary_image', 'primary_image_preview'),
                 )
             }
         )
@@ -192,7 +228,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     readonly_fields = (
         'details_link',
         'manufacturer_link',
-        'item_link'
+        'item_link',
+        'primary_image_preview'
     )
 
     def details_link(self, obj):
@@ -213,3 +250,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             'See all full manufacturer'
         )
     manufacturer_link.short_description = ''
+
+    primary_image_preview = AdminThumbnail(
+        image_field='primary_image_thumbnail'
+    )
+    primary_image_preview.short_description = 'primary image'

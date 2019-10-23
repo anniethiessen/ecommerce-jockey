@@ -94,6 +94,7 @@ sema_data = retrieve_sema_api_data
 # WARN:
 # item missing prices
 # item missing inventory
+# item missing primary image
 # item missing html
 # item inventory in alberta updated to 0
 # incomplete items

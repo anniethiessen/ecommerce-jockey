@@ -49,3 +49,26 @@ class PremierProductActions(RelevancyActions):
     update_pricing_object_action.short_description = (
         'Update this Premier product\'s pricing from Premier API'
     )
+
+    def update_primary_image_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.update_primary_image_from_media_root()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_primary_image_queryset_action.allowed_permissions = ('view',)
+    update_primary_image_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' primary image from media'
+    )
+
+    def update_primary_image_object_action(self, request, obj):
+        try:
+            msg = obj.update_primary_image_from_media_root()
+            self.display_message(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_primary_image_object_action.allowed_permissions = ('view',)
+    update_primary_image_object_action.label = "Update Image"
+    update_primary_image_object_action.short_description = (
+        'Update this Premier product\'s primary image from media directory'
+    )

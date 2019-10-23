@@ -1,3 +1,5 @@
+from imagekit.admin import AdminThumbnail
+
 from django.contrib.admin import TabularInline
 
 from core.admin.utils import get_change_view_link
@@ -23,11 +25,13 @@ class PremierProductTabularInline(TabularInline):
         'jobber',
         'msrp',
         'map',
-        'is_relevant'
+        'is_relevant',
+        'primary_image_preview'
     )
 
     readonly_fields = (
-        'details_link',
+        'primary_image_preview',
+        'details_link'
     )
 
     def details_link(self, obj):
@@ -35,3 +39,8 @@ class PremierProductTabularInline(TabularInline):
             return None
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    primary_image_preview = AdminThumbnail(
+        image_field='primary_image_thumbnail'
+    )
+    primary_image_preview.short_description = 'primary image'

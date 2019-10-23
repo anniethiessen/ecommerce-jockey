@@ -74,3 +74,20 @@ class HasProduct(SimpleListFilter):
             return queryset.filter(item__isnull=False)
         if self.value() == 'No':
             return queryset.filter(item__isnull=True)
+
+
+class HasPrimaryImage(SimpleListFilter):
+    title = 'has primary image'
+    parameter_name = 'primary_image'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(primary_image__isnull=False)
+        if self.value() == 'No':
+            return queryset.filter(primary_image__isnull=True)
