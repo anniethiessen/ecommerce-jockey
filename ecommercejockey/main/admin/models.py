@@ -131,7 +131,8 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'details_link',
         'id',
         'premier_product',
-        'sema_product'
+        'sema_product',
+        'notes'
     )
 
     list_display_links = (
@@ -167,7 +168,14 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
                     'sema_product'
                 )
             }
-        )
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
+                )
+            }
+        ),
     )
 
     readonly_fields = (

@@ -2,6 +2,7 @@ from django.db.models import (
     Model,
     ForeignKey,
     OneToOneField,
+    TextField,
     CASCADE,
     SET_NULL
 )
@@ -55,6 +56,9 @@ class Item(Model, MessagesMixin):
         related_name='items',
         on_delete=SET_NULL,
         verbose_name='SEMA product'
+    )
+    notes = TextField(
+        blank=True
     )
 
     objects = ItemManager()
