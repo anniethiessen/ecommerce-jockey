@@ -14,7 +14,8 @@ from .actions import (
 )
 from .filters import (
     HasPremierProduct,
-    HasSemaProduct
+    HasSemaProduct,
+    IsCompleteItem
 )
 
 
@@ -138,6 +139,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     )
 
     list_filter = (
+        IsCompleteItem,
         HasPremierProduct,
         HasSemaProduct
     )
