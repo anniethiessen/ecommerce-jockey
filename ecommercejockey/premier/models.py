@@ -256,7 +256,7 @@ class PremierManufacturer(Model, MessagesMixin):
 
 
 class PremierProduct(PremierApiProductInventoryModel,
-                     PremierApiProductPricingModel):
+                     PremierApiProductPricingModel):  # TODO add images
     premier_part_number = CharField(
         max_length=20,
         unique=True,
