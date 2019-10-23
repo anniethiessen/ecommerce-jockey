@@ -56,13 +56,7 @@ class PremierProductQuerySet(QuerySet):
     def update_inventory_from_api(self):
         msgs = []
 
-        invalid = self.filter(premier_part_number__isnull=True)
-        for obj in invalid:
-            msgs.append(
-                obj.get_instance_error_msg("Premier Part Number required")
-            )
-
-        queryset = self.filter(premier_part_number__isnull=False)
+        queryset = self.all()
         part_numbers = [obj.premier_part_number for obj in queryset]
 
         chunks = chunkify_list(part_numbers, chunk_size=50)
@@ -72,7 +66,9 @@ class PremierProductQuerySet(QuerySet):
                 for items in response:
                     obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['inventory']
-                    update_fields = obj.parse_api_inventory_data(data)
+                    update_fields = self.model.objects.parse_api_inventory_data(
+                        data
+                    )
                     msgs.append(
                         obj.update_inventory_from_api_data(**update_fields)
                     )
@@ -84,23 +80,19 @@ class PremierProductQuerySet(QuerySet):
     def update_pricing_from_api(self):
         msgs = []
 
-        invalid = self.filter(premier_part_number__isnull=True)
-        for obj in invalid:
-            msgs.append(
-                obj.get_instance_error_msg("Premier Part Number required")
-            )
-
-        queryset = self.filter(premier_part_number__isnull=False)
+        queryset = self.all()
         part_numbers = [obj.premier_part_number for obj in queryset]
 
         chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
-                response = self.model.objects.get_api_inventory_data(chunk)
+                response = self.model.objects.get_api_pricing_data(chunk)
                 for items in response:
                     obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['pricing']
-                    update_fields = obj.parse_api_pricing_data(data)
+                    update_fields = self.model.objects.parse_api_pricing_data(
+                        data
+                    )
                     msgs.append(
                         obj.update_pricing_from_api_data(**update_fields)
                     )
