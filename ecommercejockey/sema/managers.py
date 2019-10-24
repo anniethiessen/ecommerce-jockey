@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from django.db.models import Manager, QuerySet, F, Q
+from django.db.models import Manager, QuerySet, F, Q, ManyToManyField
 from django.db.models.functions import Floor
 
 from .apis import sema_api
@@ -545,11 +545,22 @@ class SemaBaseManager(Manager):
 
     def create_from_api_data(self, pk, **update_fields):
         try:
+            m2m_fields = {}
+            create_fields = {}
+            for attr, value in update_fields.items():
+                if isinstance(
+                        self.model._meta.get_field(attr), ManyToManyField):
+                    m2m_fields[attr] = value
+                else:
+                    create_fields[attr] = value
             obj = self.create(
                 pk=pk,
                 is_authorized=True,
-                **update_fields
+                **create_fields
             )
+            for attr, value in m2m_fields.items():
+                getattr(obj, attr).add(value)
+                obj.save()
             msg = obj.get_create_success_msg()
         except Exception as err:
             msg = self.model.get_class_error_msg(f"{pk}, {update_fields}, {err}")
