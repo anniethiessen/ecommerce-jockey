@@ -283,12 +283,12 @@ class PremierApiProductPricingModel(Model, MessagesMixin):
 class PremierProduct(PremierApiProductInventoryModel,
                      PremierApiProductPricingModel):
     premier_part_number = CharField(
-        max_length=20,
+        max_length=30,
         unique=True,
         primary_key=True
     )
     vendor_part_number = CharField(
-        max_length=20,
+        max_length=30,
     )
     description = CharField(
         max_length=500

@@ -570,7 +570,7 @@ class SemaCategory(SemaBaseModel):
         unique=True
     )
     name = CharField(
-        max_length=50,
+        max_length=100,
     )
     parent_categories = ManyToManyField(
         'self',
@@ -748,7 +748,7 @@ class SemaProduct(SemaBaseModel):
         unique=True
     )
     part_number = CharField(
-        max_length=20
+        max_length=30
     )
     dataset = ForeignKey(
         SemaDataset,
