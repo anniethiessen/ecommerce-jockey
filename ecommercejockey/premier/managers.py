@@ -1,7 +1,7 @@
 from django.db.models import Manager, QuerySet, Q
 
-from .apis import premier_api
 from core.utils import chunkify_list
+from .apis import premier_api
 
 
 class PremierProductQuerySet(QuerySet):

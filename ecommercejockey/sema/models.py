@@ -11,10 +11,6 @@ from django.db.models import (
 )
 
 from core.mixins import MessagesMixin
-from premier.models import (
-    PremierManufacturer,
-    PremierProduct
-)
 from .apis import sema_api
 from .managers import (
     SemaBaseManager,
