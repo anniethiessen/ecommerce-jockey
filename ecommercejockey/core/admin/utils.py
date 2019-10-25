@@ -1,5 +1,16 @@
+from django.contrib.admin import FieldListFilter
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+
+
+def get_custom_filter_title(title):
+    # noinspection PyAbstractClass
+    class Wrapper(FieldListFilter):
+        def __new__(cls, *args, **kwargs):
+            instance = FieldListFilter.create(*args, **kwargs)
+            instance.title = title
+            return instance
+    return Wrapper
 
 
 def get_change_view_link(instance, link_name, query=None):

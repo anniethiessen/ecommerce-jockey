@@ -109,6 +109,8 @@ class PremierProductQuerySet(QuerySet):
             except Exception as err:
                 msgs.append(self.model.get_class_error_msg(str(err)))
                 continue
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
 

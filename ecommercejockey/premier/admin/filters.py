@@ -1,6 +1,8 @@
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
 
+from core.admin.filters import MayBeRelevantFilter
+
 
 class HasApiInventory(SimpleListFilter):
     title = 'has API inventory'
@@ -59,9 +61,9 @@ class HasApiPricing(SimpleListFilter):
             return queryset.has_missing_pricing_data()
 
 
-class HasProduct(SimpleListFilter):
-    title = 'has full product'
-    parameter_name = 'product'
+class HasItem(SimpleListFilter):
+    title = 'part of main item'
+    parameter_name = 'item'
 
     def lookups(self, request, model_admin):
         return (
@@ -88,6 +90,28 @@ class HasPrimaryImage(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
-            return queryset.filter(primary_image__isnull=False)
+            return queryset.filter(
+                Q(primary_image__isnull=False)
+                & ~Q(primary_image__exact='')
+            )
         if self.value() == 'No':
-            return queryset.filter(primary_image__isnull=True)
+            return queryset.filter(
+                Q(primary_image__isnull=True)
+                | Q(primary_image__exact='')
+            )
+
+
+class MayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                manufacturer__is_relevant=True,
+                inventory_ab__isnull=False,
+                inventory_ab__gt=0
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(manufacturer__is_relevant=False)
+                | Q(inventory_ab__isnull=True)
+                | Q(inventory_ab=0)
+            )

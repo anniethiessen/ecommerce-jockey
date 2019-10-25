@@ -7,7 +7,6 @@ from imagekit.processors import ResizeToFill
 from django.conf import settings
 from django.db.models import (
     Model,
-    BooleanField,
     CharField,
     DecimalField,
     ForeignKey,
@@ -17,6 +16,7 @@ from django.db.models import (
 )
 
 from core.mixins import MessagesMixin
+from core.models import RelevancyBaseModel
 from .managers import PremierProductManager
 from .utils import (
     premier_manufacturer_image_path,
@@ -24,7 +24,7 @@ from .utils import (
 )
 
 
-class PremierManufacturer(Model, MessagesMixin):
+class PremierManufacturer(RelevancyBaseModel):
     name = CharField(
         max_length=50,
         unique=True
@@ -52,7 +52,7 @@ class PremierManufacturer(Model, MessagesMixin):
         return self.name
 
 
-class PremierApiProductInventoryModel(Model, MessagesMixin):
+class PremierProductInventoryBaseModel(Model, MessagesMixin):
     inventory_ab = IntegerField(
         blank=True,
         help_text='API field',
@@ -159,7 +159,7 @@ class PremierApiProductInventoryModel(Model, MessagesMixin):
         abstract = True
 
 
-class PremierApiProductPricingModel(Model, MessagesMixin):
+class PremierProductPricingBaseModel(Model, MessagesMixin):
     cost_cad = DecimalField(
         blank=True,
         decimal_places=2,
@@ -280,8 +280,8 @@ class PremierApiProductPricingModel(Model, MessagesMixin):
         abstract = True
 
 
-class PremierProduct(PremierApiProductInventoryModel,
-                     PremierApiProductPricingModel):
+class PremierProduct(PremierProductInventoryBaseModel,
+                     PremierProductPricingBaseModel, RelevancyBaseModel):
     premier_part_number = CharField(
         max_length=30,
         unique=True,
@@ -354,6 +354,7 @@ class PremierProduct(PremierApiProductInventoryModel,
     )
     primary_image = ImageField(
         blank=True,
+        max_length=200,
         null=True,
         upload_to=premier_product_image_path
     )
@@ -365,9 +366,10 @@ class PremierProduct(PremierApiProductInventoryModel,
         format='JPEG',
         options={'quality': 50}
     )
-    is_relevant = BooleanField(
-        default=False
-    )
+
+    @property
+    def may_be_relevant(self):
+        return self.manufacturer.is_relevant and self.inventory_ab
 
     def update_primary_image_from_media_root(self):
         try:

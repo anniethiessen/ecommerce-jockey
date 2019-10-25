@@ -5,27 +5,40 @@ from import_export.admin import ImportMixin
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 
-from core.admin.utils import get_change_view_link
+from core.admin.utils import (
+    get_change_view_link,
+    get_custom_filter_title
+)
 from ..models import (
     PremierManufacturer,
     PremierProduct,
 )
-from .actions import PremierProductActions
+from .actions import (
+    PremierManufacturerActions,
+    PremierProductActions
+)
 from .filters import (
     HasAlbertaInventory,
     HasApiInventory,
     HasApiPricing,
+    HasItem,
     HasPrimaryImage,
-    HasProduct
+    MayBeRelevant
 )
 # from .inlines import PremierProductTabularInline
 from .resources import PremierProductResource
 
 
 @admin.register(PremierManufacturer)
-class PremierManufacturerModelAdmin(ModelAdmin):
+class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
+                                    PremierManufacturerActions):
     search_fields = (
         'name',
+    )
+
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     list_display = (
@@ -33,17 +46,27 @@ class PremierManufacturerModelAdmin(ModelAdmin):
         'id',
         'name',
         'product_count',
-        'primary_image_preview'
+        'primary_image_preview',
+        'is_relevant'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+    )
+
+    list_filter = (
+        'is_relevant',
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'is_relevant',
                     'id',
                     'name'
                 )
@@ -134,8 +157,9 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
 
     list_filter = (
         'is_relevant',
-        HasProduct,
-        'manufacturer__name',
+        MayBeRelevant,
+        HasItem,
+        ('manufacturer__name', get_custom_filter_title('manufacturer')),
         'part_status',
         HasApiInventory,
         HasApiPricing,

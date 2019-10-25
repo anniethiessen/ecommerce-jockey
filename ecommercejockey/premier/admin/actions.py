@@ -3,6 +3,10 @@ from django.contrib import messages
 from core.admin.actions import RelevancyActions
 
 
+class PremierManufacturerActions(RelevancyActions):
+    pass
+
+
 class PremierProductActions(RelevancyActions):
     def update_inventory_queryset_action(self, request, queryset):
         try:

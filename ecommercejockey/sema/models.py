@@ -11,6 +11,7 @@ from django.db.models import (
 )
 
 from core.mixins import MessagesMixin
+from core.models import RelevancyBaseModel
 from .apis import sema_api
 from .managers import (
     SemaBaseManager,
@@ -515,7 +516,7 @@ class SemaBaseVehicle(SemaBaseModel):
         return f'{self.make_year} :: {self.model}'
 
 
-class SemaVehicle(SemaBaseModel):
+class SemaVehicle(SemaBaseModel, RelevancyBaseModel):
     vehicle_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -529,9 +530,6 @@ class SemaVehicle(SemaBaseModel):
         SemaSubmodel,
         on_delete=CASCADE,
         related_name='vehicles'
-    )
-    is_relevant = BooleanField(
-        default=False
     )
 
     @property
