@@ -12,4 +12,8 @@ class MayBeRelevantFilter(SimpleListFilter):
         )
 
     def queryset(self, request, queryset):
-        raise Exception('May be relevant filter must be defined')
+        queryset = queryset.with_relevancy_values()
+        if self.value() == 'Yes':
+            return queryset.filter(_may_be_relevant=True)
+        if self.value() == 'No':
+            return queryset.filter(_may_be_relevant=False)

@@ -16,6 +16,10 @@ class RelevancyBaseModel(Model, MessagesMixin):
     def may_be_relevant(self):
         raise Exception("May be relevant must be defined")
 
+    @property
+    def relevancy_errors(self):
+        return ''
+
     objects = RelevancyBaseManager()
 
     class Meta:
