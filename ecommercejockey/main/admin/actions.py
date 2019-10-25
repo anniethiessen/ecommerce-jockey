@@ -1,9 +1,9 @@
 from django.contrib import messages
 
-from core.admin.actions import BaseActions
+from core.admin.actions import RelevancyActions
 
 
-class VendorActions(BaseActions):
+class VendorActions(RelevancyActions):
     def check_unlinked_vendors_class_action(self, request, queryset):
         try:
             msgs = self.model.objects.check_unlinked_vendors()
@@ -16,7 +16,7 @@ class VendorActions(BaseActions):
         'Check if any unlinked Premier manufacturers and SEMA brands exist')
 
 
-class ItemActions(BaseActions):
+class ItemActions(RelevancyActions):
     def create_items_class_action(self, request, queryset):
         msgs = []
         try:

@@ -26,6 +26,11 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'sema_brand'
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     search_fields = (
         'premier_manufacturer__name',
         'sema_brand__brand_id',
@@ -42,17 +47,27 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'id',
         'premier_manufacturer',
         'sema_brand',
-        'slug'
+        'slug',
+        'is_relevant'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+    )
+
+    list_filter = (
+        'is_relevant',
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'is_relevant',
                     'id',
                     'slug'
                 )
@@ -110,6 +125,11 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'sema_product'
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     search_fields = (
         'premier_product__premier_part_number',
         'premier_product__vendor_part_number',
@@ -135,14 +155,20 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'id',
         'premier_product',
         'sema_product',
-        'notes'
+        'notes',
+        'is_relevant'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+    )
+
     list_filter = (
+        'is_relevant',
         IsCompleteItem,
         HasPremierProduct,
         HasSemaProduct
@@ -152,6 +178,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         (
             None, {
                 'fields': (
+                    'is_relevant',
                     'id',
                 )
             }

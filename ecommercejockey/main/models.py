@@ -8,7 +8,7 @@ from django.db.models import (
     SET_NULL
 )
 
-from core.mixins import MessagesMixin
+from core.models import RelevancyBaseModel
 from premier.models import (
     PremierManufacturer,
     PremierProduct
@@ -23,7 +23,7 @@ from .managers import (
 )
 
 
-class Vendor(Model, MessagesMixin):
+class Vendor(RelevancyBaseModel):
     premier_manufacturer = OneToOneField(
         PremierManufacturer,
         on_delete=CASCADE,
@@ -46,7 +46,7 @@ class Vendor(Model, MessagesMixin):
         return f'{self.premier_manufacturer.name} :: {self.sema_brand.name}'
 
 
-class Item(Model, MessagesMixin):
+class Item(RelevancyBaseModel):
     premier_product = OneToOneField(
         PremierProduct,
         blank=True,

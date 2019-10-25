@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from premier.models import *
 from sema.models import *
 
@@ -6,7 +8,8 @@ def perform_premier_api_update(tasks=None):
     if not tasks:
         tasks = [
             'product_inventory',
-            'product_pricing'
+            'product_pricing',
+            'product_primary_image'
         ]
 
     msgs = []
@@ -14,7 +17,9 @@ def perform_premier_api_update(tasks=None):
         if task == 'product_inventory':
             print(f'{index}. Updating product inventory...')
             try:
-                products = PremierProduct.objects.all()
+                products = PremierProduct.objects.filter(
+                    manufacturer__is_relevant=True
+                )
                 msgs += products.update_inventory_from_api()
                 print('--- complete')
             except Exception as err:
@@ -25,6 +30,21 @@ def perform_premier_api_update(tasks=None):
             try:
                 products = PremierProduct.objects.filter(is_relevant=True)
                 msgs += products.update_pricing_from_api()
+                print('--- complete')
+            except Exception as err:
+                msgs.append(f'Internal Error: {err}')
+                print('--- errored')
+        elif task == 'product_primary_image':
+            print(f'{index}. Updating product primary image...')
+            try:
+                products = PremierProduct.objects.filter(
+                    Q(is_relevant=True)
+                    & (
+                        Q(primary_image__isnull=True)
+                        | Q(primary_image__exact='')
+                    )
+                )
+                msgs += products.update_primary_image_from_media_root()
                 print('--- complete')
             except Exception as err:
                 msgs.append(f'Internal Error: {err}')
@@ -176,3 +196,45 @@ sema_update = perform_sema_api_update
 # INFO:
 # non item premier products with inventory in Alberta
 # item with new category
+
+# ----
+#   NEW ORDER OF EVENTS
+#   1. media: save images (manual)
+#   2. premier manufacturer: create (manual)
+#   3. premier manufacturer: mark as relevant (manual)
+#   4. premier manufacturer: add image (manual)
+#   5. premier products: import by csv (manual)
+#   6. premier products: update inventory (task)
+#       -- all new
+#   7. premier products: update relevancy (manual)
+#       -- all new
+#       -- use "may be relevant" as a guide
+#   8. premier products: update pricing (task)
+#       -- all new relevant
+#   9. premier products: update primary image (task)
+#       -- all new relevant
+#   10 create new items
+#   TODO new item tasks ..
+
+
+#   DAILY PREMIER AUTOMATED TASKS
+#   1. update product inventory if product manufacturer is relevant
+#       send info log of possible new relevant/irrelevant products
+#   2. update product pricing if product is relevant
+
+#   DAILY MANUAL TASKS
+#   1. update premier product relevancy from logs
+#   2. update premier product pricing for new relevant
+#   2. update premier product images for new relevant
+#   2. create/delete main items
+
+
+#   TODO item warnings
+#   no premier product
+#   premier product - not relevant
+#   premier product.manufacturer - no image
+#   premier product - no image
+#   premier product - no price
+#   premier product - no inventory
+#   no sema product
+#   sema product - not relevant
