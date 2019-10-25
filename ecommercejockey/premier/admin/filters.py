@@ -1,8 +1,6 @@
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
 
-from core.admin.filters import MayBeRelevantFilter
-
 
 class HasApiInventory(SimpleListFilter):
     title = 'has API inventory'
@@ -98,20 +96,4 @@ class HasPrimaryImage(SimpleListFilter):
             return queryset.filter(
                 Q(primary_image__isnull=True)
                 | Q(primary_image__exact='')
-            )
-
-
-class MayBeRelevant(MayBeRelevantFilter):
-    def queryset(self, request, queryset):
-        if self.value() == 'Yes':
-            return queryset.filter(
-                manufacturer__is_relevant=True,
-                inventory_ab__isnull=False,
-                inventory_ab__gt=0
-            )
-        if self.value() == 'No':
-            return queryset.filter(
-                Q(manufacturer__is_relevant=False)
-                | Q(inventory_ab__isnull=True)
-                | Q(inventory_ab=0)
             )

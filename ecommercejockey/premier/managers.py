@@ -1,10 +1,35 @@
-from django.db.models import Manager, QuerySet, Q
+from django.db.models import Q
 
+from core.managers import (
+    RelevancyBaseManager,
+    RelevancyBaseQuerySet
+)
 from core.utils import chunkify_list
 from .apis import premier_api
 
 
-class PremierProductQuerySet(QuerySet):
+class PremierProductQuerySet(RelevancyBaseQuerySet):
+    def _get_may_be_relevant_query(self):
+        return (
+            Q(manufacturer__is_relevant=True)
+            & Q(inventory_ab__isnull=False)
+            & Q(inventory_ab__gt=0)
+        )
+
+    def _get_relevancy_errors_flag_query(self):
+        return (
+            Q(is_relevant=True)
+            & (
+                Q(manufacturer__is_relevant=False)
+                | Q(inventory_ab__isnull=True)
+                | Q(inventory_ab__lte=0)
+                | Q(cost_cad__isnull=True)
+                | Q(cost_cad__lte=0)
+                | Q(primary_image__isnull=True)
+                | Q(primary_image__exact='')
+            )
+        )
+
     def has_missing_inventory_data(self):
         return self.filter(
             Q(inventory_ab__isnull=True)
@@ -114,7 +139,7 @@ class PremierProductQuerySet(QuerySet):
         return msgs
 
 
-class PremierProductManager(Manager):
+class PremierProductManager(RelevancyBaseManager):
     @staticmethod
     def get_api_inventory_data(part_numbers):
         try:

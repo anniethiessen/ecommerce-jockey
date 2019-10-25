@@ -371,6 +371,24 @@ class PremierProduct(PremierProductInventoryBaseModel,
     def may_be_relevant(self):
         return self.manufacturer.is_relevant and self.inventory_ab
 
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if self.is_relevant:
+            if not self.manufacturer.is_relevant:
+                error = "manufacturer not relevant"
+                msgs.append(error)
+            if not self.inventory_ab or self.inventory_ab <= 0:
+                error = "no AB inventory"
+                msgs.append(error)
+            if not self.cost_cad or self.cost_cad <= 0:
+                error = "no CAD cost"
+                msgs.append(error)
+            if not self.primary_image or self.primary_image == '':
+                error = "no primary image"
+                msgs.append(error)
+        return ', '.join(msgs)
+
     def update_primary_image_from_media_root(self):
         try:
             bucket_path = os.path.join(
