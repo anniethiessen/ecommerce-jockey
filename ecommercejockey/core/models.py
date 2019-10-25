@@ -19,6 +19,7 @@ class RelevancyBaseModel(Model, MessagesMixin):
     @property
     def relevancy_errors(self):
         return ''
+    relevancy_errors.fget.short_description = 'Errors'
 
     objects = RelevancyBaseManager()
 

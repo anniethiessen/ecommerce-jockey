@@ -47,7 +47,9 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         'name',
         'product_count',
         'primary_image_preview',
-        'is_relevant'
+        'is_relevant',
+        'relevancy_errors_flag',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -83,6 +85,8 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
+        'relevancy_errors_flag',
+        'relevancy_errors',
         'product_count',
         'details_link',
         'primary_image_preview'
@@ -100,6 +104,14 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         image_field='primary_image_thumbnail'
     )
     primary_image_preview.short_description = 'primary image'
+
+    def relevancy_errors_flag(self, obj):
+        return obj._relevancy_errors_flag
+    relevancy_errors_flag.admin_order_field = '_relevancy_errors_flag'
+    relevancy_errors_flag.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_relevancy_values()
 
 
 @admin.register(PremierProduct)

@@ -17,7 +17,10 @@ from django.db.models import (
 
 from core.mixins import MessagesMixin
 from core.models import RelevancyBaseModel
-from .managers import PremierProductManager
+from .managers import (
+    PremierManufacturerManager,
+    PremierProductManager
+)
 from .utils import (
     premier_manufacturer_image_path,
     premier_product_image_path
@@ -44,9 +47,21 @@ class PremierManufacturer(RelevancyBaseModel):
     )
 
     @property
+    def relevancy_errors(self):
+        msgs = []
+        if self.is_relevant:
+            if not self.primary_image or self.primary_image == '':
+                error = "no primary image"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
+    @property
     def product_count(self):
         return self.products.count()
     product_count.fget.short_description = 'Product Count'
+
+    objects = PremierManufacturerManager()
 
     def __str__(self):
         return self.name
@@ -388,6 +403,7 @@ class PremierProduct(PremierProductInventoryBaseModel,
                 error = "no primary image"
                 msgs.append(error)
         return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
 
     def update_primary_image_from_media_root(self):
         try:

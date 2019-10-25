@@ -8,6 +8,17 @@ from core.utils import chunkify_list
 from .apis import premier_api
 
 
+class PremierManufacturerQuerySet(RelevancyBaseQuerySet):
+    def _get_relevancy_errors_flag_query(self):
+        return (
+            Q(is_relevant=True)
+            & (
+                Q(primary_image__isnull=True)
+                | Q(primary_image__exact='')
+            )
+        )
+
+
 class PremierProductQuerySet(RelevancyBaseQuerySet):
     def _get_may_be_relevant_query(self):
         return (
@@ -137,6 +148,14 @@ class PremierProductQuerySet(RelevancyBaseQuerySet):
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
+
+
+class PremierManufacturerManager(RelevancyBaseManager):
+    def get_queryset(self):
+        return PremierManufacturerQuerySet(
+            self.model,
+            using=self._db
+        )
 
 
 class PremierProductManager(RelevancyBaseManager):

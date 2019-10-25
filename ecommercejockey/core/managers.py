@@ -12,10 +12,10 @@ from django.db.models import (
 
 class RelevancyBaseQuerySet(QuerySet):
     def _get_may_be_relevant_query(self):
-        return Q()
+        return Q(is_relevant=True)
 
     def _get_relevancy_errors_flag_query(self):
-        return Q()
+        return Q(is_relevant=True)
 
     def with_relevancy_values(self):
         relevancy_query = self._get_may_be_relevant_query()
