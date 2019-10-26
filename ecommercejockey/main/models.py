@@ -40,6 +40,36 @@ class Vendor(RelevancyBaseModel):
         unique=True
     )
 
+    @property
+    def may_be_relevant(self):
+        return bool(
+            self.premier_manufacturer
+            and self.premier_manufacturer.is_relevant
+            and self.sema_brand and self.sema_brand.is_relevant
+            and self.relevancy_errors == ''
+        )
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if not self.premier_manufacturer:
+            msgs.append('Missing Premier manufacturer')
+
+        if not self.sema_brand:
+            msgs.append('Missing SEMA brand')
+
+        if (self.premier_manufacturer
+                and self.premier_manufacturer.relevancy_errors):
+            msgs.append(
+                f"PREMIER: {self.premier_manufacturer.relevancy_errors}"
+            )
+
+        if (self.sema_brand
+                and self.sema_brand.relevancy_errors):
+            msgs.append(f"SEMA: {self.sema_brand.relevancy_errors}")
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
     objects = VendorManager()
 
     def __str__(self):
@@ -65,6 +95,33 @@ class Item(RelevancyBaseModel):
     notes = TextField(
         blank=True
     )
+
+    @property
+    def may_be_relevant(self):
+        return bool(
+            self.premier_product and self.premier_product.is_relevant
+            and self.sema_product and self.sema_product.is_relevant
+            and self.relevancy_errors == ''
+        )
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if not self.premier_product:
+            msgs.append('Missing Premier product')
+
+        if not self.sema_product:
+            msgs.append('Missing SEMA product')
+
+        if self.premier_product and self.premier_product.relevancy_errors:
+            msgs.append(
+                f"PREMIER: {self.premier_product.relevancy_errors}"
+            )
+
+        if self.sema_product and self.sema_product.relevancy_errors:
+            msgs.append(f"SEMA: {self.sema_product.relevancy_errors}")
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
 
     objects = ItemManager()
 

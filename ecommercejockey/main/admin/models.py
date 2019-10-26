@@ -48,7 +48,9 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'premier_manufacturer',
         'sema_brand',
         'slug',
-        'is_relevant'
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -67,7 +69,15 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         (
             None, {
                 'fields': (
+                    'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Vendor', {
+                'fields': (
                     'id',
                     'slug'
                 )
@@ -92,6 +102,8 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     )
 
     readonly_fields = (
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'id',
         'details_link',
         'premier_manufacturer_link',
@@ -116,6 +128,13 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         return get_change_view_link(
             obj.sema_brand, 'See full SEMA brand')
     sema_brand_link.short_description = ''
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
 
 @admin.register(Item)
@@ -155,8 +174,10 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'id',
         'premier_product',
         'sema_product',
-        'notes',
-        'is_relevant'
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -178,7 +199,15 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         (
             None, {
                 'fields': (
+                    'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Item', {
+                'fields': (
                     'id',
                 )
             }
@@ -209,6 +238,8 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     )
 
     readonly_fields = (
+        'may_be_relevant_flag',
+        'relevancy_errors',
         'details_link',
         'id',
         'premier_product_link',
@@ -237,3 +268,10 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         return get_change_view_link(
             obj.sema_product, 'See full SEMA product')
     details_link.short_description = ''
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
