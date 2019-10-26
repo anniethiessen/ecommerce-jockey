@@ -36,8 +36,14 @@ from .filters import (
     ByCategoryLevel,
     HasCategory,
     HasHtml,
-    HasProduct,
-    HasVehicle
+    HasItem,
+    HasVehicle,
+    SemaBaseVehicleMayBeRelevant,
+    # SemaCategoryMayBeRelevant,
+    SemaDatasetMayBeRelevant,
+    SemaMakeYearMayBeRelevant,
+    # SemaProductMayBeRelevant,
+    SemaVehicleMayBeRelevant
 )
 from .inlines import (
     SemaBaseVehicleTabularInline,
@@ -45,7 +51,7 @@ from .inlines import (
     SemaCategoryParentsTabularInline,
     SemaCategoryProductsTabularInline,
     SemaDatasetTabularInline,
-    SemaMakeYearTabularInline,
+    # SemaMakeYearTabularInline,
     SemaProductTabularInline,
     SemaVehicleProductsTabularInline,
     SemaVehicleTabularInline
@@ -61,7 +67,9 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
     actions = (
         'import_datasets_queryset_action',
-        # 'update_product_vehicles_queryset_action'  # TO NOTE: too long
+        # 'update_product_vehicles_queryset_action',  # TO NOTE: too long
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     changelist_actions = (
@@ -79,15 +87,23 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         'brand_id',
         'name',
         'dataset_count',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant',
     )
 
     fieldsets = (
@@ -95,11 +111,19 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Brand', {
+                'fields': (
                     'brand_id',
                     'name'
                 )
             }
-        ),
+        )
     )
 
     inlines = (
@@ -107,6 +131,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     )
 
     readonly_fields = (
+        'relevancy_errors',
         'dataset_count',
     )
 
@@ -130,7 +155,9 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
 
     actions = (
         'import_products_queryset_action',
-        # 'update_product_vehicles_queryset_action'  # TO NOTE: too long
+        # 'update_product_vehicles_queryset_action',  # TO NOTE: too long
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     changelist_actions = (
@@ -148,15 +175,25 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'name',
         'brand',
         'product_count',
-        'is_authorized'
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant',
+        SemaDatasetMayBeRelevant
     )
 
     fieldsets = (
@@ -164,6 +201,15 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Dataset', {
+                'fields': (
                     'dataset_id',
                     'name'
                 )
@@ -180,6 +226,8 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     )
 
     readonly_fields = (
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'product_count',
         'details_link',
         'brand_link'
@@ -204,11 +252,23 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             obj.brand, 'See full brand')
     brand_link.short_description = ''
 
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
+
 
 @admin.register(SemaYear)
 class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     search_fields = (
         'year',
+    )
+
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     changelist_actions = (
@@ -219,15 +279,23 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         'details_link',
         'year',
         'make_year_count',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant',
         ByDecade
     )
 
@@ -236,20 +304,29 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
             None, {
                 'fields': (
                     'is_authorized',
-                    'year'
+                    'is_relevant',
+                    'relevancy_errors'
                 )
             }
         ),
+        (
+            'Year', {
+                'fields': (
+                    'year',
+                )
+            }
+        )
     )
 
     readonly_fields = (
+        'relevancy_errors',
         'make_year_count',
         'details_link'
     )
 
-    inlines = (
-        SemaMakeYearTabularInline,
-    )
+    # inlines = (
+    #     SemaMakeYearTabularInline,  # TO NOTE: too long
+    # )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
@@ -263,6 +340,11 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
         'name',
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     changelist_actions = (
         'import_and_unauthorize_class_action',
     )
@@ -272,15 +354,23 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
         'make_id',
         'name',
         'make_year_count',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant',
     )
 
     fieldsets = (
@@ -288,21 +378,30 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Make', {
+                'fields': (
                     'make_id',
                     'name'
                 )
             }
-        ),
+        )
     )
 
     readonly_fields = (
+        'relevancy_errors',
         'make_year_count',
         'details_link'
     )
 
-    inlines = (
-        SemaMakeYearTabularInline,
-    )
+    # inlines = (
+    #     SemaMakeYearTabularInline,  # TO NOTE: too long
+    # )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
@@ -316,6 +415,11 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'name'
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     changelist_actions = (
         'import_and_unauthorize_class_action',
     )
@@ -325,15 +429,23 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'model_id',
         'name',
         'base_vehicle_count',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant'
     )
 
     fieldsets = (
@@ -341,21 +453,30 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Model', {
+                'fields': (
                     'model_id',
                     'name'
                 )
             }
-        ),
+        )
     )
 
     readonly_fields = (
+        'relevancy_errors',
         'base_vehicle_count',
         'details_link',
     )
 
-    inlines = (
-        SemaBaseVehicleTabularInline,
-    )
+    # inlines = (
+    #     SemaBaseVehicleTabularInline,  # TO NOTE: too long
+    # )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
@@ -369,6 +490,11 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'name'
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     changelist_actions = (
         'import_and_unauthorize_class_action',
     )
@@ -378,15 +504,23 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'submodel_id',
         'name',
         'vehicle_count',
-        'is_authorized'
+        'is_authorized',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant'
     )
 
     fieldsets = (
@@ -394,21 +528,31 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Submodel', {
+                'fields': (
                     'submodel_id',
                     'name'
                 )
             }
-        ),
+        )
     )
 
     readonly_fields = (
+        'relevancy_errors',
         'vehicle_count',
         'details_link',
     )
 
-    inlines = (
-        SemaVehicleTabularInline,
-    )
+    # inlines = (
+    #     SemaVehicleTabularInline,  # TO NOTE: too long
+    # )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
@@ -420,6 +564,11 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
     list_select_related = (
         'year',
         'make'
+    )
+
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     search_fields = (
@@ -438,15 +587,25 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'year',
         'make',
         'base_vehicle_count',
-        'is_authorized'
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant',
+        SemaMakeYearMayBeRelevant,
         ('make', RelatedOnlyFieldListFilter),
         ('year', RelatedOnlyFieldListFilter)
     )
@@ -456,7 +615,16 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
             None, {
                 'fields': (
                     'is_authorized',
-                    'id'
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Make Year', {
+                'fields': (
+                    'id',
                 )
             }
         ),
@@ -480,6 +648,8 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
 
     readonly_fields = (
         'id',
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'base_vehicle_count',
         'details_link',
         'year_link',
@@ -511,6 +681,13 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         return get_change_view_link(obj.make, 'See full make')
     make_link.short_description = ''
 
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
+
 
 @admin.register(SemaBaseVehicle)
 class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
@@ -518,6 +695,11 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     list_select_related = (
         'make_year',
         'model'
+    )
+
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     search_fields = (
@@ -539,15 +721,25 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'make_year',
         'model',
         'vehicle_count',
-        'is_authorized'
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant',
+        SemaBaseVehicleMayBeRelevant,
         ('make_year__make', RelatedOnlyFieldListFilter),
         ('model', RelatedOnlyFieldListFilter),
         ('make_year__year', RelatedOnlyFieldListFilter)
@@ -558,7 +750,16 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
             None, {
                 'fields': (
                     'is_authorized',
-                    'base_vehicle_id'
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Base Vehicle', {
+                'fields': (
+                    'base_vehicle_id',
                 )
             }
         ),
@@ -581,6 +782,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     readonly_fields = (
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'vehicle_count',
         'details_link',
         'make_year_link',
@@ -611,6 +814,13 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
             return None
         return get_change_view_link(obj.model, 'See full model')
     model_link.short_description = ''
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
 
 @admin.register(SemaVehicle)
@@ -648,7 +858,9 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'submodel',
         'product_count',
         'is_authorized',
-        'is_relevant'
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -657,10 +869,13 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
 
     list_editable = (
         'is_relevant',
+        'is_authorized'
     )
 
     list_filter = (
         'is_authorized',
+        'is_relevant',
+        SemaVehicleMayBeRelevant,
         ('base_vehicle__make_year__year', RelatedOnlyFieldListFilter),
         ('base_vehicle__make_year__make', RelatedOnlyFieldListFilter),
         ('base_vehicle__model', RelatedOnlyFieldListFilter),
@@ -671,9 +886,17 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         (
             None, {
                 'fields': (
-                    'is_relevant',
                     'is_authorized',
-                    'vehicle_id'
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Vehicle', {
+                'fields': (
+                    'vehicle_id',
                 )
             }
         ),
@@ -696,6 +919,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     readonly_fields = (
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'details_link',
         'product_count',
         'base_vehicle_link',
@@ -730,6 +955,13 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         return get_change_view_link(obj.submodel, 'See full submodel')
     submodel_link.short_description = ''
 
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
+
 
 @admin.register(SemaCategory)
 class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
@@ -740,6 +972,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     actions = (
         'update_category_products_queryset_action',
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     changelist_actions = (
@@ -758,15 +992,25 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'parent_category_count',
         'child_category_count',
         'product_count',
-        'is_authorized'
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
         'is_authorized',
+        'is_relevant',
+        # SemaCategoryMayBeRelevant,
         ByCategoryLevel
     )
 
@@ -775,14 +1019,25 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Category', {
+                'fields': (
                     'category_id',
                     'name'
                 )
             }
-        ),
+        )
     )
 
     readonly_fields = (
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'parent_category_count',
         'child_category_count',
         'product_count',
@@ -799,11 +1054,22 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
+
 
 @admin.register(SemaProduct)
 class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     list_select_related = (
         'dataset',
+    )
+
+    ordering = (
+        'product_id',
     )
 
     search_fields = (
@@ -817,7 +1083,9 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     actions = (
         'update_html_queryset_action',
-        'update_product_vehicles_queryset_action'
+        'update_product_vehicles_queryset_action',
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
     )
 
     changelist_actions = (
@@ -836,17 +1104,27 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'product_id',
         'part_number',
         'dataset',
-        'is_authorized'
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors'
     )
 
     list_display_links = (
         'details_link',
     )
 
+    list_editable = (
+        'is_relevant',
+        'is_authorized'
+    )
+
     list_filter = (
-        HasProduct,
+        HasItem,
         'is_authorized',
-        ('dataset', RelatedOnlyFieldListFilter),
+        'is_relevant',
+        # SemaProductMayBeRelevant,
+        ('dataset__brand', RelatedOnlyFieldListFilter),
         HasCategory,
         HasVehicle,
         HasHtml
@@ -857,6 +1135,15 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Product', {
+                'fields': (
                     'product_id',
                     'part_number'
                 )
@@ -867,14 +1154,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                 'fields': (
                     'dataset_link',
                     'dataset'
-                )
-            }
-        ),
-        (
-            'Brand', {
-                'fields': (
-                    'brand_link',
-                    'brand_a'
                 )
             }
         ),
@@ -921,6 +1200,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     readonly_fields = (
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'details_link',
         'dataset_link',
         'brand_link',
@@ -960,3 +1241,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             return mark_safe(html)
         except Exception as err:
             return str(err)
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''

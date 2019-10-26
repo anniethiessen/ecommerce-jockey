@@ -384,7 +384,7 @@ class PremierProduct(PremierProductInventoryBaseModel,
 
     @property
     def may_be_relevant(self):
-        return self.manufacturer.is_relevant and self.inventory_ab
+        return bool(self.manufacturer.is_relevant and self.inventory_ab)
 
     @property
     def relevancy_errors(self):

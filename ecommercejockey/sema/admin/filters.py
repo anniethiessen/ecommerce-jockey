@@ -1,5 +1,7 @@
 from django.contrib.admin import SimpleListFilter
-from django.db.models import Q
+from django.db.models import Q  # Case, When, BooleanField
+
+from core.admin.filters import MayBeRelevantFilter
 
 
 class HasCategory(SimpleListFilter):
@@ -116,9 +118,9 @@ class HasHtml(SimpleListFilter):
             )
 
 
-class HasProduct(SimpleListFilter):
-    title = 'has full product'
-    parameter_name = 'product'
+class HasItem(SimpleListFilter):
+    title = 'part of main item'
+    parameter_name = 'items'
 
     def lookups(self, request, model_admin):
         return (
@@ -131,3 +133,111 @@ class HasProduct(SimpleListFilter):
             return queryset.filter(items__isnull=False)
         if self.value() == 'No':
             return queryset.filter(items__isnull=True)
+
+
+class SemaDatasetMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(brand__is_relevant=True)
+        if self.value() == 'No':
+            return queryset.filter(brand__is_relevant=False)
+
+
+class SemaMakeYearMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                Q(year__is_relevant=True)
+                & Q(make__is_relevant=True)
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(year__is_relevant=False)
+                | Q(make__is_relevant=False)
+            )
+
+
+class SemaBaseVehicleMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                Q(make_year__is_relevant=True)
+                & Q(model__is_relevant=True)
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(make_year__is_relevant=False)
+                | Q(model__is_relevant=False)
+            )
+
+
+class SemaVehicleMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                Q(base_vehicle__is_relevant=True)
+                & Q(submodel__is_relevant=True)
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(base_vehicle__is_relevant=False)
+                | Q(submodel__is_relevant=False)
+            )
+
+
+# class SemaCategoryMayBeRelevant(MayBeRelevantFilter):  # FIXME
+#     def queryset(self, request, queryset):
+#         from ..models import SemaProduct
+#         relevant_products = SemaProduct.objects.filter(is_relevant=True)
+#
+#         queryset = queryset.order_by('name').annotate(
+#             _has_relevant_products=Case(
+#                 When(
+#                     Q(products__in=relevant_products),
+#                     then=True
+#                 ),
+#                 default=False,
+#                 output_field=BooleanField()
+#             )
+#         ).order_by(
+#             'name',
+#             '-_has_relevant_products'
+#         ).distinct('name')
+#
+#         if self.value() == 'Yes':
+#             return queryset.filter(_has_relevant_products=True)
+#         if self.value() == 'No':
+#             return queryset.filter(_has_relevant_products=False)
+
+
+# class SemaProductMayBeRelevant(MayBeRelevantFilter):  # FIXME
+#     def queryset(self, request, queryset):
+#         from ..models import SemaVehicle
+#
+#         relevant_vehicles = SemaVehicle.objects.filter(is_relevant=True)
+#
+#         queryset = queryset.annotate(
+#             _has_relevant_vehicles=Case(
+#                 When(
+#                     Q(vehicles__in=relevant_vehicles),
+#                     then=True
+#                 ),
+#                 default=False,
+#                 output_field=BooleanField()
+#             )
+#         ).order_by(
+#             'dataset_id',
+#             'part_number',
+#             '-_has_relevant_vehicles'
+#         ).distinct('dataset_id', 'part_number')
+#
+#         if self.value() == 'Yes':
+#             return queryset.filter(
+#                 Q(dataset__is_relevant=True)
+#                 & Q(_has_relevant_vehicles=True)
+#             )
+#         if self.value() == 'No':
+#             return queryset.filter(
+#                 Q(dataset__is_relevant=False)
+#                 | Q(_has_relevant_vehicles=False)
+#             )

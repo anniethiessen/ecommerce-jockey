@@ -1,9 +1,9 @@
 from django.contrib import messages
 
-from core.admin.actions import BaseActions, RelevancyActions
+from core.admin.actions import RelevancyActions
 
 
-class SemaBaseActions(BaseActions):
+class SemaBaseActions(RelevancyActions):
     def import_and_unauthorize_class_action(self, request, queryset):
         try:
             msgs = self.model.objects.import_and_unauthorize_from_api()
@@ -235,7 +235,7 @@ class SemaBaseVehicleActions(SemaBaseActions):
     pass
 
 
-class SemaVehicleActions(SemaBaseActions, RelevancyActions):
+class SemaVehicleActions(SemaBaseActions):
     pass
 
 

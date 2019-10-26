@@ -3,7 +3,6 @@ from django.db.models import (
     BooleanField
 )
 
-from .managers import RelevancyBaseManager
 from .mixins import MessagesMixin
 
 
@@ -18,10 +17,8 @@ class RelevancyBaseModel(Model, MessagesMixin):
 
     @property
     def relevancy_errors(self):
-        return ''
+        raise Exception("Relevancy errors must be defined")
     relevancy_errors.fget.short_description = 'Errors'
-
-    objects = RelevancyBaseManager()
 
     class Meta:
         abstract = True

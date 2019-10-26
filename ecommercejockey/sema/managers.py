@@ -1,6 +1,12 @@
 from collections import defaultdict
 
-from django.db.models import Manager, QuerySet, F, Q, ManyToManyField
+from django.db.models import (
+    Manager,
+    QuerySet,
+    F,
+    Q,
+    ManyToManyField
+)
 from django.db.models.functions import Floor
 
 from .apis import sema_api
@@ -199,6 +205,8 @@ class SemaBaseVehicleQuerySet(SemaBaseQuerySet):
 
 
 class SemaVehicleQuerySet(SemaBaseQuerySet):
+    pass
+
     def get_by_ids(self, year, make_id, model_id, submodel_id):
         """
         Returns vehicle object by year, make id, model id, and submodel

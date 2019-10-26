@@ -9,7 +9,6 @@ from core.admin.utils import (
     get_change_view_link,
     get_custom_filter_title
 )
-from core.admin.filters import MayBeRelevantFilter
 from ..models import (
     PremierManufacturer,
     PremierProduct,
@@ -23,7 +22,8 @@ from .filters import (
     HasApiInventory,
     HasApiPricing,
     HasItem,
-    HasPrimaryImage
+    HasPrimaryImage,
+    PremierProductMayBeRelevant
 )
 # from .inlines import PremierProductTabularInline
 from .resources import PremierProductResource
@@ -48,7 +48,6 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         'product_count',
         'primary_image_preview',
         'is_relevant',
-        'relevancy_errors_flag',
         'relevancy_errors'
     )
 
@@ -69,6 +68,13 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
             None, {
                 'fields': (
                     'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Manufacturer', {
+                'fields': (
                     'id',
                     'name'
                 )
@@ -85,7 +91,6 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
-        'relevancy_errors_flag',
         'relevancy_errors',
         'product_count',
         'details_link',
@@ -104,14 +109,6 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         image_field='primary_image_thumbnail'
     )
     primary_image_preview.short_description = 'primary image'
-
-    def relevancy_errors_flag(self, obj):
-        return obj._relevancy_errors_flag
-    relevancy_errors_flag.admin_order_field = '_relevancy_errors_flag'
-    relevancy_errors_flag.short_description = ''
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).with_relevancy_values()
 
 
 @admin.register(PremierProduct)
@@ -156,8 +153,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'msrp',
         'map',
         'primary_image_preview',
+        'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors_flag',
         'relevancy_errors'
     )
 
@@ -170,9 +167,9 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     )
 
     list_filter = (
-        'is_relevant',
-        MayBeRelevantFilter,
         HasItem,
+        'is_relevant',
+        PremierProductMayBeRelevant,
         ('manufacturer__name', get_custom_filter_title('manufacturer')),
         'part_status',
         HasApiInventory,
@@ -185,8 +182,16 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         (
             None, {
                 'fields': (
-                    'item_link',
+                    'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_errors',
+                )
+            }
+        ),
+        (
+            'Product', {
+                'fields': (
+                    'item_link',
                     'premier_part_number',
                     'description',
                     'vendor_part_number',
@@ -265,7 +270,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
 
     readonly_fields = (
         'relevancy_errors',
-        'relevancy_errors_flag',
+        'may_be_relevant_flag',
         'details_link',
         'manufacturer_link',
         'item_link',
@@ -296,10 +301,9 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     )
     primary_image_preview.short_description = 'primary image'
 
-    def relevancy_errors_flag(self, obj):
-        return obj._relevancy_errors_flag
-    relevancy_errors_flag.admin_order_field = '_relevancy_errors_flag'
-    relevancy_errors_flag.short_description = ''
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).with_relevancy_values()
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''

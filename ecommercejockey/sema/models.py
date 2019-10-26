@@ -10,7 +10,6 @@ from django.db.models import (
     CASCADE
 )
 
-from core.mixins import MessagesMixin
 from core.models import RelevancyBaseModel
 from .apis import sema_api
 from .managers import (
@@ -29,11 +28,26 @@ from .managers import (
 )
 
 
-class SemaBaseModel(Model, MessagesMixin):
+class SemaBaseModel(RelevancyBaseModel):
     is_authorized = BooleanField(
         default=False,
         help_text='brand has given access to dataset'
     )
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if self.is_relevant:
+            if not self.is_authorized:
+                error = "not authorized"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
+    objects = SemaBaseManager()
+
+    class Meta:
+        abstract = True
 
     @property
     def state(self):
@@ -80,11 +94,6 @@ class SemaBaseModel(Model, MessagesMixin):
         except Exception as err:
             msg = self.get_instance_error_msg(str(err))
         return msg
-
-    objects = SemaBaseManager()
-
-    class Meta:
-        abstract = True
 
 
 class SemaBrand(SemaBaseModel):
@@ -211,6 +220,23 @@ class SemaDataset(SemaBaseModel):
         on_delete=CASCADE,
         related_name='datasets'
     )
+
+    @property
+    def may_be_relevant(self):
+        return self.brand.is_relevant
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        if self.is_relevant:
+            if not self.brand.is_relevant:
+                error = "brand not relevant"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
 
     @property
     def state(self):
@@ -448,6 +474,26 @@ class SemaMakeYear(SemaBaseModel):
     )
 
     @property
+    def may_be_relevant(self):
+        return self.year.is_relevant and self.make.is_relevant
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        if self.is_relevant:
+            if not self.year.is_relevant:
+                error = "year not relevant"
+                msgs.append(error)
+            if not self.make.is_relevant:
+                error = "make not relevant"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
+    @property
     def state(self):
         state = dict(super().state)
         state.update(
@@ -491,6 +537,26 @@ class SemaBaseVehicle(SemaBaseModel):
     )
 
     @property
+    def may_be_relevant(self):
+        return self.make_year.is_relevant and self.model.is_relevant
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        if self.is_relevant:
+            if not self.make_year.is_relevant:
+                error = "make year not relevant"
+                msgs.append(error)
+            if not self.model.is_relevant:
+                error = "model not relevant"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
+    @property
     def state(self):
         state = dict(super().state)
         state.update(
@@ -516,7 +582,7 @@ class SemaBaseVehicle(SemaBaseModel):
         return f'{self.make_year} :: {self.model}'
 
 
-class SemaVehicle(SemaBaseModel, RelevancyBaseModel):
+class SemaVehicle(SemaBaseModel):
     vehicle_id = PositiveIntegerField(
         primary_key=True,
         unique=True
@@ -531,6 +597,26 @@ class SemaVehicle(SemaBaseModel, RelevancyBaseModel):
         on_delete=CASCADE,
         related_name='vehicles'
     )
+
+    @property
+    def may_be_relevant(self):
+        return self.base_vehicle.is_relevant and self.submodel.is_relevant
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        if self.is_relevant:
+            if not self.base_vehicle.is_relevant:
+                error = "base vehicle not relevant"
+                msgs.append(error)
+            if not self.submodel.is_relevant:
+                error = "submodel not relevant"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
 
     @property
     def state(self):
@@ -574,6 +660,34 @@ class SemaCategory(SemaBaseModel):
     )
 
     @property
+    def may_be_relevant(self):
+        has_relevant_products = any(
+            product in self.products.all()
+            for product in SemaProduct.objects.filter(is_relevant=True)
+        )
+        return has_relevant_products
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        has_relevant_products = any(
+            product in self.products.all()
+            for product in SemaProduct.objects.filter(is_relevant=True)
+        )
+        if self.is_relevant:
+            if not has_relevant_products:
+                error = "no relevant products"
+                msgs.append(error)
+            if not self.level:
+                error = "invalid level"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
+    @property
     def state(self):
         state = dict(super().state)
         state.update(
@@ -586,7 +700,7 @@ class SemaCategory(SemaBaseModel):
 
     @property
     def product_count(self):
-        return self.products.filter(is_authorized=True).count()
+        return self.products.filter(is_authorized=True).distinct().count()
     product_count.fget.short_description = 'Product Count'
 
     @property
@@ -601,13 +715,16 @@ class SemaCategory(SemaBaseModel):
 
     @property
     def level(self):
-        if self.parent_category_count == 0:
-            return '1'
-        else:
-            if self.child_category_count == 0:
-                return '3'
-            else:
+        if self.parent_category_count:
+            if self.child_category_count:
                 return '2'
+            else:
+                return '3'
+        else:
+            if self.child_category_count:
+                return '1'
+            else:
+                return ''
 
     def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
                                         base_vehicle_ids=None,
@@ -765,6 +882,40 @@ class SemaProduct(SemaBaseModel):
     )
 
     @property
+    def may_be_relevant(self):
+        has_relevant_vehicles = any(
+            vehicle in self.vehicles.all()
+            for vehicle in SemaVehicle.objects.filter(is_relevant=True)
+        )
+        return self.dataset.is_relevant and has_relevant_vehicles
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        has_relevant_vehicles = any(
+            vehicle in self.vehicles.all()
+            for vehicle in SemaVehicle.objects.filter(is_relevant=True)
+        )
+        if self.is_relevant:
+            if not self.dataset.is_relevant:
+                error = "dataset not relevant"
+                msgs.append(error)
+            if not has_relevant_vehicles:
+                error = "no relevant vehicles"
+                msgs.append(error)
+            if not self.html or self.html == '':
+                error = "no html"
+                msgs.append(error)
+            if not self.categories.all().count() == 3:
+                error = "missing categories"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
+    @property
     def state(self):
         state = dict(super().state)
         state.update(
@@ -900,6 +1051,7 @@ class SemaProduct(SemaBaseModel):
                     model_name=item['ModelName'],
                     submodel_name=item['SubmodelName'],
                 )
+                continue
             except SemaVehicle.DoesNotExist:
                 # FIXME
                 from random import randint
@@ -937,6 +1089,17 @@ class SemaProduct(SemaBaseModel):
                         model = SemaModel.objects.get(
                             name=item['ModelName']
                         )
+                    except MultipleObjectsReturned:
+                        if item['MakeName'] == 'Chrysler':
+                            model = SemaModel.objects.get(
+                                model_id=2489
+                            )
+                        elif item['MakeName'] == 'GMC':
+                            model = SemaModel.objects.get(
+                                model_id=21430
+                            )
+                        else:
+                            raise
                     except SemaModel.DoesNotExist:
                         pk = randint(1000000, 9999999)
                         while SemaModel.objects.filter(pk=pk).exists():

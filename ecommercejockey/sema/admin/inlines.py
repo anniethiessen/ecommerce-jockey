@@ -108,7 +108,7 @@ class SemaVehicleTabularInline(TabularInline):
     model = SemaVehicle
     extra = 0
     verbose_name = 'vehicle'
-    verbose_name_plural = 'vehicles'
+    verbose_name_plural = 'vehicles (first 10)'
     ordering = (
         'base_vehicle',
         'submodel'
