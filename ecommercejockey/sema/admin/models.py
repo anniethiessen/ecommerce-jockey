@@ -4,7 +4,10 @@ from django.contrib import admin
 from django.contrib.admin import ModelAdmin, RelatedOnlyFieldListFilter
 from django.utils.safestring import mark_safe
 
-from core.admin.utils import get_change_view_link
+from core.admin.utils import (
+    get_change_view_link,
+    get_image_preview
+)
 from ..models import (
     SemaBaseVehicle,
     SemaBrand,
@@ -90,6 +93,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         'brand_id',
         'name',
         'dataset_count',
+        'primary_image_preview',
         'is_authorized',
         'is_relevant',
         'relevancy_errors'
@@ -126,6 +130,13 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
                     'name'
                 )
             }
+        ),
+        (
+            'Images', {
+                'fields': (
+                    ('primary_image_url', 'primary_image_preview'),
+                )
+            }
         )
     )
 
@@ -134,13 +145,20 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     )
 
     readonly_fields = (
+        'primary_image_preview',
         'relevancy_errors',
-        'dataset_count',
+        'dataset_count'
     )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def primary_image_preview(self, obj):
+        if not obj.primary_image_url:
+            return None
+        return get_image_preview(obj.primary_image_url, width="100")
+    primary_image_preview.short_description = 'primary image'
 
 
 @admin.register(SemaDataset)

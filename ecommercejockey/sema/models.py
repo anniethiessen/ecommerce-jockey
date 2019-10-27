@@ -7,6 +7,7 @@ from django.db.models import (
     PositiveIntegerField,
     PositiveSmallIntegerField,
     TextField,
+    URLField,
     CASCADE
 )
 
@@ -105,6 +106,23 @@ class SemaBrand(SemaBaseModel):
     name = CharField(
         max_length=50,
     )
+    primary_image_url = URLField(
+        blank=True
+    )
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        if self.is_relevant:
+            if not self.primary_image_url:
+                error = "missing image"
+                msgs.append(error)
+        return ', '.join(msgs)
+
+    relevancy_errors.fget.short_description = 'Errors'
 
     @property
     def state(self):
