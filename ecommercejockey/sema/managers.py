@@ -1382,7 +1382,7 @@ class SemaProductManager(SemaBaseManager):
                      year=None, make_name=None,
                      model_name=None, submodel_name=None,
                      base_vehicle_ids=None, vehicle_ids=None,
-                     part_numbers=None, pies_segments=None):
+                     part_numbers=None, pies_segments=('C10_DES', 'C10_EXT')):
         from .models import SemaDataset
 
         datasets = SemaDataset.objects.filter(is_authorized=True)
@@ -1392,6 +1392,9 @@ class SemaProductManager(SemaBaseManager):
             datasets = datasets.filter(dataset_id__in=dataset_ids)
         if not datasets:
             raise Exception('No authorized datasets')
+
+        if pies_segments:
+            pies_segments = list(pies_segments)
 
         all_data = []
         try:
@@ -1417,7 +1420,6 @@ class SemaProductManager(SemaBaseManager):
 
     def parse_api_data(self, data):
         from .models import SemaDataset
-
         try:
             pk = data['ProductId']
             update_fields = {
@@ -1426,6 +1428,13 @@ class SemaProductManager(SemaBaseManager):
                     dataset_id=data['dataset_id_']
                 )
             }
+            pies_attributes = data.pop('PiesAttributes', [])
+            if pies_attributes:
+                for attribute in pies_attributes:
+                    if attribute['PiesSegment'] == 'C10_DES_EN':
+                        update_fields['pies_c10_des'] = attribute['Value']
+                    elif attribute['PiesSegment'] == 'C10_EXT_EN':
+                        update_fields['pies_c10_ext'] = attribute['Value']
             return pk, update_fields
         except Exception:
             raise

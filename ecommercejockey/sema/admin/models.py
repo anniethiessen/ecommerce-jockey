@@ -1099,7 +1099,9 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'dataset__dataset_id',
         'dataset__name',
         'product_id',
-        'part_number'
+        'part_number',
+        'pies_c10_des',
+        'pies_c10_ext'
     )
 
     actions = (
@@ -1124,6 +1126,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'details_link',
         'product_id',
         'part_number',
+        'pies_c10_des',
+        'pies_c10_ext',
         'dataset',
         'is_authorized',
         'may_be_relevant_flag',
@@ -1166,7 +1170,9 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             'Product', {
                 'fields': (
                     'product_id',
-                    'part_number'
+                    'part_number',
+                    'pies_c10_des',
+                    'pies_c10_ext'
                 )
             }
         ),

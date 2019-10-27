@@ -898,6 +898,16 @@ class SemaProduct(SemaBaseModel):
         blank=True,
         related_name='products'
     )
+    pies_c10_des = CharField(
+        blank=True,
+        max_length=100,
+        verbose_name='title'
+    )
+    pies_c10_ext = CharField(
+        blank=True,
+        max_length=500,
+        verbose_name='description'
+    )
 
     @property
     def may_be_relevant(self):
@@ -930,6 +940,12 @@ class SemaProduct(SemaBaseModel):
             if not self.categories.count() == 3:
                 error = "missing categories"
                 msgs.append(error)
+            if not self.pies_c10_des:
+                error = "missing title"
+                msgs.append(error)
+            if not self.pies_c10_ext:
+                error = "missing description"
+                msgs.append(error)
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
 
@@ -939,7 +955,9 @@ class SemaProduct(SemaBaseModel):
         state.update(
             {
                 'Part': self.part_number,
-                'Dataset': str(self.dataset)
+                'Dataset': str(self.dataset),
+                'Title': self.pies_c10_des,
+                'Description': self.pies_c10_ext
             }
         )
         return state
