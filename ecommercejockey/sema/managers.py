@@ -468,7 +468,7 @@ class SemaBaseManager(Manager):
 
         try:
             data = self.get_api_data()
-            msgs += self.create_or_update_from_api_data(data)
+            msgs += self.create_or_update_from_api_data(data, new_only=False)
             msgs += self.unauthorize_from_api_data(data)
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
@@ -478,7 +478,7 @@ class SemaBaseManager(Manager):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def import_from_api(self, **filters):
+    def import_from_api(self, new_only=False, **filters):
         msgs = []
 
         try:
@@ -492,14 +492,10 @@ class SemaBaseManager(Manager):
 
         try:
             data = self.get_api_data(**filters)
+            msgs += self.create_or_update_from_api_data(data, new_only=new_only)
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
             return msgs
-
-        try:
-            msgs += self.create_or_update_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
 
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())
@@ -526,7 +522,7 @@ class SemaBaseManager(Manager):
     def parse_api_data(self, data):
         raise Exception('Parse API data must be defined')
 
-    def create_or_update_from_api_data(self, data):
+    def create_or_update_from_api_data(self, data, new_only=False):
         msgs = []
         for item in data:
             try:
@@ -537,12 +533,12 @@ class SemaBaseManager(Manager):
 
             try:
                 obj = self.get_object_from_api_data(pk, **update_fields)
-                msgs.append(obj.update_from_api_data(**update_fields))
+                if not new_only:
+                    msgs.append(obj.update_from_api_data(**update_fields))
             except self.model.DoesNotExist:
                 msgs.append(self.create_from_api_data(pk, **update_fields))
             except Exception as err:
                 msgs.append(self.model.get_class_error_msg(f"{item}: {err}"))
-
         return msgs
 
     def get_object_from_api_data(self, pk, **update_fields):

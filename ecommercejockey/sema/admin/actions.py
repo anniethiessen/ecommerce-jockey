@@ -11,10 +11,23 @@ class SemaBaseActions(RelevancyActions):
         except Exception as err:
             messages.error(request, str(err))
     import_and_unauthorize_class_action.allowed_permissions = ('view',)
-    import_and_unauthorize_class_action.label = 'Import from API'
+    import_and_unauthorize_class_action.label = 'Import/Unauthorize from API'
     import_and_unauthorize_class_action.short_description = (
         'Create or update all available objects from SEMA API. '
         'Unauthorizes existing objects no longer returned by API. '
+        'WARNING: All related objects must be up-to-date'
+    )
+
+    def import_class_action(self, request, queryset):
+        try:
+            msgs = self.model.objects.import_from_api(new_only=False)
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_class_action.allowed_permissions = ('view',)
+    import_class_action.label = 'Import from API'
+    import_class_action.short_description = (
+        'Create or update all available objects from SEMA API. '
         'WARNING: All related objects must be up-to-date'
     )
 

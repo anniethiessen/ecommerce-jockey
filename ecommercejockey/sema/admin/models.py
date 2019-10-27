@@ -79,7 +79,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
         # 'update_product_vehicles_class_action'  # TO NOTE: too long
     )
 
@@ -182,7 +182,7 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
         # 'update_product_vehicles_class_action'  # TO NOTE: too long
     )
 
@@ -293,7 +293,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
     )
 
     list_display = (
@@ -367,7 +367,7 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
     )
 
     list_display = (
@@ -442,7 +442,7 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
     )
 
     list_display = (
@@ -517,7 +517,7 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
     )
 
     list_display = (
@@ -599,7 +599,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
     )
 
     list_display = (
@@ -733,7 +733,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
     )
 
     list_display = (
@@ -869,7 +869,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
     )
 
     list_display = (
@@ -998,7 +998,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
         'update_category_products_class_action'
     )
 
@@ -1112,7 +1112,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     changelist_actions = (
-        'import_and_unauthorize_class_action',
+        'import_class_action',
         # 'update_product_categories_class_action',  # TO NOTE: too long
         # 'update_product_vehicles_class_action'  # TO NOTE: too long
     )
