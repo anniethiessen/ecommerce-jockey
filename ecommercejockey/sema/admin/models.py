@@ -32,17 +32,20 @@ from .actions import (
     SemaYearActions
 )
 from .filters import (
-    ByDecade,
+    SemaYearByDecade,
     ByCategoryLevel,
     HasCategory,
     HasHtml,
     HasItem,
     HasVehicle,
+    SemaBaseVehicleByDecade,
     SemaBaseVehicleMayBeRelevant,
     # SemaCategoryMayBeRelevant,
     SemaDatasetMayBeRelevant,
+    SemaMakeYearByDecade,
     SemaMakeYearMayBeRelevant,
     # SemaProductMayBeRelevant,
+    SemaVehicleByDecade,
     SemaVehicleMayBeRelevant
 )
 from .inlines import (
@@ -296,7 +299,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
-        ByDecade
+        SemaYearByDecade
     )
 
     fieldsets = (
@@ -606,8 +609,8 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'is_authorized',
         'is_relevant',
         SemaMakeYearMayBeRelevant,
-        ('make', RelatedOnlyFieldListFilter),
-        ('year', RelatedOnlyFieldListFilter)
+        SemaMakeYearByDecade,
+        ('make', RelatedOnlyFieldListFilter)
     )
 
     fieldsets = (
@@ -740,9 +743,9 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'is_authorized',
         'is_relevant',
         SemaBaseVehicleMayBeRelevant,
+        SemaBaseVehicleByDecade,
         ('make_year__make', RelatedOnlyFieldListFilter),
-        ('model', RelatedOnlyFieldListFilter),
-        ('make_year__year', RelatedOnlyFieldListFilter)
+        ('model', RelatedOnlyFieldListFilter)
     )
 
     fieldsets = (
@@ -876,7 +879,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'is_authorized',
         'is_relevant',
         SemaVehicleMayBeRelevant,
-        ('base_vehicle__make_year__year', RelatedOnlyFieldListFilter),
+        SemaVehicleByDecade,
         ('base_vehicle__make_year__make', RelatedOnlyFieldListFilter),
         ('base_vehicle__model', RelatedOnlyFieldListFilter),
         ('submodel', RelatedOnlyFieldListFilter)

@@ -38,8 +38,8 @@ class HasVehicle(SimpleListFilter):
             return queryset.filter(vehicles=None)
 
 
-class ByDecade(SimpleListFilter):
-    title = 'decade'
+class ByDecadeFilter(SimpleListFilter):
+    title = 'year'
     parameter_name = 'year'
 
     def lookups(self, request, model_admin):
@@ -60,8 +60,48 @@ class ByDecade(SimpleListFilter):
         )
 
     def queryset(self, request, queryset):
+        raise Exception("Filter must be defined")
+
+
+class SemaYearByDecade(ByDecadeFilter):
+    def queryset(self, request, queryset):
         if self.value():
             return queryset.with_year_data().filter(decade=int(self.value()))
+
+
+class SemaMakeYearByDecade(ByDecadeFilter):
+    def queryset(self, request, queryset):
+        from sema.models import SemaYear
+
+        if self.value():
+            years = SemaYear.objects.with_year_data().filter(
+                decade=int(self.value())
+            )
+            return queryset.filter(year__in=years)
+
+
+class SemaBaseVehicleByDecade(ByDecadeFilter):
+    def queryset(self, request, queryset):
+        from sema.models import SemaYear
+
+        if self.value():
+            years = SemaYear.objects.with_year_data().filter(
+                decade=int(self.value())
+            )
+            return queryset.filter(make_year__year__in=years)
+
+
+class SemaVehicleByDecade(ByDecadeFilter):
+    def queryset(self, request, queryset):
+        from sema.models import SemaYear
+
+        if self.value():
+            years = SemaYear.objects.with_year_data().filter(
+                decade=int(self.value())
+            )
+            return queryset.filter(
+                base_vehicle__make_year__year__in=years
+            )
 
 
 class ByCategoryLevel(SimpleListFilter):
