@@ -117,11 +117,10 @@ class SemaBrand(SemaBaseModel):
             msgs.append(super().relevancy_errors)
 
         if self.is_relevant:
-            if not self.primary_image_url:
+            if not self.primary_image_url or self.primary_image_url == '':
                 error = "missing image"
                 msgs.append(error)
         return ', '.join(msgs)
-
     relevancy_errors.fget.short_description = 'Errors'
 
     @property
@@ -908,6 +907,9 @@ class SemaProduct(SemaBaseModel):
         max_length=500,
         verbose_name='description'
     )
+    primary_image_url = URLField(
+        blank=True
+    )
 
     @property
     def may_be_relevant(self):
@@ -936,6 +938,9 @@ class SemaProduct(SemaBaseModel):
                 msgs.append(error)
             if not self.html or self.html == '':
                 error = "no html"
+                msgs.append(error)
+            if not self.primary_image_url or self.primary_image_url == '':
+                error = "missing image"
                 msgs.append(error)
             if not self.categories.count() == 3:
                 error = "missing categories"

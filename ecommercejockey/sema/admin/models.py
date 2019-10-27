@@ -156,7 +156,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
     def primary_image_preview(self, obj):
         if not obj.primary_image_url:
-            return None
+            return ''
         return get_image_preview(obj.primary_image_url, width="100")
     primary_image_preview.short_description = 'primary image'
 
@@ -1129,6 +1129,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'pies_c10_des',
         'pies_c10_ext',
         'dataset',
+        'primary_image_preview',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -1202,6 +1203,13 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             }
         ),
         (
+            'Images', {
+                'fields': (
+                    ('primary_image_url', 'primary_image_preview'),
+                )
+            }
+        ),
+        (
             'HTML', {
                 'fields': (
                     'html',
@@ -1227,6 +1235,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     readonly_fields = (
+        'primary_image_preview',
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',
@@ -1252,6 +1261,12 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         return str(obj.dataset.brand)
     brand_a.short_description = 'brand'
 
+    def primary_image_preview(self, obj):
+        if not obj.primary_image_url:
+            return ''
+        return get_image_preview(obj.primary_image_url, width="100")
+    primary_image_preview.short_description = 'primary image'
+
     def html_preview(self, obj):
         if not obj.html:
             return '-----'
@@ -1275,3 +1290,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         else:
             return ''
     may_be_relevant_flag.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related(
+            'vehicles', 'categories')
