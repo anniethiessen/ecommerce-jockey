@@ -96,7 +96,8 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         'primary_image_preview',
         'is_authorized',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -135,6 +136,13 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
             'Images', {
                 'fields': (
                     ('primary_image_url', 'primary_image_preview'),
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -199,7 +207,8 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -241,6 +250,13 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
                 'fields': (
                     'brand_link',
                     'brand'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -302,7 +318,8 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         'make_year_count',
         'is_authorized',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -334,6 +351,13 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
             'Year', {
                 'fields': (
                     'year',
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -377,7 +401,8 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
         'make_year_count',
         'is_authorized',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -409,6 +434,13 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
                 'fields': (
                     'make_id',
                     'name'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -452,7 +484,8 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'base_vehicle_count',
         'is_authorized',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -484,6 +517,13 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
                 'fields': (
                     'model_id',
                     'name'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -527,7 +567,8 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'vehicle_count',
         'is_authorized',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -560,6 +601,13 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
                 'fields': (
                     'submodel_id',
                     'name'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -611,7 +659,8 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -662,6 +711,13 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
                 'fields': (
                     'make_link',
                     'make'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -745,7 +801,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -797,6 +854,13 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
                 'fields': (
                     'model_link',
                     'model'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -881,7 +945,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -934,6 +999,13 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
                 'fields': (
                     'submodel_link',
                     'submodel'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -1016,7 +1088,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -1051,6 +1124,13 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
                 'fields': (
                     'category_id',
                     'name'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )
@@ -1133,7 +1213,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -1223,6 +1304,13 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             None, {
                 'fields': (
                     'html_preview',
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )

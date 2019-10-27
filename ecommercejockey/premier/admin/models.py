@@ -48,7 +48,8 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         'product_count',
         'primary_image_preview',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -87,6 +88,13 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
                 )
             }
         ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
+                )
+            }
+        )
     )
 
     readonly_fields = (
@@ -149,13 +157,11 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'description',
         'manufacturer',
         'cost',
-        'jobber',
-        'msrp',
-        'map',
         'primary_image_preview',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -263,6 +269,13 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             'Images', {
                 'fields': (
                     ('primary_image', 'primary_image_preview'),
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
                 )
             }
         )

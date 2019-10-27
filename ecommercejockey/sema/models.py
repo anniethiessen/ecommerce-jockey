@@ -11,7 +11,10 @@ from django.db.models import (
     CASCADE
 )
 
-from core.models import RelevancyBaseModel
+from core.models import (
+    NotesBaseModel,
+    RelevancyBaseModel
+)
 from .apis import sema_api
 from .managers import (
     SemaBaseManager,
@@ -29,7 +32,7 @@ from .managers import (
 )
 
 
-class SemaBaseModel(RelevancyBaseModel):
+class SemaBaseModel(RelevancyBaseModel, NotesBaseModel):
     is_authorized = BooleanField(
         default=False,
         help_text='brand has given access to dataset'

@@ -16,7 +16,10 @@ from django.db.models import (
 )
 
 from core.mixins import MessagesMixin
-from core.models import RelevancyBaseModel
+from core.models import (
+    NotesBaseModel,
+    RelevancyBaseModel
+)
 from .managers import (
     PremierManufacturerManager,
     PremierProductManager
@@ -27,7 +30,7 @@ from .utils import (
 )
 
 
-class PremierManufacturer(RelevancyBaseModel):
+class PremierManufacturer(RelevancyBaseModel, NotesBaseModel):
     name = CharField(
         max_length=50,
         unique=True
@@ -295,7 +298,7 @@ class PremierProductPricingBaseModel(Model, MessagesMixin):
         abstract = True
 
 
-class PremierProduct(PremierProductInventoryBaseModel,
+class PremierProduct(PremierProductInventoryBaseModel, NotesBaseModel,
                      PremierProductPricingBaseModel, RelevancyBaseModel):
     premier_part_number = CharField(
         max_length=30,

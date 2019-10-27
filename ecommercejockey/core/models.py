@@ -1,6 +1,7 @@
 from django.db.models import (
     Model,
-    BooleanField
+    BooleanField,
+    TextField
 )
 
 from .mixins import MessagesMixin
@@ -19,6 +20,15 @@ class RelevancyBaseModel(Model, MessagesMixin):
     def relevancy_errors(self):
         raise Exception("Relevancy errors must be defined")
     relevancy_errors.fget.short_description = 'Errors'
+
+    class Meta:
+        abstract = True
+
+
+class NotesBaseModel(Model, MessagesMixin):
+    notes = TextField(
+        blank=True
+    )
 
     class Meta:
         abstract = True

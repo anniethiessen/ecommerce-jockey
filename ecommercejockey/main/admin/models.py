@@ -50,7 +50,8 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'slug',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors'
+        'relevancy_errors',
+        'notes'
     )
 
     list_display_links = (
@@ -92,13 +93,20 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
             }
         ),
         (
-            None, {
+            'Sema Brand', {
                 'fields': (
                     'sema_brand_link',
                     'sema_brand'
                 )
             }
         ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
+                )
+            }
+        )
     )
 
     readonly_fields = (
@@ -234,7 +242,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
                     'notes',
                 )
             }
-        ),
+        )
     )
 
     readonly_fields = (

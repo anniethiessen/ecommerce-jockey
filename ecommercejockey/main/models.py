@@ -3,12 +3,14 @@ from django.db.models import (
     CharField,
     ForeignKey,
     OneToOneField,
-    TextField,
     CASCADE,
     SET_NULL
 )
 
-from core.models import RelevancyBaseModel
+from core.models import (
+    NotesBaseModel,
+    RelevancyBaseModel
+)
 from premier.models import (
     PremierManufacturer,
     PremierProduct
@@ -23,7 +25,7 @@ from .managers import (
 )
 
 
-class Vendor(RelevancyBaseModel):
+class Vendor(RelevancyBaseModel, NotesBaseModel):
     premier_manufacturer = OneToOneField(
         PremierManufacturer,
         on_delete=CASCADE,
@@ -76,7 +78,7 @@ class Vendor(RelevancyBaseModel):
         return f'{self.premier_manufacturer.name} :: {self.sema_brand.name}'
 
 
-class Item(RelevancyBaseModel):
+class Item(RelevancyBaseModel, NotesBaseModel):
     premier_product = OneToOneField(
         PremierProduct,
         blank=True,
@@ -91,9 +93,6 @@ class Item(RelevancyBaseModel):
         related_name='items',
         on_delete=SET_NULL,
         verbose_name='SEMA product'
-    )
-    notes = TextField(
-        blank=True
     )
 
     @property
