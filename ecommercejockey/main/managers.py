@@ -62,43 +62,81 @@ class VendorManager(Manager):
 
 
 class ItemManager(Manager):
-    def create_products_from_premier_products(self):
+    def create_from_relevant(self):
         from premier.models import PremierProduct
+        from sema.models import SemaProduct
 
         msgs = []
+        premier_products = PremierProduct.objects.filter(
+            is_relevant=True,
+            item__isnull=True
+        )
+        sema_products = SemaProduct.objects.filter(
+            is_relevant=True,
+            items__isnull=True
+        )
 
-        try:
-            premier_products = PremierProduct.objects.filter(is_relevant=True)
-            for premier_product in premier_products:
-                try:
-                    product = self.model.objects.get(
-                        premier_product=premier_product
+        for product in premier_products:
+            try:
+                item = self.model.objects.get(premier_product=product)
+                msgs.append(
+                    item.get_instance_up_to_date_msg(
+                        message='Already exists'
                     )
+                )
+            except self.model.DoesNotExist:
+                try:
+                    item = self.model.objects.get(
+                        sema_product__dataset__brand__vendor__premier_manufacturer=product.manufacturer,
+                        sema_product__part_number=product.vendor_part_number
+                    )
+                    item.premier_product = product
+                    item.save()
                     msgs.append(
-                        product.get_instance_up_to_date_msg(
-                            message=f'Already exists'
+                        item.get_update_success_msg(
+                            message=f"{product} added"
                         )
                     )
                 except self.model.DoesNotExist:
-                    product = self.model.objects.create(
-                        premier_product=premier_product
+                    item = self.model.objects.create(
+                        premier_product=product
                     )
-                    msgs.append(product.get_create_success_msg())
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
+                    msgs.append(item.get_create_success_msg())
+                except Exception as err:
+                    msgs.append(self.model.get_class_error_msg(str(err)))
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
 
-        try:
-            products = self.model.objects.all()
-            for product in products:
-                if (product.premier_product and
-                        not product.premier_product.is_relevant):
+        for product in sema_products:
+            try:
+                item = self.model.objects.get(sema_product=product)
+                msgs.append(
+                    item.get_instance_up_to_date_msg(
+                        message='Already exists'
+                    )
+                )
+            except self.model.DoesNotExist:
+                try:
+                    item = self.model.objects.get(
+                        premier_product__manufacturer__vendor__sema_brand=product.dataset.brand,
+                        premier_product__vendor_part_number=product.part_number
+                    )
+                    item.sema_product = product
+                    item.save()
                     msgs.append(
-                        product.get_instance_error_msg(
-                            'Premier product not relevant'
+                        item.get_update_success_msg(
+                            message=f"{product} added"
                         )
                     )
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
+                except self.model.DoesNotExist:
+                    item = self.model.objects.create(
+                        sema_product=product
+                    )
+                    msgs.append(item.get_create_success_msg())
+                except Exception as err:
+                    msgs.append(self.model.get_class_error_msg(str(err)))
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
 
         return msgs
 

@@ -20,14 +20,14 @@ class ItemActions(RelevancyActions):
     def create_items_class_action(self, request, queryset):
         msgs = []
         try:
-            msgs = self.model.objects.create_products_from_premier_products()
+            msgs = self.model.objects.create_from_relevant()
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
         self.display_messages(request, msgs, include_info=False)
     create_items_class_action.allowed_permissions = ('view',)
     create_items_class_action.label = 'Create items'
     create_items_class_action.short_description = (
-        'Create items from relevant Premier products'
+        'Create items from relevant Premier and SEMA products'
     )
 
     def link_products_class_action(self, request, queryset):
@@ -40,5 +40,5 @@ class ItemActions(RelevancyActions):
     link_products_class_action.allowed_permissions = ('view',)
     link_products_class_action.label = 'Link products'
     link_products_class_action.short_description = (
-        'Create product if Premier product and Sema product exist'
+        'Link missing Premier and SEMA products by part numbers'
     )
