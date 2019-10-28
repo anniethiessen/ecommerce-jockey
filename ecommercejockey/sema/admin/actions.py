@@ -289,3 +289,29 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
     update_html_queryset_action.short_description = (
         'Update selected %(verbose_name_plural)s\' HTML from SEMA API'
     )
+
+    def update_description_pies_object_action(self, request, obj):
+        try:
+            msgs = obj.perform_description_pies_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_description_pies_object_action.allowed_permissions = ('view',)
+    update_description_pies_object_action.label = (
+        "Update description PIES from API"
+    )
+    update_description_pies_object_action.short_description = (
+        'Update this SEMA product\'s description PIES from SEMA API'
+    )
+
+    def update_description_pies_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_description_pies_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_description_pies_queryset_action.allowed_permissions = ('view',)
+    update_description_pies_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' '
+        'description PIES from SEMA API'
+    )

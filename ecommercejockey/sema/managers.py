@@ -509,6 +509,17 @@ class SemaProductQuerySet(SemaBaseQuerySet):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
+    def perform_description_pies_update(self):
+        msgs = []
+        try:
+            data = self.get_description_pies_data_from_api()
+            msgs += self.model.objects.update_description_pies_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
     def get_products_by_brand_data_from_api(self, base_vehicle_ids=None,
                                             vehicle_ids=None, year=None,
                                             make_name=None, model_name=None,
@@ -578,6 +589,14 @@ class SemaProductQuerySet(SemaBaseQuerySet):
                     part_numbers=part_numbers
                 )
             return data
+        except Exception:
+            raise
+
+    def get_description_pies_data_from_api(self):
+        try:
+            return self.get_products_by_brand_data_from_api(
+                pies_segments=['C10']
+            )
         except Exception:
             raise
 
@@ -1634,6 +1653,17 @@ class SemaProductManager(SemaBaseManager):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
+    def perform_description_pies_update(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_description_pies_update()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
     def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
                                         base_vehicle_ids=None,
                                         vehicle_ids=None, part_numbers=None,
@@ -1838,4 +1868,16 @@ class SemaProductManager(SemaBaseManager):
                     f"{product_id}, {err}")
                 )
                 continue
+        return msgs
+
+    def update_description_pies_from_api_data(self, data):
+        msgs = []
+        for item in data:
+            try:
+                product = self.get(product_id=item['ProductId'])
+                msgs += product.update_description_pies_from_api_data(
+                    item['PiesAttributes']
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
         return msgs

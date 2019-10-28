@@ -1179,6 +1179,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     actions = (
         'update_html_queryset_action',
         'update_product_vehicles_queryset_action',
+        'update_description_pies_queryset_action',
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
     )
@@ -1191,7 +1192,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     change_actions = (
         'update_html_object_action',
-        'update_product_vehicles_object_action'
+        'update_product_vehicles_object_action',
+        'update_description_pies_object_action'
     )
 
     list_display = (
