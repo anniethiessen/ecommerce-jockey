@@ -196,13 +196,10 @@ class SemaApi(object):
 
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
-    def retrieve_categories(self, brand_ids=None, dataset_ids=None,
+    def retrieve_categories(self, brand_ids, dataset_ids=None,
                             base_vehicle_ids=None, vehicle_ids=None,
                             year=None, make_name=None,
                             model_name=None, submodel_name=None):
-        if not (brand_ids or dataset_ids):
-            raise Exception('Brand ID or dataset ID required')
-
         url = f'{settings.SEMA_BASE_URL}/lookup/categories'
         data = {
             'token': self.token,
@@ -224,14 +221,11 @@ class SemaApi(object):
 
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
-    def retrieve_products_by_brand(self, brand_ids=None, dataset_ids=None,
+    def retrieve_products_by_brand(self, brand_ids, dataset_ids=None,
                                    base_vehicle_ids=None, vehicle_ids=None,
                                    year=None, make_name=None,
                                    model_name=None, submodel_name=None,
                                    part_numbers=None, pies_segments=None):
-        if not (brand_ids or dataset_ids):
-            raise Exception('Brand ID or dataset ID required')
-
         url = f'{settings.SEMA_BASE_URL}/lookup/products'
         data = {
             'token': self.token,

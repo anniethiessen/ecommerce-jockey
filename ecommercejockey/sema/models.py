@@ -172,6 +172,51 @@ class SemaBrand(SemaBaseModel):
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
+    def get_categories_data_from_api(self, dataset_ids=None,
+                                     base_vehicle_ids=None, vehicle_ids=None,
+                                     year=None, make_name=None,
+                                     model_name=None, submodel_name=None):
+        try:
+            data = sema_api.retrieve_categories(
+                brand_ids=[self.brand_id],
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name
+            )
+            for item in data:
+                item['brand_id_'] = self.brand_id
+        except Exception:
+            raise
+
+    def get_products_by_brand_data_from_api(self, dataset_ids=None,
+                                            base_vehicle_ids=None,
+                                            vehicle_ids=None,
+                                            year=None, make_name=None,
+                                            model_name=None, submodel_name=None,
+                                            part_numbers=None,
+                                            pies_segments=None):
+        try:
+            data = sema_api.retrieve_products_by_brand(
+                brand_ids=[self.brand_id],
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments
+            )
+            for item in data:
+                item['brand_id_'] = self.brand_id
+        except Exception:
+            raise
+
     def get_vehicles_by_product_data_from_api(self, dataset_id=None,
                                               part_numbers=None):
         """
@@ -299,6 +344,47 @@ class SemaDataset(SemaBaseModel):
         if not msgs:
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
+
+    def get_categories_data_from_api(self, base_vehicle_ids=None,
+                                     vehicle_ids=None, year=None, make_name=None,
+                                     model_name=None, submodel_name=None):
+        try:
+            data = self.brand.get_categories_data_from_api(
+                dataset_ids=[self.dataset_id],
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name
+            )
+            for item in data:
+                item['dataset_id_'] = self.brand_id
+        except Exception:
+            raise
+
+    def get_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                            vehicle_ids=None, year=None,
+                                            make_name=None, model_name=None,
+                                            submodel_name=None,
+                                            part_numbers=None,
+                                            pies_segments=None):
+        try:
+            data = self.brand.get_products_by_brand_data_from_api(
+                dataset_ids=[self.dataset_id],
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments
+            )
+            for item in data:
+                item['dataset_id_'] = self.brand_id
+        except Exception:
+            raise
 
     def get_vehicles_by_product_data_from_api(self, part_numbers=None):
         """
@@ -1002,6 +1088,27 @@ class SemaProduct(SemaBaseModel):
         if not msgs:
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
+
+    def get_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                            vehicle_ids=None, year=None,
+                                            make_name=None, model_name=None,
+                                            submodel_name=None,
+                                            pies_segments=None):
+        try:
+            data = self.dataset.get_products_by_brand_data_from_api(
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=[self.part_number],
+                pies_segments=pies_segments
+            )
+            for item in data:
+                item['product_id_'] = self.product_id
+        except Exception:
+            raise
 
     def get_product_html_data_from_api(self):
         """
