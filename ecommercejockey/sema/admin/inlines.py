@@ -1,11 +1,15 @@
 from django.contrib.admin import TabularInline
 
-from core.admin.utils import get_change_view_link
+from core.admin.utils import (
+    get_change_view_link,
+    get_image_preview
+)
 from ..models import (
     SemaBaseVehicle,
     SemaCategory,
     SemaDataset,
     SemaDescriptionPiesAttribute,
+    SemaDigitalAssetsPiesAttribute,
     SemaMakeYear,
     SemaProduct,
     SemaVehicle
@@ -356,11 +360,8 @@ class SemaProductTabularInline(TabularInline):
     details_link.short_description = ''
 
 
-class SemaDescriptionPiesAttributeTabularInline(TabularInline):
-    model = SemaDescriptionPiesAttribute
+class SemaPiesAttributeBaseTabularInline(TabularInline):
     extra = 0
-    verbose_name = 'description PIES'
-    verbose_name_plural = 'description PIES'
     ordering = (
         'segment',
     )
@@ -383,3 +384,40 @@ class SemaDescriptionPiesAttributeTabularInline(TabularInline):
             return None
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+
+class SemaDescriptionPiesAttributeTabularInline(SemaPiesAttributeBaseTabularInline):
+    model = SemaDescriptionPiesAttribute
+    verbose_name = 'description PIES'
+    verbose_name_plural = 'description PIES'
+
+
+class SemaDigitalAssetsPiesAttributeTabularInline(SemaPiesAttributeBaseTabularInline):
+    model = SemaDigitalAssetsPiesAttribute
+    verbose_name = 'digital assets PIES'
+    verbose_name_plural = 'digital assets PIES'
+
+    fields = (
+        'details_link',
+        'product',
+        'segment',
+        'value',
+        'image_preview',
+        'is_authorized',
+        'is_relevant'
+    )
+
+    readonly_fields = (
+        'image_preview',
+        'details_link',
+    )
+
+    def image_preview(self, obj):
+        if not obj.value:
+            return ''
+        try:
+            return get_image_preview(obj.value, width="100")
+        except Exception as err:
+            return str(err)
+    image_preview.short_description = ''
+

@@ -301,7 +301,7 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
             messages.error(request, str(err))
     update_description_pies_object_action.allowed_permissions = ('view',)
     update_description_pies_object_action.label = (
-        "Update description PIES from API"
+        "Update descriptions from API"
     )
     update_description_pies_object_action.short_description = (
         'Update this SEMA product\'s description PIES from SEMA API'
@@ -320,4 +320,36 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
     update_description_pies_queryset_action.short_description = (
         'Update selected %(verbose_name_plural)s\' '
         'description PIES from SEMA API'
+    )
+
+    def update_digital_assets_pies_object_action(self, request, obj):
+        from sema.models import SemaDigitalAssetsPiesAttribute
+        try:
+            msgs = obj.perform_pies_attribute_update(
+                SemaDigitalAssetsPiesAttribute
+            )
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_digital_assets_pies_object_action.allowed_permissions = ('view',)
+    update_digital_assets_pies_object_action.label = (
+        "Update assets from API"
+    )
+    update_digital_assets_pies_object_action.short_description = (
+        'Update this SEMA product\'s digital assets PIES from SEMA API'
+    )
+
+    def update_digital_assets_pies_queryset_action(self, request, queryset):
+        from sema.models import SemaDigitalAssetsPiesAttribute
+        try:
+            msgs = queryset.perform_pies_attribute_update(
+                SemaDigitalAssetsPiesAttribute
+            )
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_digital_assets_pies_queryset_action.allowed_permissions = ('view',)
+    update_digital_assets_pies_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' '
+        'digital assets PIES from SEMA API'
     )

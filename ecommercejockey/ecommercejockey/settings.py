@@ -203,8 +203,12 @@ ADMIN_REORDER = (
             },
             {
                 'model': 'sema.SemaDescriptionPiesAttribute',
-                'label': 'Description PIES'
+                'label': 'Description PIES'  # TODO remove
             },
+            {
+                'model': 'sema.SemaDigitalAssetsPiesAttribute',
+                'label': 'Digital Assets PIES'  # TODO remove
+            }
         )
     }
 )

@@ -1025,6 +1025,9 @@ class SemaProduct(SemaBaseModel):
             if not self.description_pies_attributes.count() > 0:
                 error = "missing description PIES"
                 msgs.append(error)
+            if not self.digital_assets_pies_attributes.count() > 0:
+                error = "missing digital assets PIES"
+                msgs.append(error)
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
 
@@ -1453,7 +1456,27 @@ class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
 
     class Meta:
         verbose_name = 'SEMA description PIES'
+        verbose_name_plural = 'SEMA description PIES'
 
     @classmethod
     def get_attribute_codes(cls):
         return ['C10']
+
+
+class SemaDigitalAssetsPiesAttribute(SemaBasePiesAttributeModel):
+    product = ForeignKey(
+        SemaProduct,
+        on_delete=CASCADE,
+        related_name='digital_assets_pies_attributes'
+    )
+    value = CharField(
+        max_length=500
+    )
+
+    class Meta:
+        verbose_name = 'SEMA digital assets PIES'
+        verbose_name_plural = 'SEMA digital assets PIES'
+
+    @classmethod
+    def get_attribute_codes(cls):
+        return ['P05', 'P80']

@@ -14,6 +14,7 @@ from ..models import (
     SemaCategory,
     SemaDataset,
     SemaDescriptionPiesAttribute,
+    SemaDigitalAssetsPiesAttribute,
     SemaMake,
     SemaMakeYear,
     SemaModel,
@@ -59,6 +60,7 @@ from .inlines import (
     SemaCategoryProductsTabularInline,
     SemaDatasetTabularInline,
     SemaDescriptionPiesAttributeTabularInline,
+    SemaDigitalAssetsPiesAttributeTabularInline,
     # SemaMakeYearTabularInline,
     SemaProductTabularInline,
     SemaVehicleProductsTabularInline,
@@ -1178,6 +1180,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'update_html_queryset_action',
         'update_product_vehicles_queryset_action',
         'update_description_pies_queryset_action',
+        'update_digital_assets_pies_queryset_action',
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
     )
@@ -1191,6 +1194,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     change_actions = (
         'update_html_object_action',
         'update_product_vehicles_object_action',
+        'update_description_pies_object_action',
         'update_description_pies_object_action'
     )
 
@@ -1313,6 +1317,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     inlines = (
         SemaDescriptionPiesAttributeTabularInline,
+        SemaDigitalAssetsPiesAttributeTabularInline
     )
 
     def details_link(self, obj):
@@ -1360,8 +1365,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             'vehicles', 'categories')
 
 
-@admin.register(SemaDescriptionPiesAttribute)
-class SemaDescriptionPiesAttributeModelAdmin(ModelAdmin):
+class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
     list_select_related = (
         'product',
     )
@@ -1438,3 +1442,65 @@ class SemaDescriptionPiesAttributeModelAdmin(ModelAdmin):
     def product_link(self, obj):
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
+
+
+@admin.register(SemaDescriptionPiesAttribute)
+class SemaDescriptionPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdmin):
+    pass
+
+
+@admin.register(SemaDigitalAssetsPiesAttribute)
+class SemaSemaDigitalAssetsPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdmin):
+    list_display = (
+        'details_link',
+        'product',
+        'segment',
+        'value',
+        'image_preview',
+        'is_authorized',
+        'is_relevant',
+        'notes'
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'is_authorized',
+                    'is_relevant'
+                )
+            }
+        ),
+        (
+            'Product', {
+                'fields': (
+                    'product_link',
+                    'product'
+                )
+            }
+        ),
+        (
+            'PIES Attribute', {
+                'fields': (
+                    'segment',
+                    ('value', 'image_preview')
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'image_preview',
+        'details_link',
+        'product_link'
+    )
+
+    def image_preview(self, obj):
+        if not obj.value:
+            return ''
+        try:
+            return get_image_preview(obj.value, width="100")
+        except Exception as err:
+            return str(err)
+
+    image_preview.short_description = ''

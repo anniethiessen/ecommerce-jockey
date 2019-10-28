@@ -29,6 +29,9 @@ def get_change_view_link(instance, link_name, query=None):
 
 
 def get_image_preview(image_link, width="150"):
-    return mark_safe(
-        f'<img src="{image_link}" width={width} />'
-    )
+    try:
+        return mark_safe(
+            f'<img src="{image_link}" width={width} />'
+        )
+    except Exception:
+        raise
