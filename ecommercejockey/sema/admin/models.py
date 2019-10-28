@@ -1171,9 +1171,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'dataset__dataset_id',
         'dataset__name',
         'product_id',
-        'part_number',
-        'pies_c10_des',
-        'pies_c10_ext'
+        'part_number'
     )
 
     actions = (
@@ -1200,10 +1198,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'details_link',
         'product_id',
         'part_number',
-        'pies_c10_des',
-        'pies_c10_ext',
         'dataset',
-        'primary_image_preview',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -1245,9 +1240,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
             'Product', {
                 'fields': (
                     'product_id',
-                    'part_number',
-                    'pies_c10_des',
-                    'pies_c10_ext'
+                    'part_number'
                 )
             }
         ),
@@ -1273,13 +1266,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                 ),
                 'classes': (
                     'collapse',
-                )
-            }
-        ),
-        (
-            'Images', {
-                'fields': (
-                    ('primary_image_url', 'primary_image_preview'),
                 )
             }
         ),
@@ -1316,7 +1302,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     readonly_fields = (
-        'primary_image_preview',
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',
@@ -1345,12 +1330,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     def brand_a(self, obj):
         return str(obj.dataset.brand)
     brand_a.short_description = 'brand'
-
-    def primary_image_preview(self, obj):
-        if not obj.primary_image_url:
-            return ''
-        return get_image_preview(obj.primary_image_url, width="100")
-    primary_image_preview.short_description = 'primary image'
 
     def html_preview(self, obj):
         if not obj.html:

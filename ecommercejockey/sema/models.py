@@ -990,19 +990,6 @@ class SemaProduct(SemaBaseModel):
         blank=True,
         related_name='products'
     )
-    pies_c10_des = CharField(
-        blank=True,
-        max_length=100,
-        verbose_name='title'
-    )
-    pies_c10_ext = CharField(
-        blank=True,
-        max_length=500,
-        verbose_name='description'
-    )
-    primary_image_url = URLField(
-        blank=True
-    )
 
     @property
     def may_be_relevant(self):
@@ -1032,17 +1019,11 @@ class SemaProduct(SemaBaseModel):
             if not self.html or self.html == '':
                 error = "no html"
                 msgs.append(error)
-            if not self.primary_image_url or self.primary_image_url == '':
-                error = "missing image"
-                msgs.append(error)
             if not self.categories.count() == 3:
                 error = "missing categories"
                 msgs.append(error)
-            if not self.pies_c10_des:
-                error = "missing title"
-                msgs.append(error)
-            if not self.pies_c10_ext:
-                error = "missing description"
+            if not self.description_pies_attributes.count() > 0:
+                error = "missing description PIES"
                 msgs.append(error)
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
@@ -1053,9 +1034,7 @@ class SemaProduct(SemaBaseModel):
         state.update(
             {
                 'Part': self.part_number,
-                'Dataset': str(self.dataset),
-                'Title': self.pies_c10_des,
-                'Description': self.pies_c10_ext
+                'Dataset': str(self.dataset)
             }
         )
         return state
@@ -1440,7 +1419,8 @@ class SemaProduct(SemaBaseModel):
 class SemaBasePiesAttributeModel(SemaBaseModel):
     product = ForeignKey(
         SemaProduct,
-        on_delete=CASCADE
+        on_delete=CASCADE,
+        related_name='pies_attributes'
     )
     segment = CharField(
         max_length=100
@@ -1455,6 +1435,11 @@ class SemaBasePiesAttributeModel(SemaBaseModel):
 
 
 class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
+    product = ForeignKey(
+        SemaProduct,
+        on_delete=CASCADE,
+        related_name='description_pies_attributes'
+    )
     value = CharField(
         max_length=500
     )
