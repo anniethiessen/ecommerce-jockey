@@ -291,8 +291,11 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
     )
 
     def update_description_pies_object_action(self, request, obj):
+        from sema.models import SemaDescriptionPiesAttribute
         try:
-            msgs = obj.perform_description_pies_update()
+            msgs = obj.perform_pies_attribute_update(
+                SemaDescriptionPiesAttribute
+            )
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -305,8 +308,11 @@ class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
     )
 
     def update_description_pies_queryset_action(self, request, queryset):
+        from sema.models import SemaDescriptionPiesAttribute
         try:
-            msgs = queryset.perform_description_pies_update()
+            msgs = queryset.perform_pies_attribute_update(
+                SemaDescriptionPiesAttribute
+            )
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))

@@ -509,11 +509,14 @@ class SemaProductQuerySet(SemaBaseQuerySet):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def perform_description_pies_update(self):
+    def perform_pies_attribute_update(self, attribute_model):
         msgs = []
         try:
-            data = self.get_description_pies_data_from_api()
-            msgs += self.model.objects.update_description_pies_from_api_data(data)
+            data = self.get_pies_attribute_data_from_api(attribute_model)
+            msgs += self.model.objects.update_pies_attributes_from_api_data(
+                attribute_model,
+                data
+            )
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
         if not msgs:
@@ -592,10 +595,10 @@ class SemaProductQuerySet(SemaBaseQuerySet):
         except Exception:
             raise
 
-    def get_description_pies_data_from_api(self):
+    def get_pies_attribute_data_from_api(self, attribute_model):
         try:
             return self.get_products_by_brand_data_from_api(
-                pies_segments=['C10']
+                pies_segments=attribute_model.get_attribute_codes()
             )
         except Exception:
             raise
@@ -1646,10 +1649,12 @@ class SemaProductManager(SemaBaseManager):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def perform_description_pies_update(self):
+    def perform_pies_attribute_update(self, attribute_model):
         msgs = []
         try:
-            msgs += self.get_queryset().perform_description_pies_update()
+            msgs += self.get_queryset().perform_pies_attribute_update(
+                attribute_model
+            )
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
 
@@ -1863,12 +1868,13 @@ class SemaProductManager(SemaBaseManager):
                 continue
         return msgs
 
-    def update_description_pies_from_api_data(self, data):
+    def update_pies_attributes_from_api_data(self, attribute_model, data):
         msgs = []
         for item in data:
             try:
                 product = self.get(product_id=item['ProductId'])
-                msgs += product.update_description_pies_from_api_data(
+                msgs += product.update_pies_attributes_from_api_data(
+                    attribute_model,
                     item['PiesAttributes']
                 )
             except Exception as err:

@@ -362,7 +362,7 @@ class SemaDataset(SemaBaseModel):
             )
             for item in data:
                 item['dataset_id_'] = self.brand_id
-            return  data
+            return data
         except Exception:
             raise
 
@@ -1072,11 +1072,14 @@ class SemaProduct(SemaBaseModel):
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
-    def perform_description_pies_update(self):
+    def perform_pies_attribute_update(self, attribute_model):
         msgs = []
         try:
-            data = self.get_description_pies_data_from_api()
-            msgs += self.update_description_pies_from_api_data(data)
+            data = self.get_pies_attribute_data_from_api(attribute_model)
+            msgs += self.update_pies_attributes_from_api_data(
+                attribute_model,
+                data
+            )
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
         return msgs
@@ -1162,10 +1165,10 @@ class SemaProduct(SemaBaseModel):
         except Exception:
             raise
 
-    def get_description_pies_data_from_api(self):
+    def get_pies_attribute_data_from_api(self, attribute_model):
         try:
             data = self.get_products_by_brand_data_from_api(
-                pies_segments=['C10']
+                pies_segments=attribute_model.get_attribute_codes()
             )
             return data[0]['PiesAttributes']
         except Exception:
@@ -1373,11 +1376,11 @@ class SemaProduct(SemaBaseModel):
                 continue
         return msgs
 
-    def update_description_pies_from_api_data(self, data):
+    def update_pies_attributes_from_api_data(self, attribute_model, data):
         msgs = []
         for item in data:
             try:
-                attribute = SemaDescriptionPiesAttribute.objects.get(
+                attribute = attribute_model.objects.get(
                     product=self,
                     segment=item['PiesSegment']
                 )
@@ -1391,8 +1394,8 @@ class SemaProduct(SemaBaseModel):
                     attribute.value = item['Value']
                     attribute.save()
                     msgs.append(attribute.get_update_success_msg())
-            except SemaDescriptionPiesAttribute.DoesNotExist:
-                attribute = SemaDescriptionPiesAttribute.objects.create(
+            except attribute_model.DoesNotExist:
+                attribute = attribute_model.objects.create(
                     product=self,
                     segment=item['PiesSegment'],
                     value=item['Value'],
@@ -1433,6 +1436,10 @@ class SemaBasePiesAttributeModel(SemaBaseModel):
     def __str__(self):
         return f"{self.product} :: {self.segment}"
 
+    @classmethod
+    def get_attribute_codes(cls):
+        return ['all']
+
 
 class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
     product = ForeignKey(
@@ -1446,3 +1453,7 @@ class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
 
     class Meta:
         verbose_name = 'SEMA description PIES'
+
+    @classmethod
+    def get_attribute_codes(cls):
+        return ['C10']
