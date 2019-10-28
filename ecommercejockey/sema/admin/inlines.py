@@ -5,6 +5,7 @@ from ..models import (
     SemaBaseVehicle,
     SemaCategory,
     SemaDataset,
+    SemaDescriptionPiesAttribute,
     SemaMakeYear,
     SemaProduct,
     SemaVehicle
@@ -340,6 +341,35 @@ class SemaProductTabularInline(TabularInline):
         'product_id',
         'part_number',
         'dataset',
+        'is_authorized',
+        'is_relevant'
+    )
+
+    readonly_fields = (
+        'details_link',
+    )
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+
+class SemaDescriptionPiesAttributeTabularInline(TabularInline):
+    model = SemaDescriptionPiesAttribute
+    extra = 0
+    verbose_name = 'description PIES'
+    verbose_name_plural = 'description PIES'
+    ordering = (
+        'segment',
+    )
+
+    fields = (
+        'details_link',
+        'product',
+        'segment',
+        'value',
         'is_authorized',
         'is_relevant'
     )

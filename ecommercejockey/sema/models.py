@@ -1379,3 +1379,23 @@ class SemaProduct(SemaBaseModel):
 
     def __str__(self):
         return f'{self.product_id} :: {self.dataset}'
+
+
+class SemaBasePiesAttributeModel(SemaBaseModel):
+    product = ForeignKey(
+        SemaProduct,
+        on_delete=CASCADE
+    )
+    segment = CharField(
+        max_length=100
+    )
+
+    class Meta:
+        unique_together = ('product', 'segment')
+        abstract = True
+
+
+class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
+    value = CharField(
+        max_length=500
+    )

@@ -13,6 +13,7 @@ from ..models import (
     SemaBrand,
     SemaCategory,
     SemaDataset,
+    SemaDescriptionPiesAttribute,
     SemaMake,
     SemaMakeYear,
     SemaModel,
@@ -57,6 +58,7 @@ from .inlines import (
     SemaCategoryParentsTabularInline,
     SemaCategoryProductsTabularInline,
     SemaDatasetTabularInline,
+    SemaDescriptionPiesAttributeTabularInline,
     # SemaMakeYearTabularInline,
     SemaProductTabularInline,
     SemaVehicleProductsTabularInline,
@@ -106,7 +108,6 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -217,7 +218,6 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -328,7 +328,6 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -411,7 +410,6 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -494,7 +492,6 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -577,7 +574,6 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -669,7 +665,6 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -811,7 +806,6 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -955,7 +949,6 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -1098,7 +1091,6 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -1223,7 +1215,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     list_editable = (
         'is_relevant',
-        'is_authorized'
     )
 
     list_filter = (
@@ -1333,6 +1324,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'html_preview'
     )
 
+    inlines = (
+        SemaDescriptionPiesAttributeTabularInline,
+    )
+
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
@@ -1382,3 +1377,83 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related(
             'vehicles', 'categories')
+
+
+@admin.register(SemaDescriptionPiesAttribute)
+class SemaDescriptionPiesAttributeModelAdmin(ModelAdmin):
+    list_select_related = (
+        'product',
+    )
+
+    search_fields = (
+        'product__dataset__brand__brand_id',
+        'product__dataset__brand__name',
+        'product__dataset__dataset_id',
+        'product__dataset__name',
+        'product__product_id',
+        'product__part_number',
+        'segment',
+        'value'
+    )
+
+    list_display = (
+        'details_link',
+        'product',
+        'segment',
+        'value',
+        'is_authorized',
+        'is_relevant',
+        'notes'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_editable = (
+        'is_relevant',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'is_authorized',
+                    'is_relevant'
+                )
+            }
+        ),
+        (
+            'Product', {
+                'fields': (
+                    'product_link',
+                    'product'
+                )
+            }
+        ),
+        (
+            'PIES Attribute', {
+                'fields': (
+                    'segment',
+                    'value'
+                )
+            }
+        )
+    )
+
+    autocomplete_fields = (
+        'product',
+    )
+
+    readonly_fields = (
+        'details_link',
+        'product_link'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def product_link(self, obj):
+        return get_change_view_link(obj.product, 'See full product')
+    product_link.short_description = ''

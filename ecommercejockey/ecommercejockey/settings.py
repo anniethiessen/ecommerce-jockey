@@ -200,7 +200,11 @@ ADMIN_REORDER = (
             {
                 'model': 'sema.SemaProduct',
                 'label': 'Products'
-            }
+            },
+            {
+                'model': 'sema.SemaDescriptionPiesAttribute',
+                'label': 'Description PIES'
+            },
         )
     }
 )
