@@ -4,23 +4,22 @@ from core.admin.actions import RelevancyActions
 
 
 class SemaBaseActions(RelevancyActions):
-    def import_and_unauthorize_class_action(self, request, queryset):
+    def import_new_class_action(self, request, queryset):
         try:
-            msgs = self.model.objects.import_and_unauthorize_from_api()
+            msgs = self.model.objects.perform_import_from_api(new_only=True)
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
-    import_and_unauthorize_class_action.allowed_permissions = ('view',)
-    import_and_unauthorize_class_action.label = 'Import/Unauthorize from API'
-    import_and_unauthorize_class_action.short_description = (
-        'Create or update all available objects from SEMA API. '
-        'Unauthorizes existing objects no longer returned by API. '
+    import_new_class_action.allowed_permissions = ('view',)
+    import_new_class_action.label = 'Import New from API'
+    import_new_class_action.short_description = (
+        'Create new objects from SEMA API. '
         'WARNING: All related objects must be up-to-date'
     )
 
     def import_class_action(self, request, queryset):
         try:
-            msgs = self.model.objects.import_from_api(new_only=False)
+            msgs = self.model.objects.perform_import_from_api(new_only=False)
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -31,25 +30,93 @@ class SemaBaseActions(RelevancyActions):
         'WARNING: All related objects must be up-to-date'
     )
 
-
-class SemaProductVehicleActions(SemaBaseActions):
-    def update_product_vehicles_class_action(self, request, queryset):
+    def unauthorize_class_action(self, request, queryset):
         try:
-            queryset = queryset.filter(is_authorized=True)
-            msgs = queryset.perform_product_vehicle_update()
+            msgs = self.model.objects.perform_unauthorize_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
-    update_product_vehicles_class_action.allowed_permissions = ('view',)
-    update_product_vehicles_class_action.label = (
-        "Update Product Vehicles from API"
+    unauthorize_class_action.allowed_permissions = ('view',)
+    unauthorize_class_action.label = 'Unauthorize from API'
+    unauthorize_class_action.short_description = (
+        'Unauthorizes existing objects no longer returned by API. '
+        'WARNING: All related objects must be up-to-date'
     )
-    update_product_vehicles_class_action.short_description = (
-        'Add vehicles to products of available objects from SEMA API. '
+
+    def sync_class_action(self, request, queryset):
+        try:
+            msgs = self.model.objects.perform_api_sync()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    sync_class_action.allowed_permissions = ('view',)
+    sync_class_action.label = 'Sync with API'
+    sync_class_action.short_description = (
+        'Create or update all available objects from SEMA API. '
+        'Unauthorizes existing objects no longer returned by API. '
+        'WARNING: All related objects must be up-to-date'
+    )
+
+
+class SemaDatasetVehicleActions(SemaBaseActions):
+    def update_dataset_vehicles_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_dataset_vehicles_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_dataset_vehicles_queryset_action.allowed_permissions = ('view',)
+    update_dataset_vehicles_queryset_action.short_description = (
+        'Add vehicles to selected %(verbose_name_plural)s from SEMA API'
+    )
+
+    def update_dataset_vehicles_object_action(self, request, obj):
+        try:
+            msgs = obj.perform_dataset_vehicles_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_dataset_vehicles_object_action.allowed_permissions = ('view',)
+    update_dataset_vehicles_object_action.label = (
+        "Update Vehicles from API"
+    )
+    update_dataset_vehicles_object_action.short_description = (
+        'Add vehicles to this object from SEMA API. '
         'Does not remove existing vehicles no longer returned by API. '
         'WARNING: Related objects must be up-to-date.'
     )
 
+
+class SemaDatasetCategoryActions(SemaBaseActions):
+    def update_dataset_categories_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_dataset_categories_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_dataset_categories_queryset_action.allowed_permissions = ('view',)
+    update_dataset_categories_queryset_action.short_description = (
+        'Add categories to selected %(verbose_name_plural)s from SEMA API'
+    )
+
+    def update_dataset_categories_object_action(self, request, obj):
+        try:
+            msgs = obj.perform_dataset_categories_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_dataset_categories_object_action.allowed_permissions = ('view',)
+    update_dataset_categories_object_action.label = (
+        "Update Categories from API"
+    )
+    update_dataset_categories_object_action.short_description = (
+        'Add categories to this object from SEMA API. '
+        'Does not remove existing categories no longer returned by API. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
+
+class SemaProductVehicleActions(SemaBaseActions):
     def update_product_vehicles_queryset_action(self, request, queryset):
         try:
             msgs = queryset.perform_product_vehicle_update()
@@ -69,7 +136,7 @@ class SemaProductVehicleActions(SemaBaseActions):
             messages.error(request, str(err))
     update_product_vehicles_object_action.allowed_permissions = ('view',)
     update_product_vehicles_object_action.label = (
-        "Update Product Vehicles from API"
+        "Update Vehicles from API"
     )
     update_product_vehicles_object_action.short_description = (
         'Add vehicles to products of this object from SEMA API. '
@@ -79,26 +146,9 @@ class SemaProductVehicleActions(SemaBaseActions):
 
 
 class SemaCategoryProductActions(SemaBaseActions):
-    def update_category_products_class_action(self, request, queryset):
-        try:
-            queryset = queryset.filter(is_authorized=True)
-            msgs = queryset.perform_product_category_update()
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_category_products_class_action.allowed_permissions = ('view',)
-    update_category_products_class_action.label = (
-        "Update Category Products from API"
-    )
-    update_category_products_class_action.short_description = (
-        'Add products to available categories from SEMA API. '
-        'Does not remove existing products no longer returned by API. '
-        'WARNING: Related objects must be up-to-date.'
-    )
-
     def update_category_products_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.perform_product_category_update()
+            msgs = queryset.perform_category_products_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -109,13 +159,13 @@ class SemaCategoryProductActions(SemaBaseActions):
 
     def update_category_products_object_action(self, request, obj):
         try:
-            msgs = obj.perform_product_category_update()
+            msgs = obj.perform_category_products_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
     update_category_products_object_action.allowed_permissions = ('view',)
     update_category_products_object_action.label = (
-        "Update Category Products from API"
+        "Update Products from API"
     )
     update_category_products_object_action.short_description = (
         'Add products to this category from SEMA API. '
@@ -123,105 +173,109 @@ class SemaCategoryProductActions(SemaBaseActions):
         'WARNING: Related objects must be up-to-date.'
     )
 
-    def update_product_categories_class_action(self, request, queryset):
-        from ..models import SemaCategory
+
+class SemaProductPiesAttributeActions(SemaBaseActions):
+    def update_description_pies_object_action(self, request, obj):
+        from sema.models import SemaDescriptionPiesAttribute
+
         try:
-            queryset = SemaCategory.objects.filter(is_authorized=True)
-            msgs = queryset.perform_product_category_update()
+            msgs = obj.perform_pies_attribute_update_from_api(
+                pies_attr_model=SemaDescriptionPiesAttribute
+            )
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
-    update_product_categories_class_action.allowed_permissions = ('view',)
-    update_product_categories_class_action.label = (
-        "Update Product Categories from API"
+    update_description_pies_object_action.allowed_permissions = ('view',)
+    update_description_pies_object_action.label = (
+        "Update descriptions from API"
     )
-    update_product_categories_class_action.short_description = (
-        'Add available categories to products from SEMA API. '
-        'Does not remove existing categories no longer returned by API. '
-        'WARNING: Related objects must be up-to-date.'
+    update_description_pies_object_action.short_description = (
+        'Update this SEMA product\'s description PIES from SEMA API'
     )
 
+    def update_description_pies_queryset_action(self, request, queryset):
+        from sema.models import SemaDescriptionPiesAttribute
 
-class SemaBrandActions(SemaProductVehicleActions):
-    def import_datasets_object_action(self, request, obj):
         try:
-            msgs = obj.import_datasets_from_api()
+            msgs = queryset.perform_pies_attribute_update_from_api(
+                pies_attr_model=SemaDescriptionPiesAttribute
+            )
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
-    import_datasets_object_action.allowed_permissions = ('view',)
-    import_datasets_object_action.label = "Import Datasets from API"
-    import_datasets_object_action.short_description = (
-        'Create or update all available datasets of this brand from SEMA API. '
-        'Does not unauthorizes existing objects no longer returned by API. '
-        'WARNING: Brand must be up-to-date'
+    update_description_pies_queryset_action.allowed_permissions = ('view',)
+    update_description_pies_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' '
+        'description PIES from SEMA API'
     )
 
-    def import_datasets_queryset_action(self, request, queryset):
+    def update_digital_assets_pies_object_action(self, request, obj):
+        from sema.models import SemaDigitalAssetsPiesAttribute
+
         try:
-            msgs = queryset.import_datasets_from_api()
+            msgs = obj.perform_pies_attribute_update_from_api(
+                pies_attr_model=SemaDigitalAssetsPiesAttribute
+            )
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
-    import_datasets_queryset_action.allowed_permissions = ('view',)
-    import_datasets_queryset_action.short_description = (
-        'Import datasets for selected %(verbose_name_plural)s\' from SEMA API'
+    update_digital_assets_pies_object_action.allowed_permissions = ('view',)
+    update_digital_assets_pies_object_action.label = (
+        "Update assets from API"
+    )
+    update_digital_assets_pies_object_action.short_description = (
+        'Update this SEMA product\'s digital assets PIES from SEMA API'
+    )
+
+    def update_digital_assets_pies_queryset_action(self, request, queryset):
+        from sema.models import SemaDigitalAssetsPiesAttribute
+
+        try:
+            msgs = queryset.perform_pies_attribute_update_from_api(
+                pies_attr_model=SemaDigitalAssetsPiesAttribute
+            )
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_digital_assets_pies_queryset_action.allowed_permissions = ('view',)
+    update_digital_assets_pies_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' '
+        'digital assets PIES from SEMA API'
     )
 
 
-class SemaDatasetActions(SemaProductVehicleActions):
+class SemaProductHtmlActions(SemaBaseActions):
+    def update_html_object_action(self, request, obj):
+        try:
+            msg = obj.perform_product_html_update_from_api()
+            self.display_message(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_html_object_action.allowed_permissions = ('view',)
+    update_html_object_action.label = "Update HTML from API"
+    update_html_object_action.short_description = (
+        'Update this SEMA product\'s HTML from SEMA API'
+    )
+
+    def update_html_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_product_html_update_from_api()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_html_queryset_action.allowed_permissions = ('view',)
+    update_html_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s\' HTML from SEMA API'
+    )
+
+
+class SemaBrandActions(SemaBaseActions):
     pass
 
-    # def import_products_object_action(self, request, obj):
-    #     if not obj.is_authorized:
-    #         messages.error(request, "Dataset needs to be authorized")
-    #         return
-    #
-    #     try:
-    #         token = self.model.retrieve_sema_api_token()
-    #     except Exception as err:
-    #         messages.error(request, f"Token error: {err}")
-    #         return
-    #
-    #     try:
-    #         msgs = obj.import_products_from_sema_api(token)
-    #         for msg in msgs:
-    #             if msg[:4] == 'Info':
-    #                 messages.info(request, msg)
-    #             elif msg[:7] == 'Success':
-    #                 messages.success(request, msg)
-    #             else:
-    #                 messages.error(request, msg)
-    #     except Exception as err:
-    #         messages.error(request, str(err))
-    # import_products_object_action.allowed_permissions = ('view',)
-    # import_products_object_action.label = 'Import Products from API'
-    # import_products_object_action.short_description = (
-    #     'Import products from SEMA API'
-    # )
-    #
-    # def import_products_queryset_action(self, request, queryset):
-    #     try:
-    #         token = self.model.retrieve_sema_api_token()
-    #     except Exception as err:
-    #         messages.error(request, f"Token error: {err}")
-    #         return
-    #
-    #     try:
-    #         msgs = queryset.import_products_from_sema_api(token)
-    #         for msg in msgs:
-    #             if msg[:4] == 'Info':
-    #                 messages.info(request, msg)
-    #             elif msg[:7] == 'Success':
-    #                 messages.success(request, msg)
-    #             else:
-    #                 messages.error(request, msg)
-    #     except Exception as err:
-    #         messages.error(request, str(err))
-    # import_products_queryset_action.allowed_permissions = ('view',)
-    # import_products_queryset_action.short_description = (
-    #     'Import products from SEMA API for selected %(verbose_name_plural)s'
-    # )
+
+class SemaDatasetActions(SemaDatasetCategoryActions,
+                         SemaDatasetVehicleActions):
+    pass
 
 
 class SemaYearActions(SemaBaseActions):
@@ -253,103 +307,10 @@ class SemaVehicleActions(SemaBaseActions):
 
 
 class SemaCategoryActions(SemaCategoryProductActions):
-    def update_product_categories_class_action(self, request, queryset):
-        raise Exception("This action is for product class only")
+    pass
 
 
-class SemaProductActions(SemaProductVehicleActions, SemaCategoryProductActions):
-    def update_category_products_class_action(self, request, queryset):
-        raise Exception("This action is for category class only")
-
-    def update_category_products_queryset_action(self, request, queryset):
-        raise Exception("This action is for category querysets only")
-
-    def update_category_products_object_action(self, request, obj):
-        raise Exception("This action is for category objects only")
-
-    def update_html_object_action(self, request, obj):
-        try:
-            msg = obj.perform_product_html_update()
-            self.display_message(request, msg)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_html_object_action.allowed_permissions = ('view',)
-    update_html_object_action.label = "Update HTML from API"
-    update_html_object_action.short_description = (
-        'Update this SEMA product\'s HTML from SEMA API'
-    )
-
-    def update_html_queryset_action(self, request, queryset):
-        try:
-            msgs = queryset.perform_product_html_update()
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_html_queryset_action.allowed_permissions = ('view',)
-    update_html_queryset_action.short_description = (
-        'Update selected %(verbose_name_plural)s\' HTML from SEMA API'
-    )
-
-    def update_description_pies_object_action(self, request, obj):
-        from sema.models import SemaDescriptionPiesAttribute
-        try:
-            msgs = obj.perform_pies_attribute_update(
-                SemaDescriptionPiesAttribute
-            )
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_description_pies_object_action.allowed_permissions = ('view',)
-    update_description_pies_object_action.label = (
-        "Update descriptions from API"
-    )
-    update_description_pies_object_action.short_description = (
-        'Update this SEMA product\'s description PIES from SEMA API'
-    )
-
-    def update_description_pies_queryset_action(self, request, queryset):
-        from sema.models import SemaDescriptionPiesAttribute
-        try:
-            msgs = queryset.perform_pies_attribute_update(
-                SemaDescriptionPiesAttribute
-            )
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_description_pies_queryset_action.allowed_permissions = ('view',)
-    update_description_pies_queryset_action.short_description = (
-        'Update selected %(verbose_name_plural)s\' '
-        'description PIES from SEMA API'
-    )
-
-    def update_digital_assets_pies_object_action(self, request, obj):
-        from sema.models import SemaDigitalAssetsPiesAttribute
-        try:
-            msgs = obj.perform_pies_attribute_update(
-                SemaDigitalAssetsPiesAttribute
-            )
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_digital_assets_pies_object_action.allowed_permissions = ('view',)
-    update_digital_assets_pies_object_action.label = (
-        "Update assets from API"
-    )
-    update_digital_assets_pies_object_action.short_description = (
-        'Update this SEMA product\'s digital assets PIES from SEMA API'
-    )
-
-    def update_digital_assets_pies_queryset_action(self, request, queryset):
-        from sema.models import SemaDigitalAssetsPiesAttribute
-        try:
-            msgs = queryset.perform_pies_attribute_update(
-                SemaDigitalAssetsPiesAttribute
-            )
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_digital_assets_pies_queryset_action.allowed_permissions = ('view',)
-    update_digital_assets_pies_queryset_action.short_description = (
-        'Update selected %(verbose_name_plural)s\' '
-        'digital assets PIES from SEMA API'
-    )
+class SemaProductActions(SemaProductVehicleActions,
+                         SemaProductPiesAttributeActions,
+                         SemaProductHtmlActions):
+    pass

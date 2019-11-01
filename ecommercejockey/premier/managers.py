@@ -5,7 +5,7 @@ from django.db.models import (
 )
 
 from core.utils import chunkify_list
-from .apis import premier_api
+from .clients import premier_client
 
 
 class PremierManufacturerQuerySet(QuerySet):
@@ -134,14 +134,14 @@ class PremierProductManager(Manager):
     @staticmethod
     def get_api_inventory_data(part_numbers):
         try:
-            return premier_api.retrieve_product_inventory(part_numbers)
+            return premier_client.retrieve_product_inventory(part_numbers)
         except Exception:
             raise
 
     @staticmethod
     def get_api_pricing_data(part_numbers):
         try:
-            return premier_api.retrieve_product_pricing(part_numbers)
+            return premier_client.retrieve_product_pricing(part_numbers)
         except Exception:
             raise
 

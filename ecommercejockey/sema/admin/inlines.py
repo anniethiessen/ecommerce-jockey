@@ -331,6 +331,96 @@ class SemaVehicleProductsTabularInline(TabularInline):
     brand_name_a.short_description = 'Brand'
 
 
+class SemaCategoryDatasetsTabularInline(TabularInline):
+    model = SemaDataset.categories.through
+    extra = 0
+    verbose_name = 'Dataset'
+    verbose_name_plural = 'Dataset'
+
+    fields = (
+        'details_link',
+        'dataset_id_a',
+        'dataset_name_a',
+        'brand_name_a'
+    )
+
+    readonly_fields = (
+        'details_link',
+        'dataset_id_a',
+        'dataset_name_a',
+        'brand_name_a'
+    )
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj.semadataset, 'Details')
+    details_link.short_description = ''
+
+    def dataset_id_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semadataset.dataset_id
+    dataset_id_a.short_description = 'Dataset ID'
+
+    def dataset_name_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semadataset.name
+    dataset_name_a.short_description = 'Name'
+
+    def brand_name_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semadataset.brand.name
+    brand_name_a.short_description = 'Brand'
+
+
+class SemaVehicleDatasetsTabularInline(TabularInline):
+    model = SemaDataset.vehicles.through
+    extra = 0
+    verbose_name = 'Dataset'
+    verbose_name_plural = 'Datasets'
+
+    fields = (
+        'details_link',
+        'product_id_a',
+        'part_number_a',
+        'brand_name_a'
+    )
+
+    readonly_fields = (
+        'details_link',
+        'product_id_a',
+        'part_number_a',
+        'brand_name_a'
+    )
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj.semadataset, 'Details')
+    details_link.short_description = ''
+
+    def dataset_id_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semadataset.dataset_id
+    dataset_id_a.short_description = 'Dataset ID'
+
+    def dataset_name_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semadataset.name
+    dataset_name_a.short_description = 'Name'
+
+    def brand_name_a(self, obj):
+        if not obj.pk:
+            return None
+        return obj.semadataset.brand.name
+    brand_name_a.short_description = 'Brand'
+
+
 class SemaProductTabularInline(TabularInline):
     model = SemaProduct
     extra = 0

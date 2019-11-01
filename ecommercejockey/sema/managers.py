@@ -1,5 +1,13 @@
-from collections import defaultdict
+"""
+This module defines all managers and querysets for the SEMA app.
 
+"""
+
+
+from collections import defaultdict
+from random import randint
+
+from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import (
     Manager,
     QuerySet,
@@ -9,251 +17,5022 @@ from django.db.models import (
 )
 from django.db.models.functions import Floor
 
-from .apis import sema_api
+from .clients import sema_client
 
 
 class SemaBaseQuerySet(QuerySet):
+    """
+    This base queryset class defines base attributes for SEMA querysets.
+
+    """
+
+    # <editor-fold desc="unauthorize properties ...">
     def unauthorize(self):
+        """
+        Marks objects as unauthorized.
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
         msgs = []
         for obj in self:
-            msgs.append(obj.unauthorize())
+            try:
+                msgs.append(obj.unauthorize())
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
         return msgs
+    # </editor-fold>
 
 
 class SemaBrandQuerySet(SemaBaseQuerySet):
-    def import_datasets_from_api(self):
-        msgs = []
-        for obj in self:
-            msgs += obj.import_datasets_from_api()
-        return msgs
+    """
+    This queryset class defines SEMA brand queryset methods.
 
-    def perform_product_vehicle_update(self, dataset_id=None,
-                                       part_numbers=None):
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_years_data_from_api(self, annotated=False):
         """
-        Retrieves **vehicles by product** data for brand queryset by
-        brand queryset method, brand object method and SEMA API object
-        method, and retrieves and updates product objects' vehicles by
-        product manager method and products object methods, and returns
-        a list of messages.
+        Retrieves brands years data from SEMA API.
 
-        :type dataset_id: int
-        :type part_numbers: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands years data
         :rtype: list
 
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "years_": [
+                            <int>,
+                            ...
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    <int>,
+                    ...
+                ]
+
         """
 
-        from .models import SemaProduct
-
-        msgs = []
         try:
-            data = self.get_vehicles_by_product_data_from_api(
-                dataset_id=dataset_id,
-                part_numbers=part_numbers
-            )
-            msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def get_categories_data_from_api(self, dataset_ids=None,
-                                     base_vehicle_ids=None, vehicle_ids=None,
-                                     year=None, make_name=None,
-                                     model_name=None, submodel_name=None):
-        try:
-            brand_ids = [brand.brand_id for brand in self]
-            return sema_api.retrieve_categories(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name
-            )
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_years_data_from_api(
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_years(
+                    brand_ids=[brand.brand_id for brand in self]
+                )
+            return data
         except Exception:
             raise
 
-    def get_products_by_brand_data_from_api(self, dataset_ids=None,
-                                            base_vehicle_ids=None,
-                                            vehicle_ids=None, year=None,
-                                            make_name=None, model_name=None,
-                                            submodel_name=None,
-                                            part_numbers=None,
-                                            pies_segments=None):
-        try:
-            brand_ids = [brand.brand_id for brand in self]
-            return sema_api.retrieve_products_by_brand(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name,
-                part_numbers=part_numbers,
-                pies_segments=pies_segments
-            )
-        except Exception:
-            raise
-
-    def get_vehicles_by_product_data_from_api(self, dataset_id=None,
-                                              part_numbers=None):
+    def retrieve_makes_data_from_api(self, year=None, annotated=False):
         """
-        Retrieves and concatenates **vehicles by product** data for
-        brand queryset by brand object method, and SEMA API object
-        method.
+        Retrieves brands makes data from SEMA API.
 
-        :type dataset_id: int
-        :type part_numbers: list
+        :param year: year on which to filter
+        :type year: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands makes data
         :rtype: list
 
-        :raises: Exception on brand object method exception
+        :raises Exception: on general exception
 
-        .. Topic:: Return Format
-
-            [
-                {
-                    "PartNumber": str,
-                    "Vehicles": [
-                        {
-                            "Year": int,
-                            "MakeName": str,
-                            "ModelName": str,
-                            "SubmodelName": str
-                        },
-                        {...}
-                    ],
-                    "brand_id_": str
-                },
-                {...}
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "makes_": [
+                            {
+                                "MakeID": <int>,
+                                "MakeName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "MakeID": <int>,
+                        "MakeName": <str>
+                    },
+                    {...}
             ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_makes_data_from_api(
+                        year=year,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_makes(
+                    brand_ids=[brand.brand_id for brand in self],
+                    year=year
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, year=None,
+                                      make_id=None, annotated=False):
+        """
+        Retrieves brands models data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_models_data_from_api(
+                        year=year,
+                        make_id=make_id,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_models(
+                    brand_ids=[brand.brand_id for brand in self],
+                    year=year,
+                    make_id=make_id
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, year=None, make_id=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves brands submodels data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_submodels_data_from_api(
+                        year=year,
+                        make_id=make_id,
+                        model_id=model_id,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_submodels(
+                    brand_ids=[brand.brand_id for brand in self],
+                    year=year,
+                    make_id=make_id,
+                    model_id=model_id
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, year=None, make_id=None,
+                                       model_id=None, annotated=False):
+        """
+        Retrieves brands engines data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_engines_data_from_api(
+                        year=year,
+                        make_id=make_id,
+                        model_id=model_id,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_engines(
+                    brand_ids=[brand.brand_id for brand in self],
+                    year=year,
+                    make_id=make_id,
+                    model_id=model_id
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, base_vehicle_ids=None,
+                                          vehicle_ids=None, year=None,
+                                          make_name=None, model_name=None,
+                                          submodel_name=None, annotated=False):
+        """
+        Retrieves brands categories data from SEMA API.
+
+        :param base_vehicle_ids: base vehicle IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_categories_data_from_api(
+                        base_vehicle_ids=base_vehicle_ids,
+                        vehicle_ids=vehicle_ids,
+                        year=year,
+                        make_name=make_name,
+                        model_name=model_name,
+                        submodel_name=submodel_name,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_categories(
+                    brand_ids=[brand.brand_id for brand in self],
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                                 vehicle_ids=None, year=None,
+                                                 make_name=None,
+                                                 model_name=None,
+                                                 submodel_name=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 annotated=False):
+        """
+        Retrieves brands products data from SEMA API.
+
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_products_by_brand_data_from_api(
+                        base_vehicle_ids=base_vehicle_ids,
+                        vehicle_ids=vehicle_ids,
+                        year=year,
+                        make_name=make_name,
+                        model_name=model_name,
+                        submodel_name=submodel_name,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_products_by_brand(
+                    brand_ids=[brand.brand_id for brand in self],
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
+        """
+        Retrieves brands products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "category_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_products_by_category_data_from_api(
+                        category_id=category_id,
+                        base_vehicle_ids=base_vehicle_ids,
+                        vehicle_ids=vehicle_ids,
+                        year=year,
+                        make_name=make_name,
+                        model_name=model_name,
+                        submodel_name=submodel_name,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_products_by_category(
+                    category_id=category_id,
+                    brand_ids=[brand.brand_id for brand in self],
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_product_data_from_api(self, part_numbers=None,
+                                                   annotated=False):
+        """
+        Retrieves brands vehicles by product data from SEMA API.
+
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands vehicles by product data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "PartNumber": <str>,
+                                "Vehicles": [
+                                    {
+                                        "Year": <int>,
+                                        "MakeName": <str>,
+                                        "ModelName": <str>,
+                                        "SubmodelName": <str>
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "PartNumber": <str>,
+                        "Vehicles": [
+                            {
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
 
         """
 
         try:
             data = []
             for brand in self:
-                data += brand.get_vehicles_by_product_data_from_api(
-                    dataset_id=dataset_id,
-                    part_numbers=part_numbers
+                data += brand.retrieve_vehicles_by_product_data_from_api(
+                    part_numbers=part_numbers,
+                    annotated=annotated
                 )
             return data
         except Exception:
             raise
 
-
-class SemaDatasetQuerySet(SemaBaseQuerySet):
-    def perform_product_vehicle_update(self, part_numbers=None):
+    def retrieve_vehicles_by_brand_data_from_api(self, annotated=False):
         """
-        Retrieves **vehicles by product** data for dataset queryset by
-        dataset queryset method, dataset object method, brand object
-        method and SEMA API object method, and retrieves and updates
-        product objects' vehicles by product manager method and products
-        object methods, and returns a list of messages.
+        Retrieves vehicles by brand data from SEMA API.
 
-        :type part_numbers: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles by brand data
         :rtype: list
 
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "vehicles_": [
+                            {
+                                "AAIA_BrandID": <str>,
+                                "BrandName": <str>,
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "AAIA_BrandID": <str>,
+                        "BrandName": <str>,
+                        "Year": <int>,
+                        "MakeName": <str>,
+                        "ModelName": <str>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+                ]
+
         """
 
-        from .models import SemaProduct
-
-        msgs = []
         try:
-            data = self.get_vehicles_by_product_data_from_api(
-                part_numbers=part_numbers
-            )
-            msgs += SemaProduct.objects.update_product_vehicles_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
+            if annotated:
+                data = []
+                for brand in self:
+                    data += brand.retrieve_vehicles_by_brand_data_from_api(
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_vehicles_by_brand(
+                    brand_ids=[brand.brand_id for brand in self]
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaDatasetQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA dataset queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_years_data_from_api(self, annotated=False):
+        """
+        Retrieves datasets years data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets years data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "years_": [
+                            <int>,
+                            ...
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    <int>,
+                    ...
+                ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_years_data_from_api(
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_years(
+                    dataset_ids=[dataset.dataset_id for dataset in self]
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_makes_data_from_api(self, year=None, annotated=False):
+        """
+        Retrieves datasets makes data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets makes data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "makes_": [
+                            {
+                                "MakeID": <int>,
+                                "MakeName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "MakeID": <int>,
+                        "MakeName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_makes_data_from_api(
+                        year=year,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_makes(
+                    dataset_ids=[dataset.dataset_id for dataset in self],
+                    year=year
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, year=None,
+                                      make_id=None, annotated=False):
+        """
+        Retrieves datasets models data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_models_data_from_api(
+                        year=year,
+                        make_id=make_id,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_models(
+                    dataset_ids=[dataset.dataset_id for dataset in self],
+                    year=year,
+                    make_id=make_id
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, year=None, make_id=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves datasets submodels data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_submodels_data_from_api(
+                        year=year,
+                        make_id=make_id,
+                        model_id=model_id,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_submodels(
+                    dataset_ids=[dataset.dataset_id for dataset in self],
+                    year=year,
+                    make_id=make_id,
+                    model_id=model_id
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, year=None, make_id=None,
+                                       model_id=None, annotated=False):
+        """
+        Retrieves datasets engines data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_engines_data_from_api(
+                        year=year,
+                        make_id=make_id,
+                        model_id=model_id,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_engines(
+                    dataset_ids=[dataset.dataset_id for dataset in self],
+                    year=year,
+                    make_id=make_id,
+                    model_id=model_id
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, base_vehicle_ids=None,
+                                          vehicle_ids=None, year=None,
+                                          make_name=None, model_name=None,
+                                          submodel_name=None, annotated=False):
+        """
+        Retrieves datasets categories data from SEMA API.
+
+        :param base_vehicle_ids: base vehicle IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_categories_data_from_api(
+                        base_vehicle_ids=base_vehicle_ids,
+                        vehicle_ids=vehicle_ids,
+                        year=year,
+                        make_name=make_name,
+                        model_name=model_name,
+                        submodel_name=submodel_name,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_categories(
+                    dataset_ids=[dataset.dataset_id for dataset in self],
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                                 vehicle_ids=None, year=None,
+                                                 make_name=None,
+                                                 model_name=None,
+                                                 submodel_name=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 annotated=False):
+        """
+        Retrieves datasets products data from SEMA API.
+
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_products_by_brand_data_from_api(
+                        base_vehicle_ids=base_vehicle_ids,
+                        vehicle_ids=vehicle_ids,
+                        year=year,
+                        make_name=make_name,
+                        model_name=model_name,
+                        submodel_name=submodel_name,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_products_by_brand(
+                    dataset_ids=[dataset.dataset_id for dataset in self],
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
+        """
+        Retrieves datasets products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "category_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_products_by_category_data_from_api(
+                        category_id=category_id,
+                        base_vehicle_ids=base_vehicle_ids,
+                        vehicle_ids=vehicle_ids,
+                        year=year,
+                        make_name=make_name,
+                        model_name=model_name,
+                        submodel_name=submodel_name,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_products_by_category(
+                    category_id=category_id,
+                    dataset_ids=[dataset.dataset_id for dataset in self],
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_product_data_from_api(self, part_numbers=None,
+                                                   annotated=False):
+        """
+        Retrieves datasets vehicles by product data from SEMA API.
+
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets vehicles by product data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "PartNumber": <str>,
+                                "Vehicles": [
+                                    {
+                                        "Year": <int>,
+                                        "MakeName": <str>,
+                                        "ModelName": <str>,
+                                        "SubmodelName": <str>
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "PartNumber": <str>,
+                        "Vehicles": [
+                            {
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            data = []
+            for dataset in self:
+                data += dataset.retrieve_vehicles_by_product_data_from_api(
+                    part_numbers=part_numbers,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_brand_data_from_api(self, annotated=False):
+        """
+        Retrieves datasets vehicles by brand data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets vehicles by brand data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "vehicles_": [
+                            {
+                                "AAIA_BrandID": <str>,
+                                "BrandName": <str>,
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "AAIA_BrandID": <str>,
+                        "BrandName": <str>,
+                        "Year": <int>,
+                        "MakeName": <str>,
+                        "ModelName": <str>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if annotated:
+                data = []
+                for dataset in self:
+                    data += dataset.retrieve_vehicles_by_brand_data_from_api(
+                        annotated=annotated
+                    )
+            else:
+                data = sema_client.retrieve_vehicles_by_brand(
+                    dataset_ids=[dataset.dataset_id for dataset in self]
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_dataset_categories_update(self, **filters):
+        msgs = []
+        for dataset in self:
+            try:
+                msgs += dataset.perform_dataset_categories_update(
+                    **filters
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
 
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def get_categories_data_from_api(self, base_vehicle_ids=None,
-                                     vehicle_ids=None, year=None, make_name=None,
-                                     model_name=None, submodel_name=None):
-        try:
-            brand_ids = list(
-                dict.fromkeys(
-                    [dataset.brand.brand_id for dataset in self]
-                )
-            )
-            dataset_ids = [dataset.dataset_id for dataset in self]
-            return sema_api.retrieve_categories(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name
-            )
-        except Exception:
-            raise
+    def perform_dataset_vehicles_update(self):
+        msgs = []
+        for dataset in self:
+            try:
+                msgs += dataset.perform_dataset_vehicles_update()
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
 
-    def get_products_by_brand_data_from_api(self, base_vehicle_ids=None,
-                                            vehicle_ids=None, year=None,
-                                            make_name=None, model_name=None,
-                                            submodel_name=None,
-                                            part_numbers=None,
-                                            pies_segments=None):
-        try:
-            brand_ids = list(
-                dict.fromkeys(
-                    [dataset.brand.brand_id for dataset in self]
-                )
-            )
-            dataset_ids = [dataset.dataset_id for dataset in self]
-            return sema_api.retrieve_products_by_brand(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name,
-                part_numbers=part_numbers,
-                pies_segments=pies_segments
-            )
-        except Exception:
-            raise
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
 
-    def get_vehicles_by_product_data_from_api(self, part_numbers=None):
+
+class SemaYearQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA vehicle year queryset methods.
+
+    """
+
+    def with_year_data(self):
         """
-        Retrieves and concatenates **vehicles by product** data for
-        dataset queryset by dataset object method, brand object method,
-        and SEMA API object method.
+        Annotates decade field to queryset.
 
-        :type part_numbers: list
+        :return: annotated queryset
+        :rtype: django.db.models.QuerySet
+
+        """
+
+        return self.annotate(
+            decade=Floor(F('year') / 10) * 10
+        )
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_makes_data_from_api(self, brand_ids=None,
+                                     dataset_ids=None, annotated=False):
+        """
+        Retrieves years makes data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years makes data
         :rtype: list
 
-        :raises: Exception on dataset object method exception
+        :raises Exception: on general exception
 
-        .. Topic:: Return Format
+        .. Topic:: **-Parameters-**
 
-            [
-                {
-                    "PartNumber": str,
-                    "Vehicles": [
-                        {
-                            "Year": int,
-                            "MakeName": str,
-                            "ModelName": str,
-                            "SubmodelName": str
-                        },
-                        {...}
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <str>, (if defined)
+                        "dataset_ids_": <int>, (if defined)
+                        "year_": <int>
+                        "makes_": [
+                            {
+                                "MakeID": <int>,
+                                "MakeName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "MakeID": <int>,
+                        "MakeName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for year in self:
+                data += year.retrieve_makes_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                      make_id=None, annotated=False):
+        """
+        Retrieves years models data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>,
+                        "make_id_": <int>, (if defined)
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for year in self:
+                data += year.retrieve_models_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    make_id=make_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, make_id=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves years submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>,
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for year in self:
+                data += year.retrieve_submodels_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    make_id=make_id,
+                    model_id=model_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       make_id=None, model_id=None,
+                                       annotated=False):
+        """
+        Retrieves years engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>,
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for year in self:
+                data += year.retrieve_engines_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    make_id=make_id,
+                    model_id=model_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaMakeQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA vehicle make queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_models_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                      year=None, annotated=False):
+        """
+        Retrieves makes models data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: makes models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>,
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for make in self:
+                data += make.retrieve_models_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    year=year,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, year=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves makes submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: makes submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for make in self:
+                data += make.retrieve_submodels_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    year=year,
+                    model_id=model_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       year=None, model_id=None,
+                                       annotated=False):
+        """
+        Retrieves makes engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: makes engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for make in self:
+                data += make.retrieve_engines_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    year=year,
+                    model_id=model_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaModelQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA vehicle model queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, year=None,
+                                         make_id=None, annotated=False):
+        """
+        Retrieves models submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: models submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>,
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for model in self:
+                data += model.retrieve_submodels_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    year=year,
+                    make_id=make_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       year=None, make_id=None,
+                                       annotated=False):
+        """
+        Retrieves models engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: models engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>,
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for model in self:
+                data += model.retrieve_engines_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    year=year,
+                    make_id=make_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaSubmodelQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA vehicle submodel queryset methods.
+
+    """
+
+    pass
+
+
+class SemaMakeYearQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA vehicle make year queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_models_data_from_api(self, brand_ids=None,
+                                      dataset_ids=None, annotated=False):
+        """
+        Retrieves make years models data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: make years models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "make_year_id_" <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for make_year in self:
+                data += make_year.retrieve_models_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, model_id=None,
+                                         annotated=False):
+        """
+        Retrieves make years submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: make years submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "make_year_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for make_year in self:
+                data += make_year.retrieve_submodels_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    model_id=model_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       model_id=None, annotated=False):
+        """
+        Retrieves make years engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: make years engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "make_year_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for make_year in self:
+                data += make_year.retrieve_engines_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    model_id=model_id,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaBaseVehicleQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA base vehicle queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, annotated=False):
+        """
+        Retrieves base vehicles submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>,
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for base_vehicle in self:
+                data += base_vehicle.retrieve_submodels_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None,
+                                       dataset_ids=None, annotated=False):
+        """
+        Retrieves base vehicles engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>,
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            data = []
+            for base_vehicle in self:
+                data += base_vehicle.retrieve_engines_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_vehicle_info_data_from_api(self, annotated=False):
+        """
+        Retrieves base vehicles vehicle info data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles vehicle info data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "base_vehicle_id_": <int>,
+                        "vehicles_": [
+                            {
+                                "Year": <int>,
+                                "Make": <str>,
+                                "Model": <str>,
+                                "Submodel": <str>,
+                                "Region": <str>,
+                                "Liter": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "FuelDeliveryTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "EngineDestinationName": <str>,
+                                "EngineVINName": <str>,
+                                "ValvesPerEngine": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "EngineBoreInches": <str>,
+                                "EngineBoreMetric": <str>,
+                                "EngineStrokeInches": <str>,
+                                "EngineStrokeMetric": <str>,
+                                "FuelDeliverySubtypeName": <str>,
+                                "FuelSystemControlTypeName": <str>,
+                                "FuelSystemDesignName": <str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "EngineVersion": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "BodyTypeName": <str>,
+                                "BodyNumberOfDoors": <str>,
+                                "ManufactureBodyCodeName": <str>,
+                                "BedTypeName": <str>,
+                                "BedLengthInches": <str>,
+                                "BedLengthMetric": <str>,
+                                "BrakeSystemName": <str>,
+                                "BrakeFrontTypeName": <str>,
+                                "BrakeRearTypeName": <str>,
+                                "BrakeABSName": <str>,
+                                "DriveTypeName": <str>,
+                                "FrontSpringTypeName": <str>,
+                                "RearSpringTypeName": <str>,
+                                "SteeringTypeName": <str>,
+                                "SteeringSystemName": <str>,
+                                "TransmissionTypeName": <str>,
+                                "TranmissionNumSpeeds": <str>,
+                                "TransmissionControlTypeName": <str>,
+                                "TransmissionElectronicControlled": <str>,
+                                "TransmissionManufacturerName": <str>,
+                                "WheelbaseInches": <str>,
+                                "WheelbaseMetric": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "Year": <int>,
+                        "Make": <str>,
+                        "Model": <str>,
+                        "Submodel": <str>,
+                        "Region": <str>,
+                        "Liter": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "FuelDeliveryTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "EngineDestinationName": <str>,
+                        "EngineVINName": <str>,
+                        "ValvesPerEngine": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "EngineBoreInches": <str>,
+                        "EngineBoreMetric": <str>,
+                        "EngineStrokeInches": <str>,
+                        "EngineStrokeMetric": <str>,
+                        "FuelDeliverySubtypeName": <str>,
+                        "FuelSystemControlTypeName": <str>,
+                        "FuelSystemDesignName": <str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "EngineVersion": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "BodyTypeName": <str>,
+                        "BodyNumberOfDoors": <str>,
+                        "ManufactureBodyCodeName": <str>,
+                        "BedTypeName": <str>,
+                        "BedLengthInches": <str>,
+                        "BedLengthMetric": <str>,
+                        "BrakeSystemName": <str>,
+                        "BrakeFrontTypeName": <str>,
+                        "BrakeRearTypeName": <str>,
+                        "BrakeABSName": <str>,
+                        "DriveTypeName": <str>,
+                        "FrontSpringTypeName": <str>,
+                        "RearSpringTypeName": <str>,
+                        "SteeringTypeName": <str>,
+                        "SteeringSystemName": <str>,
+                        "TransmissionTypeName": <str>,
+                        "TranmissionNumSpeeds": <str>,
+                        "TransmissionControlTypeName": <str>,
+                        "TransmissionElectronicControlled": <str>,
+                        "TransmissionManufacturerName": <str>,
+                        "WheelbaseInches": <str>,
+                        "WheelbaseMetric": <str>
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            data = []
+            for base_vehicle in self:
+                data += base_vehicle.retrieve_vehicle_info_data_from_api(
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, brand_ids=None,
+                                          dataset_ids=None, by_names=False,
+                                          annotated=False):
+        """
+        Retrieves base vehicles categories data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if not by_names and not annotated:
+                data = sema_client.retrieve_categories(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    base_vehicle_ids=[
+                        base_vehicle.base_vehicle_id for base_vehicle in self
+                    ]
+                )
+            else:
+                data = []
+                for base_vehicle in self:
+                    data += base_vehicle.retrieve_categories_data_from_api(
+                        brand_ids=brand_ids,
+                        dataset_ids=dataset_ids,
+                        by_names=by_names,
+                        annotated=annotated
+                    )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, brand_ids=None,
+                                                 dataset_ids=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 by_names=False,
+                                                 annotated=False):
+        """
+        Retrieves base vehicles products by brand data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if not by_names and not annotated:
+                data = sema_client.retrieve_products_by_brand(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments,
+                    base_vehicle_ids=[
+                        base_vehicle.base_vehicle_id for base_vehicle in self
+                    ]
+                )
+            else:
+                data = []
+                for base_vehicle in self:
+                    data += base_vehicle.retrieve_products_by_brand_data_from_api(
+                        brand_ids=brand_ids,
+                        dataset_ids=dataset_ids,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        by_names=by_names,
+                        annotated=annotated
+                    )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    brand_ids=None,
+                                                    dataset_ids=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    by_names=False,
+                                                    annotated=False):
+        """
+        Retrieves base vehicles products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if not by_names and not annotated:
+                data = sema_client.retrieve_products_by_category(
+                    category_id=category_id,
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    base_vehicle_ids=[
+                        base_vehicle.base_vehicle_id for base_vehicle in self
                     ],
-                    "brand_id_": str,
-                    "dataset_id_": int,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments,
+                )
+            else:
+                data = []
+                for base_vehicle in self:
+                    data += base_vehicle.retrieve_products_by_category_data_from_api(
+                        category_id=category_id,
+                        brand_ids=brand_ids,
+                        dataset_ids=dataset_ids,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        by_names=by_names,
+                        annotated=annotated
+                    )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaVehicleQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA vehicle queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_vehicle_info_data_from_api(self, annotated=False):
+        """
+        Retrieves vehicles vehicle info data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles vehicle info data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "vehicles_": [
+                            {
+                                "Year": <int>,
+                                "Make": <str>,
+                                "Model": <str>,
+                                "Submodel": <str>,
+                                "Region": <str>,
+                                "Liter": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "FuelDeliveryTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "EngineDestinationName": <str>,
+                                "EngineVINName": <str>,
+                                "ValvesPerEngine": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "EngineBoreInches": <str>,
+                                "EngineBoreMetric": <str>,
+                                "EngineStrokeInches": <str>,
+                                "EngineStrokeMetric": <str>,
+                                "FuelDeliverySubtypeName": <str>,
+                                "FuelSystemControlTypeName": <str>,
+                                "FuelSystemDesignName": <str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "EngineVersion": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "BodyTypeName": <str>,
+                                "BodyNumberOfDoors": <str>,
+                                "ManufactureBodyCodeName": <str>,
+                                "BedTypeName": <str>,
+                                "BedLengthInches": <str>,
+                                "BedLengthMetric": <str>,
+                                "BrakeSystemName": <str>,
+                                "BrakeFrontTypeName": <str>,
+                                "BrakeRearTypeName": <str>,
+                                "BrakeABSName": <str>,
+                                "DriveTypeName": <str>,
+                                "FrontSpringTypeName": <str>,
+                                "RearSpringTypeName": <str>,
+                                "SteeringTypeName": <str>,
+                                "SteeringSystemName": <str>,
+                                "TransmissionTypeName": <str>,
+                                "TranmissionNumSpeeds": <str>,
+                                "TransmissionControlTypeName": <str>,
+                                "TransmissionElectronicControlled": <str>,
+                                "TransmissionManufacturerName": <str>,
+                                "WheelbaseInches": <str>,
+                                "WheelbaseMetric": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "Year": <int>,
+                        "Make": <str>,
+                        "Model": <str>,
+                        "Submodel": <str>,
+                        "Region": <str>,
+                        "Liter": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "FuelDeliveryTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "EngineDestinationName": <str>,
+                        "EngineVINName": <str>,
+                        "ValvesPerEngine": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "EngineBoreInches": <str>,
+                        "EngineBoreMetric": <str>,
+                        "EngineStrokeInches": <str>,
+                        "EngineStrokeMetric": <str>,
+                        "FuelDeliverySubtypeName": <str>,
+                        "FuelSystemControlTypeName": <str>,
+                        "FuelSystemDesignName": <str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "EngineVersion": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "BodyTypeName": <str>,
+                        "BodyNumberOfDoors": <str>,
+                        "ManufactureBodyCodeName": <str>,
+                        "BedTypeName": <str>,
+                        "BedLengthInches": <str>,
+                        "BedLengthMetric": <str>,
+                        "BrakeSystemName": <str>,
+                        "BrakeFrontTypeName": <str>,
+                        "BrakeRearTypeName": <str>,
+                        "BrakeABSName": <str>,
+                        "DriveTypeName": <str>,
+                        "FrontSpringTypeName": <str>,
+                        "RearSpringTypeName": <str>,
+                        "SteeringTypeName": <str>,
+                        "SteeringSystemName": <str>,
+                        "TransmissionTypeName": <str>,
+                        "TranmissionNumSpeeds": <str>,
+                        "TransmissionControlTypeName": <str>,
+                        "TransmissionElectronicControlled": <str>,
+                        "TransmissionManufacturerName": <str>,
+                        "WheelbaseInches": <str>,
+                        "WheelbaseMetric": <str>
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            data = []
+            for vehicle in self:
+                data += vehicle.retrieve_vehicle_info_data_from_api(
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, brand_ids=None,
+                                          dataset_ids=None, by_names=False,
+                                          annotated=False):
+        """
+        Retrieves vehicles categories data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "submodel_id_": <int>,
+                        "submodel_name_": <str>,
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            if not by_names and not annotated:
+                data = sema_client.retrieve_categories(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    vehicle_ids=[vehicle.vehicle_id for vehicle in self]
+                )
+            else:
+                data = []
+                for vehicle in self:
+                    data += vehicle.retrieve_categories_data_from_api(
+                        brand_ids=brand_ids,
+                        dataset_ids=dataset_ids,
+                        by_names=by_names,
+                        annotated=annotated
+                    )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, brand_ids=None,
+                                                 dataset_ids=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 by_names=False,
+                                                 annotated=False):
+        """
+        Retrieves vehicles products by brand data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "submodel_id_": <int>,
+                        "submodel_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if not by_names and not annotated:
+                data = sema_client.retrieve_products_by_brand(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments,
+                    vehicle_ids=[vehicle.vehicle_id for vehicle in self]
+                )
+            else:
+                data = []
+                for vehicle in self:
+                    data += vehicle.retrieve_products_by_brand_data_from_api(
+                        brand_ids=brand_ids,
+                        dataset_ids=dataset_ids,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        by_names=by_names,
+                        annotated=annotated
+                    )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    brand_ids=None,
+                                                    dataset_ids=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    by_names=False,
+                                                    annotated=False):
+        """
+        Retrieves vehicles products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "submodel_id_": <int>,
+                        "submodel_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            if not by_names and not annotated:
+                data = sema_client.retrieve_products_by_category(
+                    category_id=category_id,
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    vehicle_ids=[vehicle.vehicle_id for vehicle in self],
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments,
+                )
+            else:
+                data = []
+                for vehicle in self:
+                    data += vehicle.retrieve_products_by_category_data_from_api(
+                        category_id=category_id,
+                        brand_ids=brand_ids,
+                        dataset_ids=dataset_ids,
+                        part_numbers=part_numbers,
+                        pies_segments=pies_segments,
+                        by_names=by_names,
+                        annotated=annotated
+                    )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaCategoryQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA category queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_products_by_category_data_from_api(self, brand_ids=None,
+                                                    dataset_ids=None,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
+        """
+        Retrieves categories products data from SEMA API.
+
+        :param brand_ids: brand IDs to on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs to on which to filter
+        :type dataset_ids: list
+        :param base_vehicle_ids: base vehicle IDs to on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs to on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: categories products data
+        :rtype: list
+
+        :raises Exception: parameter misuse and on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Either `brand_ids` or `dataset_ids` required
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "category_id_": <int>,
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            data = []
+            for category in self:
+                data += category.retrieve_products_by_category_data_from_api(
+                    brand_ids=brand_ids,
+                    dataset_ids=dataset_ids,
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    part_numbers=part_numbers,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    pies_segments=pies_segments,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_category_products_update_from_api(self, **filters):
+        msgs = []
+        for category in self:
+            try:
+                msgs += category.perform_category_products_update_from_api(
+                    **filters
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+
+class SemaProductQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA product queryset methods.
+
+    """
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                                 vehicle_ids=None, year=None,
+                                                 make_name=None,
+                                                 model_name=None,
+                                                 submodel_name=None,
+                                                 pies_segments=None,
+                                                 annotated=False):
+        """
+        Retrieves products by brand data from SEMA API.
+
+        :param base_vehicle_ids: base vehicle IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: product data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>,
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            dataset_products = defaultdict(list)
+            for product in self:
+                dataset_products[product.dataset].append(product.part_number)
+
+            data = []
+            for dataset, part_numbers in dataset_products.items():
+                data += dataset.retrieve_products_by_brand_data_from_api(
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
+        """
+        Retrieves products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :type base_vehicle_ids: int
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "category_id_": <int>,
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>,
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            dataset_products = defaultdict(list)
+            for product in self:
+                dataset_products[product.dataset].append(product.part_number)
+
+            data = []
+            for dataset, part_numbers in dataset_products.items():
+                data += dataset.retrieve_products_by_category_data_from_api(
+                    category_id=category_id,
+                    base_vehicle_ids=base_vehicle_ids,
+                    vehicle_ids=vehicle_ids,
+                    year=year,
+                    make_name=make_name,
+                    model_name=model_name,
+                    submodel_name=submodel_name,
+                    part_numbers=part_numbers,
+                    pies_segments=pies_segments,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_product_data_from_api(self, annotated=False):
+        """
+        Retrieves vehicles by product data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles by product data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "dataset_id_": <int>,
+                        "products_": [
+                            {
+                                "PartNumber": <str>,
+                                "Vehicles": [
+                                    {
+                                        "Year": <int>,
+                                        "MakeName": <str>,
+                                        "ModelName": <str>,
+                                        "SubmodelName": <str>
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "PartNumber": <str>,
+                        "Vehicles": [
+                            {
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            dataset_products = defaultdict(list)
+            for product in self:
+                dataset_products[product.dataset].append(product.part_number)
+
+            data = []
+            for dataset, part_numbers in dataset_products.items():
+                data += dataset.retrieve_vehicles_by_product_data_from_api(
+                    part_numbers=part_numbers,
+                    annotated=annotated
+                )
+            return data
+        except Exception:
+            raise
+
+    def retrieve_product_html_data_from_api(self, annotated=False):
+        """
+        Retrieves products HTML data from SEMA API object.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: products HTML
+        :rtype: list
+
+        :raises: Exception on SEMA API object method exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "product_id_": <int>,
+                        "html_": <str>
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    <str>,
+                    ...
+                ]
+        """
+
+        try:
+            data = []
+            for product in self:
+                data.append(
+                    product.retrieve_product_html_data_from_api(
+                        annotated=annotated
+                    )
+                )
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_product_vehicles_update(self):
+        msgs = []
+        for product in self:
+            try:
+                msgs += product.perform_product_vehicles_update()
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_pies_attribute_update_from_api(self, pies_attr_model,
+                                               new_only=False, **filters):
+        """
+        Retrieves products PIES attribute data from SEMA API, and
+        creates and/or updates products PIES attribute objects.
+
+        :param pies_attr_model: SEMA PIES Attribute model class
+        :type pies_attr_model: sema.models.SemaBasePiesAttributeModel
+        :param new_only: whether or not to skip updating existing
+            objects
+        :type new_only: bool
+        :param filters: kwargs by which to filter data retrieve
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+        try:
+            msgs += pies_attr_model.objects.perform_import_from_api(
+                products=self,
+                new_only=new_only,
+                **filters
+            )
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_product_html_update_from_api(self):
+        """
+        Retrieves products HTML data from SEMA API, and updates HTML
+        fields.
+
+        :return: update or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+        for product in self:
+            try:
+                msgs.append(product.perform_product_html_update_from_api())
+            except Exception as err:
+                msgs.append(product.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+
+class SemaBasePiesAttributeQuerySet(SemaBaseQuerySet):
+    """
+    This base queryset class defines base attributes for SEMA PIES
+    attribute querysets.
+
+    """
+
+    pass
+
+
+class SemaDescriptionPiesAttributeQuerySet(SemaBasePiesAttributeQuerySet):
+    """
+    This queryset class defines SEMA description PIES attribute queryset
+    methods.
+
+    """
+
+    pass
+
+
+class SemaDigitalAssetsPiesAttributeQuerySet(SemaBasePiesAttributeQuerySet):
+    """
+    This queryset class defines SEMA digital assets PIES attribute
+    queryset methods.
+
+    """
+
+    pass
+
+
+class SemaBaseManager(Manager):
+    """
+    This base manager class defines base attributes for SEMA managers.
+
+    """
+
+    def get_queryset(self):
+        """
+        Returns custom QuerySet object.
+
+        :return: QuerySet object
+        :rtype: object
+
+        """
+
+        return SemaBaseQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    # <editor-fold desc="perform properties ...">
+    def perform_import_from_api(self, new_only=False, **filters):
+        """
+        Retrieves data from SEMA API, and creates and/or updates
+        objects.
+
+        :param new_only: whether or not to skip updating existing
+            objects
+        :type new_only: bool
+        :param filters: kwargs by which to filter data retrieve
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+
+        try:
+            data = self.get_api_data(**filters)
+            msgs += self.import_from_api_data(data=data, new_only=new_only)
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_unauthorize_from_api(self):
+        """
+        Retrieves data from SEMA API, and unauthorizes existing objects
+        not in data.
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+
+        try:
+            data = self.get_api_data()
+            msgs += self.unauthorize_from_api_data(data=data)
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        return msgs
+
+    def perform_api_sync(self):
+        """
+        Retrieves data from SEMA API, and creates and updates objects in
+        data, and unauthorizes existing objects not in data.
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+
+        try:
+            data = self.get_api_data()
+            msgs += self.import_from_api_data(data=data, new_only=False)
+            msgs += self.unauthorize_from_api_data(data=data)
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    # <editor-fold desc="data properties ...">
+    def get_api_data(self, **filters):
+        """
+        Retrieves and cleans data from SEMA API.
+
+        :param filters: kwargs by which to filter data retrieve
+
+        :return: clean API data
+        :rtype: list
+
+        """
+
+        try:
+            filters = self.get_retrieve_data_from_api_params(**filters)
+            data = self.retrieve_data_from_api(**filters)
+            clean_data = self.clean_api_data(data=data)
+            return clean_data
+        except Exception:
+            raise
+
+    def get_retrieve_data_from_api_params(self, **params):
+        """
+        Returns params. Can be overridden to add required retrieve
+        params.
+
+        :param params: param kwargs to which to add additional params
+
+        :return: param kwargs
+        :rtype: dict
+
+        """
+
+        return params
+
+    def retrieve_data_from_api(self, **filters):
+        """
+        Raises exception. Must be overridden with method that retrieves
+        API data.
+
+        :param filters: kwargs by which to filter data retrieve
+
+        :raises Exception: if not overridden
+
+        """
+
+        raise Exception('Retrieve data from API must be defined')
+
+    def clean_api_data(self, data):
+        """
+        Cleans object data by flattening nested data and removing
+        duplicates.
+
+        :param data: API data
+        :type data: list
+
+        :return: clean API data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        """
+
+        try:
+            return self.remove_duplicates_from_api_data(
+                data=self.flatten_api_data(data=data)
+            )
+        except Exception:
+            raise
+
+    def flatten_api_data(self, data):
+        """
+        Returns data. Can be overridden for data flattening.
+
+        :param data: API data
+        :type data: list
+
+        :return: flat API data
+        :rtype: list
+
+        """
+
+        return data
+
+    @staticmethod
+    def remove_duplicates_from_api_data(data):
+        """
+        Removes duplicate items from list of items or dictionaries.
+
+        :param data: API data
+        :type data: list
+
+        :return: reduced API data
+        :rtype: list
+
+        """
+
+        try:
+            return [dict(t) for t in {tuple(i.items()) for i in data}]
+        except AttributeError:
+            try:
+                return list(dict.fromkeys(data))
+            except Exception:
+                raise
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def import_from_api_data(self, data, new_only=False):
+        """
+        Retrieves and creates and/or updates objects from API data.
+
+        :param data: API data
+        :type data: list
+        :param new_only: whether or not to skip updating existing
+            objects
+        :type new_only: bool
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+        for item in data:
+            try:
+                pk, fields = self.parse_api_data(data=item)
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(f"{item}: {err}"))
+                continue
+
+            try:
+                obj = self.get_object_from_api_data(pk=pk, **fields)
+                if not new_only:
+                    msgs.append(obj.update_from_api_data(**fields))
+            except self.model.DoesNotExist:
+                msgs.append(self.create_from_api_data(pk=pk, **fields))
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(f"{item}: {err}"))
+        return msgs
+
+    def parse_api_data(self, data):
+        """
+        Raises exception. Must be overridden with method that returns
+        PK and field/value dictionary from API data item.
+
+        :param data: API data item
+
+        :raises Exception: if not overridden
+
+        """
+
+        raise Exception('Parse API data must be defined')
+
+    def get_object_from_api_data(self, pk, **fields):
+        """
+        Returns object by PK. Can be overridden to retrieve object by
+        fields.
+
+        :param pk: object PK
+        :param fields: object field/value kwargs
+
+        :return: model instance
+        :rtype: object
+
+        :raises Exception: on general exception
+
+        """
+
+        try:
+            return self.get(pk=pk)
+        except Exception:
+            raise
+
+    def create_from_api_data(self, pk, **fields):
+        """
+        Creates object from PK and field/value kwargs.
+
+        :param pk: object PK
+        :param fields: object field/value kwargs
+
+        :return: success or error message
+        :rtype: str
+
+        """
+
+        try:
+            m2m_fields = {}
+            create_fields = {}
+            for attr, value in fields.items():
+                if isinstance(
+                        self.model._meta.get_field(attr), ManyToManyField):
+                    m2m_fields[attr] = value
+                else:
+                    create_fields[attr] = value
+            obj = self.create(
+                pk=pk,
+                is_authorized=True,
+                **create_fields
+            )
+            for attr, value in m2m_fields.items():
+                getattr(obj, attr).add(value)
+                obj.save()
+            msg = obj.get_create_success_msg()
+        except Exception as err:
+            msg = self.model.get_class_error_msg(f"{pk}, {fields}, {err}")
+        return msg
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def unauthorize_from_api_data(self, data):
+        """
+        Retrieves PKs of objects in data and unauthorizes any objects
+        not in data.
+
+        :param data: API data
+        :type data: list
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+
+        try:
+            authorized_pks = self.get_pk_list_from_api_data(data=data)
+            unauthorized = self.model.objects.filter(~Q(pk__in=authorized_pks))
+            msgs += unauthorized.unauthorize()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+            return msgs
+
+        return msgs
+
+    def get_pk_list_from_api_data(self, data):
+        """
+        Raises exception. Must be overridden with method that returns a
+        list of object PKs.
+
+        :param data: API data
+        :type data: list
+
+        :raises Exception: if not overridden
+
+        """
+
+        raise Exception('Get PK list must be defined')
+
+    def unauthorize(self):
+        """
+        Retrieves queryset and marks queryset objects as unauthorized.
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+        return self.get_queryset().unauthorize()
+    # </editor-fold>
+
+
+class SemaBrandManager(SemaBaseManager):
+    """
+    This manager class defines SEMA brand methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaBrandQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self):
+        """
+        Retrieves brand data from SEMA API.
+
+        :return: brand data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            ret = [
+                {
+                    "AAIABrandId": <str>,
+                    "BrandName": <str>
                 },
                 {...}
             ]
@@ -261,45 +5040,4573 @@ class SemaDatasetQuerySet(SemaBaseQuerySet):
         """
 
         try:
-            data = []
-            for dataset in self:
-                data += dataset.get_vehicles_by_product_data_from_api(
-                    part_numbers=part_numbers
-                )
+            data = sema_client.retrieve_brand_datasets()
+            for item in data:
+                del item['DatasetId']
+                del item['DatasetName']
             return data
         except Exception:
             raise
 
+    def retrieve_years_data_from_api(self, annotated=False):
+        """
+        Retrieves brands years data from SEMA API.
 
-class SemaYearQuerySet(SemaBaseQuerySet):
-    def with_year_data(self):
-        return self.annotate(
-            decade=Floor(F('year') / 10) * 10
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands years data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "years_": [
+                            <int>,
+                            ...
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    <int>,
+                    ...
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_years_data_from_api(
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_makes_data_from_api(self, year=None, annotated=False):
+        """
+        Retrieves brands makes data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands makes data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "makes_": [
+                            {
+                                "MakeID": <int>,
+                                "MakeName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "MakeID": <int>,
+                        "MakeName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_makes_data_from_api(
+                year=year,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, year=None,
+                                      make_id=None, annotated=False):
+        """
+        Retrieves brands models data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_models_data_from_api(
+                year=year,
+                make_id=make_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, year=None, make_id=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves brands submodels data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_submodels_data_from_api(
+                year=year,
+                make_id=make_id,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, year=None, make_id=None,
+                                       model_id=None, annotated=False):
+        """
+        Retrieves brands engines data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_engines_data_from_api(
+                year=year,
+                make_id=make_id,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, base_vehicle_ids=None,
+                                          vehicle_ids=None, year=None,
+                                          make_name=None, model_name=None,
+                                          submodel_name=None, annotated=False):
+        """
+        Retrieves brands categories data from SEMA API.
+
+        :param base_vehicle_ids: base vehicle IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_categories_data_from_api(
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                                 vehicle_ids=None, year=None,
+                                                 make_name=None,
+                                                 model_name=None,
+                                                 submodel_name=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 annotated=False):
+        """
+        Retrieves brands products data from SEMA API.
+
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_brand_data_from_api(
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
+        """
+        Retrieves brands products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "category_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_category_data_from_api(
+                category_id=category_id,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_product_data_from_api(self, part_numbers=None,
+                                                   annotated=False):
+        """
+        Retrieves brands vehicles by product data from SEMA API.
+
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: brands vehicles by product data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "PartNumber": <str>,
+                                "Vehicles": [
+                                    {
+                                        "Year": <int>,
+                                        "MakeName": <str>,
+                                        "ModelName": <str>,
+                                        "SubmodelName": <str>
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "PartNumber": <str>,
+                        "Vehicles": [
+                            {
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_vehicles_by_product_data_from_api(
+                part_numbers=part_numbers,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_brand_data_from_api(self, annotated=False):
+        """
+        Retrieves vehicles by brand data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles by brand data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "vehicles_": [
+                            {
+                                "AAIA_BrandID": <str>,
+                                "BrandName": <str>,
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "AAIA_BrandID": <str>,
+                        "BrandName": <str>,
+                        "Year": <int>,
+                        "MakeName": <str>,
+                        "ModelName": <str>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_vehicles_by_brand_data_from_api(
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "AAIABrandId": <str>,
+                "BrandName": <str>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <str>
+            fields = {
+                "name": <str>
+            }
+
+        """
+
+        try:
+            pk = data['AAIABrandId']
+            fields = {
+                'name': data['BrandName']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "AAIABrandId": <str>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <str>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['AAIABrandId'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaDatasetManager(SemaBaseManager):
+    """
+    This manager class defines SEMA dataset methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaDatasetQuerySet(
+            self.model,
+            using=self._db
         )
 
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self):
+        """
+        Retrieves dataset data from SEMA API.
 
-class SemaMakeQuerySet(SemaBaseQuerySet):
-    pass
+        :return: dataset data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            ret = [
+                {
+                    "AAIABrandId": <str>,
+                    "BrandName": <str>,
+                    "DatasetId": <int>,
+                    "DatasetName": <str>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            return sema_client.retrieve_brand_datasets()
+        except Exception:
+            raise
+
+    def retrieve_years_data_from_api(self, annotated=False):
+        """
+        Retrieves datasets years data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets years data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "years_": [
+                            <int>,
+                            ...
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    <int>,
+                    ...
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_years_data_from_api(
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_makes_data_from_api(self, year=None, annotated=False):
+        """
+        Retrieves datasets makes data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets makes data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "makes_": [
+                            {
+                                "MakeID": <int>,
+                                "MakeName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "MakeID": <int>,
+                        "MakeName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_makes_data_from_api(
+                year=year,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, year=None,
+                                      make_id=None, annotated=False):
+        """
+        Retrieves datasets models data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_models_data_from_api(
+                year=year,
+                make_id=make_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, year=None, make_id=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves datasets submodels data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_submodels_data_from_api(
+                year=year,
+                make_id=make_id,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, year=None, make_id=None,
+                                       model_id=None, annotated=False):
+        """
+        Retrieves datasets engines data from SEMA API.
+
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_engines_data_from_api(
+                year=year,
+                make_id=make_id,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, base_vehicle_ids=None,
+                                          vehicle_ids=None, year=None,
+                                          make_name=None, model_name=None,
+                                          submodel_name=None, annotated=False):
+        """
+        Retrieves datasets categories data from SEMA API.
+
+        :param base_vehicle_ids: base vehicle IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_categories_data_from_api(
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                                 vehicle_ids=None, year=None,
+                                                 make_name=None,
+                                                 model_name=None,
+                                                 submodel_name=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 annotated=False):
+        """
+        Retrieves datasets products data from SEMA API.
+
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_brand_data_from_api(
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
+        """
+        Retrieves datasets products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "category_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_category_data_from_api(
+                category_id=category_id,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_product_data_from_api(self, part_numbers=None,
+                                                   annotated=False):
+        """
+        Retrieves datasets vehicles by product data from SEMA API.
+
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets vehicles by product data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "PartNumber": <str>,
+                                "Vehicles": [
+                                    {
+                                        "Year": <int>,
+                                        "MakeName": <str>,
+                                        "ModelName": <str>,
+                                        "SubmodelName": <str>
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "PartNumber": <str>,
+                        "Vehicles": [
+                            {
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_vehicles_by_product_data_from_api(
+                part_numbers=part_numbers,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_vehicles_by_brand_data_from_api(self, annotated=False):
+        """
+        Retrieves datasets vehicles by brand data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: datasets vehicles by brand data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "vehicles_": [
+                            {
+                                "AAIA_BrandID": <str>,
+                                "BrandName": <str>,
+                                "Year": <int>,
+                                "MakeName": <str>,
+                                "ModelName": <str>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "AAIA_BrandID": <str>,
+                        "BrandName": <str>,
+                        "Year": <int>,
+                        "MakeName": <str>,
+                        "ModelName": <str>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_vehicles_by_brand_data_from_api(
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "AAIABrandId": <str>,
+                "DatasetId": <int>,
+                "DatasetName": <str>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {
+                "name": <str>,
+                "brand_id": <str>
+            }
+
+        """
+
+        try:
+            pk = data['DatasetId']
+            fields = {
+                'name': data['DatasetName'],
+                'brand_id': data['AAIABrandId']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "DatasetId": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['DatasetId'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_dataset_categories_update(self, **filters):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_dataset_categories_update(
+                **filters
+            )
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_dataset_vehicles_update(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_dataset_vehicles_update()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
 
 
-class SemaModelQuerySet(SemaBaseQuerySet):
-    pass
+class SemaYearManager(SemaBaseManager):
+    """
+    This manager class defines SEMA vehicle year methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaYearQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def with_year_data(self):
+        """
+        Retrieves queryset and annotates decade field.
+
+        :return: annotated queryset
+        :rtype: django.db.models.QuerySet
+
+        """
+
+        return self.get_queryset().with_year_data()
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, brand_ids=None,
+                               dataset_ids=None):
+        """
+        Retrieves year data from SEMA API.
+
+        :param brand_ids: brand IDs to on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs to on which to filter
+        :type dataset_ids: list
+
+        :return: year data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return sema_client.retrieve_years(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids
+            )
+        except Exception:
+            raise
+
+    def retrieve_makes_data_from_api(self, brand_ids=None,
+                                     dataset_ids=None, annotated=False):
+        """
+        Retrieves years makes data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years makes data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <str>, (if defined)
+                        "dataset_ids_": <int>, (if defined)
+                        "year_": <int>
+                        "makes_": [
+                            {
+                                "MakeID": <int>,
+                                "MakeName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "MakeID": <int>,
+                        "MakeName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_makes_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                      make_id=None, annotated=False):
+        """
+        Retrieves years models data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>,
+                        "make_id_": <int>, (if defined)
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_models_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                make_id=make_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, make_id=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves years submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>,
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_submodels_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                make_id=make_id,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       make_id=None, model_id=None,
+                                       annotated=False):
+        """
+        Retrieves years engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: years engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>,
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_engines_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                make_id=make_id,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        **-Expected Data Format-**
+        ::
+            data = <int>
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {}
+
+        """
+        return data, {}
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                <int>,
+                ...
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        return data
+    # </editor-fold>
 
 
-class SemaSubmodelQuerySet(SemaBaseQuerySet):
-    pass
+class SemaMakeManager(SemaBaseManager):
+    """
+    This manager class defines SEMA vehicle make methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaMakeQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def get_or_create_by_names(self, make_name):
+        try:
+            make = self.get(name=make_name)
+            created = False
+        except self.model.DoesNotExist:
+            pk = randint(1000000, 9999999)
+            while self.model.objects.filter(pk=pk).exists():
+                pk = randint(1000000, 9999999)
+            make = self.create(
+                make_id=pk,
+                name=make_name,
+                is_authorized=False
+            )
+            created = True
+            print(f'Created unauthorized make {make}')
+        return make, created
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, brand_ids=None,
+                               dataset_ids=None, year=None):
+        """
+        Retrieves make data from SEMA API.
+
+        :param brand_ids: brand IDs to on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs to on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+
+        :return: make data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            ret = [
+                {
+                    "MakeID": <int>,
+                    "MakeName": <str>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            return sema_client.retrieve_makes(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year
+            )
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                      year=None, annotated=False):
+        """
+        Retrieves makes models data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: makes models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>,
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_models_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, year=None,
+                                         model_id=None, annotated=False):
+        """
+        Retrieves makes submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: makes submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_submodels_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       year=None, model_id=None,
+                                       annotated=False):
+        """
+        Retrieves makes engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: makes engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_engines_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "MakeID": <int>,
+                "MakeName": <str>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {
+                "name": <str>
+            }
+
+        """
+
+        try:
+            pk = data['MakeID']
+            fields = {
+                'name': data['MakeName']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "MakeID": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['MakeID'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
 
 
-class SemaMakeYearQuerySet(SemaBaseQuerySet):
-    pass
+class SemaModelManager(SemaBaseManager):
+    """
+    This manager class defines SEMA vehicle model methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaModelQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def get_or_create_by_names(self, model_name):
+        try:
+            model = self.get(name=model_name)
+            created = False
+        except MultipleObjectsReturned:
+            raise
+        except self.model.DoesNotExist:
+            pk = randint(1000000, 9999999)
+            while self.model.objects.filter(pk=pk).exists():
+                pk = randint(1000000, 9999999)
+            model = self.create(
+                model_id=pk,
+                name=model_name,
+                is_authorized=False
+            )
+            created = True
+            print(f'Created unauthorized model {model}')
+        return model, created
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, brand_ids=None, dataset_ids=None,
+                               year=None, make_id=None):
+        """
+        Retrieves model data from SEMA API.
+
+        :param brand_ids: brand IDs to on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs to on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+
+        :return: model data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            ret = [
+                {
+                    "ModelID": <int>,
+                    "ModelName": <str>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            data = sema_client.retrieve_models(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year,
+                make_id=make_id
+            )
+            for item in data:
+                del item['BaseVehicleID']
+            return data
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, year=None,
+                                         make_id=None, annotated=False):
+        """
+        Retrieves models submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: models submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>,
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_submodels_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year,
+                make_id=make_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       year=None, make_id=None,
+                                       annotated=False):
+        """
+        Retrieves models engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: models engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_id_": <int>, (if defined)
+                        "model_id_": <int>,
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_engines_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year,
+                make_id=make_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "ModelID": <int>,
+                "ModelName": <str>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {
+                "name": <str>
+            }
+
+        """
+
+        try:
+            pk = data['ModelID']
+            fields = {
+                'name': data['ModelName']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "ModelID": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['ModelID'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
 
 
-class SemaBaseVehicleQuerySet(SemaBaseQuerySet):
-    pass
+class SemaSubmodelManager(SemaBaseManager):
+    """
+    This manager class defines SEMA vehicle submodel methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaSubmodelQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def get_or_create_by_names(self, submodel_name):
+        try:
+            submodel = self.get(name=submodel_name)
+            created = False
+        except self.model.DoesNotExist:
+            pk = randint(1000000, 9999999)
+            while self.model.objects.filter(pk=pk).exists():
+                pk = randint(1000000, 9999999)
+            submodel = self.create(
+                submodel_id=pk,
+                name=submodel_name,
+                is_authorized=False
+            )
+            created = True
+            print(f'Created unauthorized submodel {submodel_name}')
+        return submodel, created
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, brand_ids=None, dataset_ids=None,
+                               year=None, make_id=None, model_id=None):
+        """
+        Retrieves submodel data from SEMA API.
+
+        :param brand_ids: brand IDs to on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs to on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+
+        :return: submodel data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            ret = [
+                {
+                    "SubmodelID": <int>,
+                    "SubmodelName": <str>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            data = sema_client.retrieve_submodels()
+            for item in data:
+                del item['VehicleID']
+            return data
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "SubmodelID": <int>,
+                "SubmodelName": <str>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {
+                "name": <str>
+            }
+
+        """
+
+        try:
+            pk = data['SubmodelID']
+            fields = {
+                'name': data['SubmodelName']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "SubmodelID": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['SubmodelID'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
 
 
-class SemaVehicleQuerySet(SemaBaseQuerySet):
-    pass
+class SemaMakeYearManager(SemaBaseManager):
+    """
+    This manager class defines SEMA vehicle make year methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaMakeYearQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def get_by_ids(self, year, make_id):
+        """
+        Returns make year object by year and make id.
+
+        :type year: int
+        :type make_id: int
+        :rtype: object
+
+        :raises: Exception on get exception
+
+        """
+
+        try:
+            return self.get(
+                year__year=year,
+                make__make_id=make_id
+            )
+        except Exception:
+            raise
+
+    def get_by_names(self, year, make_name):
+        """
+        Returns make year object by year and make name.
+
+        :type year: int
+        :type make_name: str
+        :rtype: object
+
+        :raises: Exception on get exception
+
+        """
+
+        try:
+            return self.get(
+                year__year=year,
+                make__name=make_name
+            )
+        except Exception:
+            raise
+
+    def get_or_create_by_names(self, year, make_name):
+        try:
+            make_year = self.get_by_names(
+                year=year,
+                make_name=make_name
+            )
+            created = False
+        except self.model.DoesNotExist:
+            from sema.models import SemaYear, SemaMake
+            year, created = SemaYear.objects.get_or_create(year=year)
+            if created:
+                print(f'Created unauthorized year {year}')
+            make, _ = SemaMake.objects.get_or_create_by_names(
+                make_name=make_name
+            )
+            make_year = self.create(
+                year=year,
+                make=make,
+                is_authorized=False
+            )
+            created = True
+            print(f'Created unauthorized make year {make_year}')
+        return make_year, created
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, years, brand_ids=None,
+                               dataset_ids=None, annotated=False):
+        """
+        Retrieves make year data from SEMA API.
+
+        :param years: year queryset with which to retrieve
+        :type years: django.db.models.QuerySet
+        :param brand_ids: brand IDs to on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs to on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: make year data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <str>, (if defined)
+                        "dataset_ids_": <int>, (if defined)
+                        "year_": <int>,
+                        "makes_": [
+                            {
+                                "MakeID": <int>,
+                                "MakeName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "MakeID": <int>,
+                        "MakeName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return years.retrieve_makes_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_models_data_from_api(self, brand_ids=None,
+                                      dataset_ids=None, annotated=False):
+        """
+        Retrieves make years models data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: make years models data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "make_year_id_" <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_models_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, model_id=None,
+                                         annotated=False):
+        """
+        Retrieves make years submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: make years submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "make_year_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_submodels_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None, dataset_ids=None,
+                                       model_id=None, annotated=False):
+        """
+        Retrieves make years engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param model_id: model ID on which to filter
+        :type model_id: int
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: make years engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "make_year_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>, (if defined)
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_engines_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                model_id=model_id,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def get_retrieve_data_from_api_params(self, **params):
+        """
+        Returns params with additional params years as authorized years
+        queryset if not already defined and annotated as true.
+
+        :param params: param kwargs to which to add additional params
+
+        :return: param kwargs
+        :rtype: dict
+
+        :raises Exception: on general exception
+
+        """
+
+        try:
+            if 'years' not in params:
+                from sema.models import SemaYear
+                years = SemaYear.objects.filter(is_authorized=True)
+                params['years'] = years
+            params['annotated'] = True
+            return params
+        except Exception:
+            raise
+
+    def flatten_api_data(self, data):
+        """
+        Flattens nested data and returns relevant key/values.
+
+        :param data: API data
+        :type data: list
+
+        :return: flat API data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "year_": <int>
+                    "makes_": [
+                        {
+                            "MakeID": <int>
+                        },
+                        {...}
+                    ]
+                }
+            ]
+
+        **-Return Format-**
+        ::
+            data = [
+                {
+                    "year_": <int>,
+                    "MakeID": <int>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            flattened_data = []
+            for year in data:
+                for make in year['makes_']:
+                    flattened_data.append(
+                        {
+                            'year_': year['year_'],
+                            'MakeID': make['MakeID']
+                        }
+                    )
+            return flattened_data
+        except Exception:
+            raise
+
+    def parse_api_data(self, data):
+        """
+        Returns NoneType (because PK is not defined in API data) and
+        field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "year_": <int>,
+                "MakeID": <int>
+            }
+
+        **-Return Format-**
+        ::
+            pk = None
+            fields = {
+                "year_id": <int>,
+                "make_id": <int>
+            }
+
+        """
+
+        try:
+            fields = {
+                'year_id': data['year_'],
+                'make_id': data['MakeID'],
+            }
+            return None, fields
+        except Exception:
+            raise
+
+    def get_object_from_api_data(self, pk=None, year_id=None, make_id=None):
+        """
+        Returns object by year and make.
+
+        :param pk: placeholder for overridden PK param
+        :param year_id: year ID field value
+        :type year_id: int
+        :param make_id: make ID field value
+        :type make_id: int
+
+        :return: model instance
+        :rtype: object
+
+        :raises Exception: missing year_id or make_id, or on general
+            exception
+
+        """
+
+        if not (year_id and make_id):
+            raise Exception('Year ID and make ID required')
+
+        try:
+            return self.get(
+                year_id=year_id,
+                make_id=make_id
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "year_": <int>
+                    "MakeID": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            pk_list = []
+            for item in data:
+                try:
+                    year_make = self.get(
+                        year__year=item['year_'],
+                        make__make_id=item['MakeID']
+                    )
+                    pk_list.append(year_make.pk)
+                except self.model.DoesNotExist:
+                    pass
+            return pk_list
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaBaseVehicleManager(SemaBaseManager):
+    """
+    This manager class defines SEMA base vehicle methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaBaseVehicleQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def get_by_ids(self, year, make_id, model_id):
+        """
+        Returns base vehicle object by year, make id, and model id.
+
+        :type year: int
+        :type make_id: int
+        :type model_id: int
+        :rtype: object
+
+        :raises: Exception on get exception
+
+        """
+
+        try:
+            return self.get(
+                make_year__year__year=year,
+                make_year__make__make_id=make_id,
+                model__model_id=model_id,
+            )
+        except Exception:
+            raise
+
+    def get_by_names(self, year, make_name, model_name):
+        """
+        Returns base vehicle object by year, make name, and model name.
+
+        :type year: int
+        :type make_name: str
+        :type model_name: str
+        :rtype: object
+
+        :raises: Exception on get exception
+
+        """
+
+        try:
+            return self.get(
+                make_year__year__year=year,
+                make_year__make__name=make_name,
+                model__name=model_name
+            )
+        except Exception:
+            raise
+
+    def get_or_create_by_names(self, year, make_name, model_name):
+        try:
+            base_vehicle = self.get_by_names(
+                year=year,
+                make_name=make_name,
+                model_name=model_name
+            )
+            created = False
+        except self.model.DoesNotExist:
+            from sema.models import SemaMakeYear, SemaModel
+            make_year, _ = SemaMakeYear.objects.get_or_create_by_names(
+                year=year,
+                make_name=make_name
+            )
+            try:
+                model, _ = SemaModel.objects.get_or_create_by_names(
+                    model_name=model_name
+                )
+            except MultipleObjectsReturned:  # FIXME
+                if make_name == 'Chrysler':
+                    model = SemaModel.objects.get(
+                        model_id=2489,
+                        name=model_name
+                    )
+                elif make_name == 'GMC':
+                    model = SemaModel.objects.get(
+                        model_id=21430,
+                        name=model_name
+                    )
+                else:
+                    raise
+            pk = randint(1000000, 9999999)
+            while self.model.objects.filter(pk=pk).exists():
+                pk = randint(1000000, 9999999)
+            base_vehicle = self.create(
+                base_vehicle_id=pk,
+                make_year=make_year,
+                model=model,
+                is_authorized=False
+            )
+            created = True
+            print(f'Created unauthorized base vehicle {base_vehicle}')
+        return base_vehicle, created
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, make_years, brand_ids=None,
+                               dataset_ids=None, annotated=False):
+        """
+        Retrieves base vehicle data from SEMA API.
+
+        :param make_years: make year queryset with which to retrieve
+        :type make_years: django.db.models.QuerySet
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicle data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "make_year_id_" <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "models_": [
+                            {
+                                "BaseVehicleID": <int>,
+                                "ModelID": <int>,
+                                "ModelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "BaseVehicleID": <int>,
+                        "ModelID": <int>,
+                        "ModelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return make_years.retrieve_models_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_submodels_data_from_api(self, brand_ids=None,
+                                         dataset_ids=None, annotated=False):
+        """
+        Retrieves base vehicles submodels data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles submodels data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>,
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_submodels_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_engines_data_from_api(self, brand_ids=None,
+                                       dataset_ids=None, annotated=False):
+        """
+        Retrieves base vehicles engines data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles engines data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>,
+                        "engines_": [
+                            {
+                                "VehicleID": <int>,
+                                "Liter": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "EngBoreIn": <str>,
+                                "EngBoreMetric": <str>,
+                                "EngStrokeIn": <str>,
+                                "EngStrokeMetric": <str>,
+                                "ValvesPerEngine": "<str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "MfrName": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "EngineDesignationName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "Liter": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "EngBoreIn": <str>,
+                        "EngBoreMetric": <str>,
+                        "EngStrokeIn": <str>,
+                        "EngStrokeMetric": <str>,
+                        "ValvesPerEngine": "<str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "MfrName": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "EngineDesignationName": <str>
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_engines_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_vehicle_info_data_from_api(self, annotated=False):
+        """
+        Retrieves base vehicles vehicle info data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles vehicle info data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "base_vehicle_id_": <int>,
+                        "vehicles_": [
+                            {
+                                "Year": <int>,
+                                "Make": <str>,
+                                "Model": <str>,
+                                "Submodel": <str>,
+                                "Region": <str>,
+                                "Liter": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "FuelDeliveryTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "EngineDestinationName": <str>,
+                                "EngineVINName": <str>,
+                                "ValvesPerEngine": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "EngineBoreInches": <str>,
+                                "EngineBoreMetric": <str>,
+                                "EngineStrokeInches": <str>,
+                                "EngineStrokeMetric": <str>,
+                                "FuelDeliverySubtypeName": <str>,
+                                "FuelSystemControlTypeName": <str>,
+                                "FuelSystemDesignName": <str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "EngineVersion": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "BodyTypeName": <str>,
+                                "BodyNumberOfDoors": <str>,
+                                "ManufactureBodyCodeName": <str>,
+                                "BedTypeName": <str>,
+                                "BedLengthInches": <str>,
+                                "BedLengthMetric": <str>,
+                                "BrakeSystemName": <str>,
+                                "BrakeFrontTypeName": <str>,
+                                "BrakeRearTypeName": <str>,
+                                "BrakeABSName": <str>,
+                                "DriveTypeName": <str>,
+                                "FrontSpringTypeName": <str>,
+                                "RearSpringTypeName": <str>,
+                                "SteeringTypeName": <str>,
+                                "SteeringSystemName": <str>,
+                                "TransmissionTypeName": <str>,
+                                "TranmissionNumSpeeds": <str>,
+                                "TransmissionControlTypeName": <str>,
+                                "TransmissionElectronicControlled": <str>,
+                                "TransmissionManufacturerName": <str>,
+                                "WheelbaseInches": <str>,
+                                "WheelbaseMetric": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "Year": <int>,
+                        "Make": <str>,
+                        "Model": <str>,
+                        "Submodel": <str>,
+                        "Region": <str>,
+                        "Liter": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "FuelDeliveryTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "EngineDestinationName": <str>,
+                        "EngineVINName": <str>,
+                        "ValvesPerEngine": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "EngineBoreInches": <str>,
+                        "EngineBoreMetric": <str>,
+                        "EngineStrokeInches": <str>,
+                        "EngineStrokeMetric": <str>,
+                        "FuelDeliverySubtypeName": <str>,
+                        "FuelSystemControlTypeName": <str>,
+                        "FuelSystemDesignName": <str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "EngineVersion": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "BodyTypeName": <str>,
+                        "BodyNumberOfDoors": <str>,
+                        "ManufactureBodyCodeName": <str>,
+                        "BedTypeName": <str>,
+                        "BedLengthInches": <str>,
+                        "BedLengthMetric": <str>,
+                        "BrakeSystemName": <str>,
+                        "BrakeFrontTypeName": <str>,
+                        "BrakeRearTypeName": <str>,
+                        "BrakeABSName": <str>,
+                        "DriveTypeName": <str>,
+                        "FrontSpringTypeName": <str>,
+                        "RearSpringTypeName": <str>,
+                        "SteeringTypeName": <str>,
+                        "SteeringSystemName": <str>,
+                        "TransmissionTypeName": <str>,
+                        "TranmissionNumSpeeds": <str>,
+                        "TransmissionControlTypeName": <str>,
+                        "TransmissionElectronicControlled": <str>,
+                        "TransmissionManufacturerName": <str>,
+                        "WheelbaseInches": <str>,
+                        "WheelbaseMetric": <str>
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_vehicle_info_data_from_api(
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, brand_ids=None,
+                                          dataset_ids=None, by_names=False,
+                                          annotated=False):
+        """
+        Retrieves base vehicles categories data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_categories_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                by_names=by_names,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, brand_ids=None,
+                                                 dataset_ids=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 by_names=False,
+                                                 annotated=False):
+        """
+        Retrieves base vehicles products by brand data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_brand_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                by_names=by_names,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    brand_ids=None,
+                                                    dataset_ids=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    by_names=False,
+                                                    annotated=False):
+        """
+        Retrieves base vehicles products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: base vehicles products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_category_data_from_api(
+                category_id=category_id,
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                by_names=by_names,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def get_retrieve_data_from_api_params(self, **params):
+        """
+        Returns params with additional params make_years as authorized
+        make years queryset if not already defined and annotated as
+        true.
+
+        :param params: param kwargs to which to add additional params
+
+        :return: param kwargs
+        :rtype: dict
+
+        :raises Exception: on general exception
+
+        """
+
+        try:
+            if 'make_years' not in params:
+                from sema.models import SemaMakeYear
+                make_years = SemaMakeYear.objects.filter(is_authorized=True)
+                params['make_years'] = make_years
+            params['annotated'] = True
+            return params
+        except Exception:
+            raise
+
+    def flatten_api_data(self, data):
+        """
+        Flattens nested data and returns relevant key/values.
+
+        :param data: API data
+        :type data: list
+
+        :return: flat API data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "make_year_id_" <int>,
+                    "models_": [
+                        {
+                            "BaseVehicleID": <int>,
+                            "ModelID": <int>
+                        },
+                        {...}
+                    ]
+                },
+                {...}
+            ]
+
+        **-Return Format-**
+        ::
+            data = [
+                {
+                    "BaseVehicleID": <int>,
+                    "make_year_id_": <int>,
+                    "ModelID": <int>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            flattened_data = []
+            for make_year in data:
+                for model in make_year['models_']:
+                    flattened_data.append(
+                        {
+                            'BaseVehicleID': model['BaseVehicleID'],
+                            'make_year_id_': make_year['make_year_id_'],
+                            'ModelID': model['ModelID']
+                        }
+                    )
+            return flattened_data
+        except Exception:
+            raise
+
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "BaseVehicleID": <int>,
+                "make_year_id_": <int>,
+                "ModelID": <int>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {
+                "make_year_id": <int>,
+                "model_id": <int>
+            }
+
+        """
+
+        try:
+            pk = data['BaseVehicleID']
+            fields = {
+                'make_year_id': data['make_year_id_'],
+                'model_id': data['ModelID']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "BaseVehicleID": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['BaseVehicleID'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaVehicleManager(SemaBaseManager):
+    """
+    This manager class defines SEMA vehicle methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaVehicleQuerySet(
+            self.model,
+            using=self._db
+        )
 
     def get_by_ids(self, year, make_id, model_id, submodel_id):
         """
@@ -320,7 +9627,7 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
             return self.get(
                 base_vehicle__make_year__year__year=year,
                 base_vehicle__make_year__make__make_id=make_id,
-                base_vehicle__model__model_ide=model_id,
+                base_vehicle__model__model_id=model_id,
                 submodel__submodel_id=submodel_id,
             )
         except Exception:
@@ -351,387 +9658,1064 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
         except Exception:
             raise
 
+    def get_or_create_by_names(self, year, make_name,
+                               model_name, submodel_name):
+        try:
+            vehicle = self.get_by_names(
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name
+            )
+            created = False
+        except self.model.DoesNotExist:
+            from sema.models import SemaBaseVehicle, SemaSubmodel
+            base_vehicle, _ = SemaBaseVehicle.objects.get_or_create_by_names(
+                year=year,
+                make_name=make_name,
+                model_name=model_name
+            )
+            submodel, _ = SemaSubmodel.objects.get_or_create_by_names(
+                submodel_name=submodel_name
+            )
+            pk = randint(1000000, 9999999)
+            while self.model.objects.filter(pk=pk).exists():
+                pk = randint(1000000, 9999999)
+            vehicle = self.model.objects.create(
+                vehicle_id=pk,
+                base_vehicle=base_vehicle,
+                submodel=submodel,
+                is_authorized=False
+            )
+            created = True
+            print(f'Created unauthorized vehicle {vehicle}')
+        return vehicle, created
 
-class SemaCategoryQuerySet(SemaBaseQuerySet):
-    def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
-                                        base_vehicle_ids=None,
-                                        vehicle_ids=None, part_numbers=None,
-                                        year=None, make_name=None,
-                                        model_name=None, submodel_name=None,
-                                        pies_segments=None):
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, base_vehicles, brand_ids=None,
+                               dataset_ids=None, annotated=False):
         """
-        Retrieves **products by category** data for category queryset by
-        category queryset method, category object method and SEMA API
-        object method and retrieves and updates product objects'
-        categories by product manager and product object method, and
-        returns a list of messages.
+        Retrieves vehicle data from SEMA API.
 
+        :param base_vehicles: base vehicle queryset with which to
+            retrieve
+        :type base_vehicles: django.db.models.QuerySet
+        :param brand_ids: brand IDs on which to filter
         :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
         :type dataset_ids: list
-        :type base_vehicle_ids: list
-        :type vehicle_ids: list
-        :type part_numbers: list
-        :type year: int
-        :type make_name: str
-        :type model_name: str
-        :type submodel_name: str
-        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicle data
         :rtype: list
 
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "model_id_": <int>,
+                        "submodels_": [
+                            {
+                                "VehicleID": <int>,
+                                "SubmodelID": <int>,
+                                "SubmodelName": <str>
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "VehicleID": <int>,
+                        "SubmodelID": <int>,
+                        "SubmodelName": <str>
+                    },
+                    {...}
+            ]
+
         """
 
-        from .models import SemaProduct
-
-        msgs = []
         try:
-            data = self.get_products_by_category_data_from_api(
+            return base_vehicles.retrieve_submodels_data_from_api(
                 brand_ids=brand_ids,
                 dataset_ids=dataset_ids,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_vehicle_info_data_from_api(self, annotated=False):
+        """
+        Retrieves vehicles vehicle info data from SEMA API.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles vehicle info data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "vehicles_": [
+                            {
+                                "Year": <int>,
+                                "Make": <str>,
+                                "Model": <str>,
+                                "Submodel": <str>,
+                                "Region": <str>,
+                                "Liter": <str>,
+                                "Cylinders": <str>,
+                                "BlockType": <str>,
+                                "FuelDeliveryTypeName": <str>,
+                                "FuelTypeName": <str>,
+                                "EngineDestinationName": <str>,
+                                "EngineVINName": <str>,
+                                "ValvesPerEngine": <str>,
+                                "CC": <str>,
+                                "CID": <str>,
+                                "EngineBoreInches": <str>,
+                                "EngineBoreMetric": <str>,
+                                "EngineStrokeInches": <str>,
+                                "EngineStrokeMetric": <str>,
+                                "FuelDeliverySubtypeName": <str>,
+                                "FuelSystemControlTypeName": <str>,
+                                "FuelSystemDesignName": <str>,
+                                "AspirationName": <str>,
+                                "CylinderHeadTypeName": <str>,
+                                "IgnitionSystemTypeName": <str>,
+                                "EngineVersion": <str>,
+                                "HorsePower": <str>,
+                                "KilowattPower": <str>,
+                                "BodyTypeName": <str>,
+                                "BodyNumberOfDoors": <str>,
+                                "ManufactureBodyCodeName": <str>,
+                                "BedTypeName": <str>,
+                                "BedLengthInches": <str>,
+                                "BedLengthMetric": <str>,
+                                "BrakeSystemName": <str>,
+                                "BrakeFrontTypeName": <str>,
+                                "BrakeRearTypeName": <str>,
+                                "BrakeABSName": <str>,
+                                "DriveTypeName": <str>,
+                                "FrontSpringTypeName": <str>,
+                                "RearSpringTypeName": <str>,
+                                "SteeringTypeName": <str>,
+                                "SteeringSystemName": <str>,
+                                "TransmissionTypeName": <str>,
+                                "TranmissionNumSpeeds": <str>,
+                                "TransmissionControlTypeName": <str>,
+                                "TransmissionElectronicControlled": <str>,
+                                "TransmissionManufacturerName": <str>,
+                                "WheelbaseInches": <str>,
+                                "WheelbaseMetric": <str>
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "Year": <int>,
+                        "Make": <str>,
+                        "Model": <str>,
+                        "Submodel": <str>,
+                        "Region": <str>,
+                        "Liter": <str>,
+                        "Cylinders": <str>,
+                        "BlockType": <str>,
+                        "FuelDeliveryTypeName": <str>,
+                        "FuelTypeName": <str>,
+                        "EngineDestinationName": <str>,
+                        "EngineVINName": <str>,
+                        "ValvesPerEngine": <str>,
+                        "CC": <str>,
+                        "CID": <str>,
+                        "EngineBoreInches": <str>,
+                        "EngineBoreMetric": <str>,
+                        "EngineStrokeInches": <str>,
+                        "EngineStrokeMetric": <str>,
+                        "FuelDeliverySubtypeName": <str>,
+                        "FuelSystemControlTypeName": <str>,
+                        "FuelSystemDesignName": <str>,
+                        "AspirationName": <str>,
+                        "CylinderHeadTypeName": <str>,
+                        "IgnitionSystemTypeName": <str>,
+                        "EngineVersion": <str>,
+                        "HorsePower": <str>,
+                        "KilowattPower": <str>,
+                        "BodyTypeName": <str>,
+                        "BodyNumberOfDoors": <str>,
+                        "ManufactureBodyCodeName": <str>,
+                        "BedTypeName": <str>,
+                        "BedLengthInches": <str>,
+                        "BedLengthMetric": <str>,
+                        "BrakeSystemName": <str>,
+                        "BrakeFrontTypeName": <str>,
+                        "BrakeRearTypeName": <str>,
+                        "BrakeABSName": <str>,
+                        "DriveTypeName": <str>,
+                        "FrontSpringTypeName": <str>,
+                        "RearSpringTypeName": <str>,
+                        "SteeringTypeName": <str>,
+                        "SteeringSystemName": <str>,
+                        "TransmissionTypeName": <str>,
+                        "TranmissionNumSpeeds": <str>,
+                        "TransmissionControlTypeName": <str>,
+                        "TransmissionElectronicControlled": <str>,
+                        "TransmissionManufacturerName": <str>,
+                        "WheelbaseInches": <str>,
+                        "WheelbaseMetric": <str>
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_vehicle_info_data_from_api(
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_categories_data_from_api(self, brand_ids=None,
+                                          dataset_ids=None, by_names=False,
+                                          annotated=False):
+        """
+        Retrieves vehicles categories data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles categories data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "submodel_id_": <int>,
+                        "submodel_name_": <str>,
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+            ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_categories_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                by_names=by_names,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, brand_ids=None,
+                                                 dataset_ids=None,
+                                                 part_numbers=None,
+                                                 pies_segments=None,
+                                                 by_names=False,
+                                                 annotated=False):
+        """
+        Retrieves vehicles products by brand data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles products data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "submodel_id_": <int>,
+                        "submodel_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_brand_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                by_names=by_names,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    brand_ids=None,
+                                                    dataset_ids=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    by_names=False,
+                                                    annotated=False):
+        """
+        Retrieves vehicles products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param by_names: whether or not to filter by names rather than
+            ID
+        :type by_names: bool
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: vehicles products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_id_": <int>,
+                        "vehicle_id_": <int>,
+                        "year_": <int>,
+                        "make_id_": <int>,
+                        "make_name_": <str>,
+                        "model_id_": <int>,
+                        "model_name_": <str>,
+                        "submodel_id_": <int>,
+                        "submodel_name_": <str>,
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_category_data_from_api(
+                category_id=category_id,
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                by_names=by_names,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def get_retrieve_data_from_api_params(self, **params):
+        """
+        Returns params with additional params base_vehicles as
+        authorized base vehicles queryset if not already defined and
+        annotated as true.
+
+        :param params: param kwargs to which to add additional params
+
+        :return: param kwargs
+        :rtype: dict
+
+        :raises Exception: on general exception
+
+        """
+
+        try:
+            if 'base_vehicles' not in params:
+                from sema.models import SemaBaseVehicle
+                base_vehicles = SemaBaseVehicle.objects.filter(
+                    is_authorized=True
+                )
+                params['base_vehicles'] = base_vehicles
+            params['annotated'] = True
+            return params
+        except Exception:
+            raise
+
+    def flatten_api_data(self, data):
+        """
+        Flattens nested data and returns relevant key/values.
+
+        :param data: API data
+        :type data: list
+
+        :return: flat API data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "base_vehicle_id_": <int>,
+                    "submodels_": [
+                        {
+                            "VehicleID": <int>,
+                            "SubmodelID": <int>
+                        },
+                        {...}
+                    ]
+                },
+                {...}
+            ]
+
+        **-Return Format-**
+        ::
+            data = [
+                {
+                    "VehicleID": <int>,
+                    "base_vehicle_id_": <int>,
+                    "SubmodelID": <int>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            flattened_data = []
+            for base_vehicle in data:
+                for submodel in base_vehicle['submodels_']:
+                    flattened_data.append(
+                        {
+                            'VehicleID': submodel['VehicleID'],
+                            'base_vehicle_id_': (
+                                base_vehicle['base_vehicle_id_']
+                            ),
+                            'SubmodelID': submodel['SubmodelID']
+                        }
+                    )
+            return flattened_data
+        except Exception:
+            raise
+
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "VehicleID": <int>,
+                "base_vehicle_id_": <int>,
+                "SubmodelID": <int>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {
+                "base_vehicle_id": <int>,
+                "submodel_id": <int>
+            }
+
+        """
+
+        try:
+            pk = data['VehicleID']
+            fields = {
+                'base_vehicle_id': data['base_vehicle_id_'],
+                'submodel_id': data['SubmodelID']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "VehicleID": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['VehicleID'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaCategoryManager(SemaBaseManager):
+    """
+    This manager class defines SEMA category methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaCategoryQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, datasets, base_vehicle_ids=None,
+                               vehicle_ids=None, year=None,
+                               make_name=None, model_name=None,
+                               submodel_name=None, annotated=False):
+        """
+        Retrieves category data from SEMA API.
+
+        :param datasets: dataset queryset with which to retrieve
+        :type datasets: django.db.models.QuerySet
+        :param base_vehicle_ids: base vehicle IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "categories_": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [
+                                            {
+                                                "ParentId": <int>,
+                                                "CategoryId": <int>,
+                                                "Name": <str>,
+                                                "Categories": [...]
+                                            },
+                                            {...}
+                                        ]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ParentId": <int>,
+                        "CategoryId": <int>,
+                        "Name": <str>,
+                        "Categories": [
+                            {
+                                "ParentId": <int>,
+                                "CategoryId": <int>,
+                                "Name": <str>,
+                                "Categories": [
+                                    {
+                                        "ParentId": <int>,
+                                        "CategoryId": <int>,
+                                        "Name": <str>,
+                                        "Categories": [...]
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return datasets.retrieve_categories_data_from_api(
                 base_vehicle_ids=base_vehicle_ids,
                 vehicle_ids=vehicle_ids,
-                part_numbers=part_numbers,
                 year=year,
                 make_name=make_name,
                 model_name=model_name,
                 submodel_name=submodel_name,
-                pies_segments=pies_segments
+                annotated=annotated
             )
-            msgs += SemaProduct.objects.update_product_categories_from_api_data(
-                data
-            )
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-            return msgs
+        except Exception:
+            raise
 
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def get_products_by_category_data_from_api(self, brand_ids=None,
-                                               dataset_ids=None,
-                                               base_vehicle_ids=None,
-                                               vehicle_ids=None,
-                                               part_numbers=None,
-                                               year=None,
-                                               make_name=None,
-                                               model_name=None,
-                                               submodel_name=None,
-                                               pies_segments=None):
+    def retrieve_products_by_category_data_from_api(self, brand_ids=None,
+                                                    dataset_ids=None,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    part_numbers=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
         """
-        Retrieves and concatenates **products by category** data for
-        category queryset by category object method, and SEMA API object
-        method.
+        Retrieves categories products data from SEMA API.
 
+        :param brand_ids: brand IDs to on which to filter
         :type brand_ids: list
+        :param dataset_ids: dataset IDs to on which to filter
         :type dataset_ids: list
+        :param base_vehicle_ids: base vehicle IDs to on which to filter
         :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs to on which to filter
         :type vehicle_ids: list
-        :type part_numbers: list
+        :param year: year on which to filter
         :type year: int
+        :param make_name: make name on which to filter
         :type make_name: str
+        :param model_name: model name on which to filter
         :type model_name: str
+        :param submodel_name: submodel name on which to filter
         :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
         :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: categories products data
         :rtype: list
 
-        :raises: Exception on category object method exception
+        :raises Exception: parameter misuse and on general exception
 
-        .. warnings also:: Filtering by year, make, model, or submodel
-        requires all four
+        .. Topic:: **-Parameters-**
 
-        .. Topic:: Return Format
+            Either `brand_ids` or `dataset_ids` required
 
-            [
-                {
-                    "ProductId": int,
-                    "PartNumber": str,
-                    "PiesAttributes": [],
-                    "category_id_" int
-                },
-                {...}
-            ]
+            Only one of `brand_ids` or `dataset_ids` allowed
 
-        """
+            `year` requires `make_name` and `model_name`
 
-        try:
-            data = []
-            for category in self:
-                data += category.get_products_by_category_data_from_api(
-                    brand_ids=brand_ids,
-                    dataset_ids=dataset_ids,
-                    base_vehicle_ids=base_vehicle_ids,
-                    vehicle_ids=vehicle_ids,
-                    part_numbers=part_numbers,
-                    year=year,
-                    make_name=make_name,
-                    model_name=model_name,
-                    submodel_name=submodel_name,
-                    pies_segments=pies_segments
-                )
-            return data
-        except Exception:
-            raise
+            `make_name` requires `year` and `model_name`
 
+            `model_name` requires `year` and `make_name`
 
-class SemaProductQuerySet(SemaBaseQuerySet):
-    def perform_product_html_update(self):
-        msgs = []
+            `submodel_name` requires `year`, `make_name`, and `model_name`
 
-        for obj in self:
-            try:
-                msgs.append(obj.perform_product_html_update())
-            except Exception as err:
-                msgs.append(obj.get_instance_error_msg(str(err)))
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
 
-        return msgs
-
-    def perform_product_vehicle_update(self):
-        """
-        Retrieves **vehicles by product** data for product queryset by
-        product queryset method, dataset queryset method, dataset object
-        method, brand object method and SEMA API object method, and
-        retrieves and updates product objects' vehicles by product
-        manager method and products object method, and returns a list
-        of messages.
-
-        :rtype: list
-
-        """
-
-        msgs = []
-        try:
-            data = self.get_vehicles_by_product_data_from_api()
-            msgs += self.model.objects.update_product_vehicles_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def perform_pies_attribute_update(self, attribute_model):
-        msgs = []
-        try:
-            data = self.get_pies_attribute_data_from_api(attribute_model)
-            msgs += self.model.objects.update_pies_attributes_from_api_data(
-                attribute_model,
-                data
-            )
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def get_products_by_brand_data_from_api(self, base_vehicle_ids=None,
-                                            vehicle_ids=None, year=None,
-                                            make_name=None, model_name=None,
-                                            submodel_name=None,
-                                            pies_segments=None):
-        try:
-            dataset_products = defaultdict(list)
-            for product in self:
-                dataset_products[product.dataset].append(product.part_number)
-
-            data = []
-            for dataset, part_numbers in dataset_products.items():
-                data += dataset.get_products_by_brand_data_from_api(
-                    base_vehicle_ids=base_vehicle_ids,
-                    vehicle_ids=vehicle_ids,
-                    year=year,
-                    make_name=make_name,
-                    model_name=model_name,
-                    submodel_name=submodel_name,
-                    part_numbers=part_numbers,
-                    pies_segments=pies_segments
-                )
-            return data
-        except Exception:
-            raise
-
-    def get_vehicles_by_product_data_from_api(self):
-        """
-        Retrieves and concatenates **vehicles by product** data for
-        product queryset by dataset object method, brand object method,
-        and SEMA API object method.
-
-        :rtype: list
-
-        :raises: Exception on dataset object method exception
-
-        .. Topic:: Return Format
-
-            [
-                {
-                    "PartNumber": str,
-                    "Vehicles": [
-                        {
-                            "Year": int,
-                            "MakeName": str,
-                            "ModelName": str,
-                            "SubmodelName": str
-                        },
-                        {...}
-                    ],
-                    "brand_id_": str,
-                    "dataset_id_": int,
-                },
-                {...}
-            ]
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "category_id_": <int>,
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
 
         """
 
         try:
-            dataset_products = defaultdict(list)
-            for product in self:
-                dataset_products[product.dataset].append(product.part_number)
-
-            data = []
-            for dataset, part_numbers in dataset_products.items():
-                data += dataset.get_vehicles_by_product_data_from_api(
-                    part_numbers=part_numbers
-                )
-            return data
-        except Exception:
-            raise
-
-    def get_pies_attribute_data_from_api(self, attribute_model):
-        try:
-            return self.get_products_by_brand_data_from_api(
-                pies_segments=attribute_model.get_attribute_codes()
+            return self.get_queryset().retrieve_products_by_category_data_from_api(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                annotated=annotated
             )
         except Exception:
             raise
+    # </editor-fold>
 
+    # <editor-fold desc="import properties ...">
+    def get_retrieve_data_from_api_params(self, **params):
+        """
+        Returns params with additional params datasets as authorized
+        datasets queryset if not already defined and annotated as false.
 
-class SemaBaseManager(Manager):
-    def import_and_unauthorize_from_api(self):
-        msgs = []
+        :param params: param kwargs to which to add additional params
 
-        try:
-            data = self.get_api_data()
-            msgs += self.create_or_update_from_api_data(data, new_only=False)
-            msgs += self.unauthorize_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-            return msgs
+        :return: param kwargs
+        :rtype: dict
 
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
+        :raises Exception: on general exception
 
-    def import_from_api(self, new_only=False, **filters):
-        msgs = []
+        """
 
         try:
-            errors = self.get_api_filter_errors(**filters)
-            if errors:
-                msgs.append(self.model.get_class_error_msg(errors))
-                return msgs
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-            return msgs
-
-        try:
-            data = self.get_api_data(**filters)
-            msgs += self.create_or_update_from_api_data(data, new_only=new_only)
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-            return msgs
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def unauthorize_from_api(self):
-        msgs = []
-
-        try:
-            data = self.get_api_data()
-            msgs += self.unauthorize_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-            return msgs
-
-        return msgs
-
-    def get_api_filter_errors(self, **filters):
-        return []
-
-    def get_api_data(self, **filters):
-        raise Exception('Get API data must be defined')
-
-    def parse_api_data(self, data):
-        raise Exception('Parse API data must be defined')
-
-    def create_or_update_from_api_data(self, data, new_only=False):
-        msgs = []
-        for item in data:
-            try:
-                pk, update_fields = self.parse_api_data(item)
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(f"{item}: {err}"))
-                continue
-
-            try:
-                obj = self.get_object_from_api_data(pk, **update_fields)
-                if not new_only:
-                    msgs.append(obj.update_from_api_data(**update_fields))
-            except self.model.DoesNotExist:
-                msgs.append(self.create_from_api_data(pk, **update_fields))
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(f"{item}: {err}"))
-        return msgs
-
-    def get_object_from_api_data(self, pk, **update_fields):
-        try:
-            return self.get(pk=pk)
+            if 'datasets' not in params:
+                from sema.models import SemaDataset
+                datasets = SemaDataset.objects.filter(is_authorized=True)
+                params['datasets'] = datasets
+            params['annotated'] = False
+            return params
         except Exception:
             raise
-
-    def create_from_api_data(self, pk, **update_fields):
-        try:
-            m2m_fields = {}
-            create_fields = {}
-            for attr, value in update_fields.items():
-                if isinstance(
-                        self.model._meta.get_field(attr), ManyToManyField):
-                    m2m_fields[attr] = value
-                else:
-                    create_fields[attr] = value
-            obj = self.create(
-                pk=pk,
-                is_authorized=True,
-                **create_fields
-            )
-            for attr, value in m2m_fields.items():
-                getattr(obj, attr).add(value)
-                obj.save()
-            msg = obj.get_create_success_msg()
-        except Exception as err:
-            msg = self.model.get_class_error_msg(f"{pk}, {update_fields}, {err}")
-        return msg
-
-    def unauthorize_from_api_data(self, data):
-        msgs = []
-
-        try:
-            authorized_pks = self.get_pk_list_from_api_data(data)
-            unauthorized = self.model.objects.filter(~Q(pk__in=authorized_pks))
-            msgs += unauthorized.unauthorize()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-            return msgs
-
-        return msgs
-
-    def get_pk_list_from_api_data(self, data):
-        raise Exception('Get PK list must be defined')
 
     def flatten_api_data(self, data):
-        flattened_data = []
+        """
+        Returns flattened data from nested data.
+
+        :param data: API data
+        :type data: list
+
+        :return: flat API data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "ParentId": <int>,
+                    "CategoryId": <int>,
+                    "Name": <str>,
+                    "Categories": [
+                        {
+                            "ParentId": <int>,
+                            "CategoryId": <int>,
+                            "Name": <str>,
+                            "Categories": [
+                                {
+                                    "ParentId": <int>,
+                                    "CategoryId": <int>,
+                                    "Name": <str>,
+                                    "Categories": [...]
+                                },
+                                {...}
+                            ]
+                        },
+                        {...}
+                    ]
+                },
+                {...}
+            ]
+
+        **-Return Format-**
+        ::
+            data = [
+                {
+                    "CategoryId": <int>,
+                    "Name": <str>,
+                    "ParentId": <int>
+                },
+                {...}
+            ]
+
+        """
 
         try:
+            flattened_data = []
             for item in data:
                 subcategories = item.pop('Categories', [])
                 flattened_data.append(item)
@@ -741,881 +10725,111 @@ class SemaBaseManager(Manager):
         except Exception:
             raise
 
-    def remove_duplicates_from_api_data(self, data):
-        try:
-            return [dict(t) for t in {tuple(i.items()) for i in data}]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaBaseQuerySet(
-            self.model,
-            using=self._db
-        )
-
-
-class SemaBrandManager(SemaBaseManager):
-    def get_api_data(self):
-        try:
-            data = sema_api.retrieve_brand_datasets()
-            for item in data:
-                del item['DatasetId']
-                del item['DatasetName']
-            return data
-        except Exception:
-            raise
-
     def parse_api_data(self, data):
-        pk = data['AAIABrandId']
-        update_fields = {
-            'name': data['BrandName']
-        }
-        return pk, update_fields
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['AAIABrandId'] for item in data]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaBrandQuerySet(
-            self.model,
-            using=self._db
-        )
-
-    def import_datasets_from_api(self):
-        return self.get_queryset().import_datasets_from_api()
-
-    def perform_product_vehicle_update(self, dataset_id=None,
-                                       part_numbers=None):
         """
-        Retrieves brand queryset and **vehicles by product** data for
-        brand queryset by brand queryset method, brand object method,
-        and SEMA API object method and retrieves and updates product
-        objects' vehicles by product manager and products object methods
-        and returns a list of messages.
+        Returns object PK and field/value dictionary from API data item.
 
-        :type dataset_id: int
-        :type part_numbers: list
-        :rtype: list
+        :param data: API data item
+        :type data: dict
 
-        """
+        :return: object PK and field/value dictionary
+        :rtype: tuple
 
-        msgs = []
-        try:
-            msgs += self.get_queryset().perform_product_vehicle_update(
-                dataset_id=dataset_id,
-                part_numbers=part_numbers
-            )
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
+        :raises Exception: on general exception
 
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def get_categories_data_from_api(self, dataset_ids=None, base_vehicle_ids=None,
-                                     vehicle_ids=None, year=None, make_name=None,
-                                     model_name=None, submodel_name=None):
-        try:
-            return self.get_queryset().get_categories_data_from_api(
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name
-            )
-        except Exception:
-            raise
-
-    def get_products_by_brand_data_from_api(self, dataset_ids=None,
-                                            base_vehicle_ids=None,
-                                            vehicle_ids=None, year=None,
-                                            make_name=None, model_name=None,
-                                            submodel_name=None,
-                                            part_numbers=None,
-                                            pies_segments=None):
-        try:
-            return self.get_queryset().get_products_by_brand_data_from_api(
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name,
-                part_numbers=part_numbers,
-                pies_segments=pies_segments
-            )
-        except Exception:
-            raise
-
-    def get_vehicles_by_product_data_from_api(self, dataset_id=None,
-                                              part_numbers=None):
-        """
-        Retrieves brand queryset and returns **vehicles by product**
-        data for queryset by brand queryset method, brand object method,
-        and SEMA API object method.
-
-        :type dataset_id: int
-        :type part_numbers: list
-        :rtype: list
-
-        :raises: Exception on brand queryset method exception
-
-        .. Topic:: Return Format
-
-            [
-                {
-                    "PartNumber": str,
-                    "Vehicles": [
-                        {
-                            "Year": int,
-                            "MakeName": str,
-                            "ModelName": str,
-                            "SubmodelName": str
-                        },
-                        {...}
-                    ],
-                    "brand_id_": str
-                },
-                {...}
-            ]
-
-        """
-
-        try:
-            return self.get_queryset().get_vehicles_by_product_data_from_api(
-                dataset_id=dataset_id,
-                part_numbers=part_numbers
-            )
-        except Exception:
-            raise
-
-
-class SemaDatasetManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None):
-        try:
-            data = sema_api.retrieve_brand_datasets()
-            if brand_ids:
-                data = [
-                    item for item in data
-                    if item['AAIABrandId'] in brand_ids
-                ]
-            return data
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        from .models import SemaBrand
-
-        pk = data['DatasetId']
-        update_fields = {
-            'name': data['DatasetName'],
-            'brand': SemaBrand.objects.get(brand_id=data['AAIABrandId'])
-        }
-        return pk, update_fields
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['DatasetId'] for item in data]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaDatasetQuerySet(
-            self.model,
-            using=self._db
-        )
-
-    def perform_product_vehicle_update(self, part_numbers=None):
-        """
-        Retrieves dataset queryset and **vehicles by product** data for
-        dataset queryset by dataset queryset method, dataset object
-        method, brand object method, and SEMA API object method and
-        retrieves and updates product objects' vehicles by product
-        manager and products object methods and returns a list of
-        messages.
-
-        :type part_numbers: list
-        :rtype: list
-
-        """
-
-        msgs = []
-        try:
-            msgs += self.get_queryset().perform_product_vehicle_update(
-                part_numbers=part_numbers
-            )
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def get_categories_data_from_api(self, base_vehicle_ids=None,
-                                     vehicle_ids=None, year=None, make_name=None,
-                                     model_name=None, submodel_name=None):
-        try:
-            return self.get_queryset().get_categories_data_from_api(
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name
-            )
-        except Exception:
-            raise
-
-    def get_products_by_brand_data_from_api(self, base_vehicle_ids=None,
-                                            vehicle_ids=None, year=None,
-                                            make_name=None, model_name=None,
-                                            submodel_name=None,
-                                            part_numbers=None,
-                                            pies_segments=None):
-        try:
-            return self.get_queryset().get_products_by_brand_data_from_api(
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name,
-                part_numbers=part_numbers,
-                pies_segments=pies_segments
-            )
-        except Exception:
-            raise
-
-    def get_vehicles_by_product_data_from_api(self, part_numbers=None):
-        """
-        Retrieves dataset queryset and returns **vehicles by product**
-        data for queryset by dataset queryset method, dataset object
-        method, brand object method, and SEMA API object method.
-
-        :type part_numbers: list
-        :rtype: list
-
-        :raises: Exception on dataset queryset method exception
-
-        .. Topic:: Return Format
-
-            [
-                {
-                    "PartNumber": str,
-                    "Vehicles": [
-                        {
-                            "Year": int,
-                            "MakeName": str,
-                            "ModelName": str,
-                            "SubmodelName": str
-                        },
-                        {...}
-                    ],
-                    "brand_id_": str,
-                    "dataset_id_: int
-                },
-                {...}
-            ]
-
-        """
-
-        try:
-            return self.get_queryset().get_vehicles_by_product_data_from_api(
-                part_numbers=part_numbers
-            )
-        except Exception:
-            raise
-
-
-class SemaYearManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None, dataset_ids=None):
-        try:
-            return sema_api.retrieve_years(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids
-            )
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        pk = data
-        update_fields = {}
-        return pk, update_fields
-
-    def get_pk_list_from_api_data(self, data):
-        return data
-
-    def get_queryset(self):
-        return SemaYearQuerySet(
-            self.model,
-            using=self._db
-        )
-
-    def with_year_data(self):
-        return self.get_queryset().with_year_data()
-
-
-class SemaMakeManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None, dataset_ids=None, year=None):
-        try:
-            return sema_api.retrieve_makes(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                year=year
-            )
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        try:
-            pk = data['MakeID']
-            update_fields = {
-                'name': data['MakeName']
+        **-Expected Data Format-**
+        ::
+            data = {
+                "CategoryId": <int>,
+                "Name": <str>,
+                "ParentId": <int>
             }
-            return pk, update_fields
-        except Exception:
-            raise
 
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['MakeID'] for item in data]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaMakeQuerySet(
-            self.model,
-            using=self._db
-        )
-
-
-class SemaModelManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None, dataset_ids=None,
-                     year=None, make_id=None):
-        try:
-            data = sema_api.retrieve_models(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                year=year,
-                make_id=make_id
-            )
-            for item in data:
-                del item['BaseVehicleID']
-            return [dict(t) for t in {tuple(item.items()) for item in data}]
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        try:
-            pk = data['ModelID']
-            update_fields = {
-                'name': data['ModelName']
-            }
-            return pk, update_fields
-        except Exception:
-            raise
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['ModelID'] for item in data]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaModelQuerySet(
-            self.model,
-            using=self._db
-        )
-
-
-class SemaSubmodelManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None, dataset_ids=None,
-                     year=None, make_id=None, model_id=None):
-        try:
-            data = sema_api.retrieve_submodels(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                year=year,
-                make_id=make_id,
-                model_id=model_id
-            )
-            for item in data:
-                del item['VehicleID']
-            return [dict(t) for t in {tuple(item.items()) for item in data}]
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        try:
-            pk = data['SubmodelID']
-            update_fields = {
-                'name': data['SubmodelName']
-            }
-            return pk, update_fields
-        except Exception:
-            raise
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['SubmodelID'] for item in data]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaSubmodelQuerySet(
-            self.model,
-            using=self._db
-        )
-
-
-class SemaMakeYearManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None, dataset_ids=None, year=None):
-        from .models import SemaYear
-        years = SemaYear.objects.filter(is_authorized=True)
-        if year:
-            years = years.filter(year=year)
-        if not years:
-            raise Exception('No authorized years')
-
-        all_data = []
-        try:
-            for year in years:
-                data = sema_api.retrieve_makes(
-                    brand_ids=brand_ids,
-                    dataset_ids=dataset_ids,
-                    year=year.year
-                )
-                for item in data:
-                    item['year_'] = year.year
-                all_data += data
-            return self.remove_duplicates_from_api_data(all_data)
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        from .models import SemaYear, SemaMake
-
-        try:
-            pk = None
-            update_fields = {
-                'year': SemaYear.objects.get(year=data['year_']),
-                'make': SemaMake.objects.get(make_id=data['MakeID']),
-            }
-            return pk, update_fields
-        except Exception:
-            raise
-
-    def get_object_from_api_data(self, pk, **update_fields):
-        try:
-            return self.get(
-                year=update_fields['year'],
-                make=update_fields['make']
-            )
-        except Exception:
-            raise
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            pk_list = []
-            for item in data:
-                try:
-                    year_make = self.get(
-                        year__year=item['year_'],
-                        make__make_id=item['MakeID']
-                    )
-                    pk_list.append(year_make.pk)
-                except self.model.DoesNotExist:
-                    pass
-            return pk_list
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaMakeYearQuerySet(
-            self.model,
-            using=self._db
-        )
-
-
-class SemaBaseVehicleManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None, dataset_ids=None,
-                     year=None, make_id=None):
-        from .models import SemaMakeYear
-        make_years = SemaMakeYear.objects.filter(is_authorized=True)
-        if year:
-            make_years = make_years.filter(year__year=year)
-        if make_id:
-            make_years = make_years.filter(make__make_id=make_id)
-        if not make_years:
-            raise Exception('No authorized make years')
-
-        all_data = []
-        try:
-            for make_year in make_years:
-                data = sema_api.retrieve_models(
-                    brand_ids=brand_ids,
-                    dataset_ids=dataset_ids,
-                    year=make_year.year.year,
-                    make_id=make_year.make.make_id
-                )
-                for item in data:
-                    item['year_'] = make_year.year.year
-                    item['make_id_'] = make_year.make.make_id
-                all_data += data
-            return self.remove_duplicates_from_api_data(all_data)
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        from .models import SemaMakeYear, SemaModel
-        try:
-            pk = data['BaseVehicleID']
-            update_fields = {
-                'make_year': SemaMakeYear.objects.get(
-                    year__year=data['year_'],
-                    make__make_id=data['make_id_']
-                ),
-                'model': SemaModel.objects.get(model_id=data['ModelID'])
-            }
-            return pk, update_fields
-        except Exception:
-            raise
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['BaseVehicleID'] for item in data]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaBaseVehicleQuerySet(
-            self.model,
-            using=self._db
-        )
-
-
-class SemaVehicleManager(SemaBaseManager):
-    def get_api_data(self, brand_ids=None, dataset_ids=None,
-                     year=None, make_id=None, model_id=None):
-        from .models import SemaBaseVehicle
-
-        base_vehicles = SemaBaseVehicle.objects.filter(is_authorized=True)
-        if year:
-            base_vehicles = base_vehicles.filter(make_year__year__year=year)
-        if make_id:
-            base_vehicles = base_vehicles.filter(
-                make_year__make__make_id=make_id
-            )
-        if model_id:
-            base_vehicles = base_vehicles.filter(model__model_id=model_id)
-        if not base_vehicles:
-            raise Exception('No authorized base vehicles')
-
-        all_data = []
-        try:
-            for base_vehicle in base_vehicles:
-                data = sema_api.retrieve_submodels(
-                    brand_ids=brand_ids,
-                    dataset_ids=dataset_ids,
-                    year=base_vehicle.make_year.year.year,
-                    make_id=base_vehicle.make_year.make.make_id,
-                    model_id=base_vehicle.model.model_id
-                )
-                for item in data:
-                    item['year_'] = base_vehicle.make_year.year.year
-                    item['make_id_'] = base_vehicle.make_year.make.make_id
-                    item['model_id_'] = base_vehicle.model.model_id
-                all_data += data
-            return self.remove_duplicates_from_api_data(all_data)
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        from .models import SemaBaseVehicle, SemaSubmodel
-        try:
-            pk = data['VehicleID']
-            update_fields = {
-                'base_vehicle': SemaBaseVehicle.objects.get(
-                    make_year__year__year=data['year_'],
-                    make_year__make__make_id=data['make_id_'],
-                    model__model_id=data['model_id_']
-                ),
-                'submodel': SemaSubmodel.objects.get(
-                    submodel_id=data['SubmodelID']
-                )
-            }
-            return pk, update_fields
-        except Exception:
-            raise
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['VehicleID'] for item in data]
-        except Exception:
-            raise
-
-    def get_queryset(self):
-        return SemaVehicleQuerySet(
-            self.model,
-            using=self._db
-        )
-
-    def get_by_ids(self, year, make_id, model_id, submodel_id):
-        """
-        Returns vehicle queryset and returns queryset object by year,
-        make id, model id, and submodel id.
-
-        :type year: int
-        :type make_id: int
-        :type model_id: int
-        :type submodel_id: int
-        :rtype: object
-
-        :raises: Exception on queryset method exception
+        **-Return Format-**
+        ::
+            pk = <int>
+            if data["ParentId"] == 0:
+                fields = {
+                    "name": <int>
+                }
+            else:
+                fields = {
+                    "name": <int>,
+                    "parent_categories": <int>
+                }
 
         """
 
-        try:
-            return self.get_queryset().get_by_ids(
-                year=year,
-                make_id=make_id,
-                model_id=model_id,
-                submodel_id=submodel_id
-            )
-        except Exception:
-            raise
-
-    def get_by_names(self, year, make_name, model_name, submodel_name):
-        """
-        Retrieves vehicle queryset and returns vehicle object by year,
-        make name, model name, and submodel name by vehicle queryset
-        method.
-
-        :type year: int
-        :type make_name: str
-        :type model_name: str
-        :type submodel_name: str
-        :rtype: object
-
-        :raises: Exception on queryset method exception
-
-        """
-
-        try:
-            return self.get_queryset().get_by_names(
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name
-            )
-        except Exception:
-            raise
-
-
-class SemaCategoryManager(SemaBaseManager):
-    def get_full_api_data(self):  # TODO: implement
-        from .models import SemaDataset
-
-        try:
-            datasets = SemaDataset.objects.filter(is_authorized=True)
-            data = datasets.get_categories_data_from_api()
-            data = self.flatten_api_data(data)
-            return self.remove_duplicates_from_api_data(data)
-        except Exception:
-            raise
-
-    def get_api_data(self, brand_ids=None, dataset_ids=None,  # TODO: replace
-                     year=None, make_name=None,
-                     model_name=None, submodel_name=None,
-                     base_vehicle_ids=None, vehicle_ids=None):
-        try:
-            return self.get_full_api_data()
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
         try:
             pk = data['CategoryId']
-            update_fields = {
+            fields = {
                 'name': data['Name']
             }
-            if data.get('ParentId'):
-                update_fields['parent_categories'] = (
-                    self.get(category_id=data['ParentId'])
-                )
-            return pk, update_fields
+            if data['ParentId']:
+                fields['parent_categories'] = data['ParentId']
+            return pk, fields
         except Exception:
             raise
+    # </editor-fold>
 
+    # <editor-fold desc="unauthorize properties ...">
     def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "CategoryId": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
         try:
             return [item['CategoryId'] for item in data]
         except Exception:
             raise
+    # </editor-fold>
 
-    def get_queryset(self):
-        return SemaCategoryQuerySet(
-            self.model,
-            using=self._db
-        )
-
-    def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
-                                        base_vehicle_ids=None,
-                                        vehicle_ids=None, part_numbers=None,
-                                        year=None, make_name=None,
-                                        model_name=None, submodel_name=None,
-                                        pies_segments=None):
-        """
-        Retrieves category queryset and **products by category** data
-        for queryset by category queryset method, category object method
-        and SEMA API object method and retrieves and updates product
-        objects' categories by product manager and product object method,
-        and returns a list of messages.
-
-        :type brand_ids: list
-        :type dataset_ids: list
-        :type base_vehicle_ids: list
-        :type vehicle_ids: list
-        :type part_numbers: list
-        :type year: int
-        :type make_name: str
-        :type model_name: str
-        :type submodel_name: str
-        :type pies_segments: list
-        :rtype: list
-
-        """
-
+    # <editor-fold desc="perform properties ...">
+    def perform_category_products_update_from_api(self, **filters):
         msgs = []
         try:
-            msgs += self.get_queryset().perform_product_category_update(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                part_numbers=part_numbers,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name,
-                pies_segments=pies_segments
+            msgs += self.get_queryset().perform_category_products_update_from_api(
+                **filters
             )
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
-            return msgs
 
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
-
-    def get_products_by_category_data_from_api(self, brand_ids=None,
-                                               dataset_ids=None,
-                                               base_vehicle_ids=None,
-                                               vehicle_ids=None,
-                                               part_numbers=None,
-                                               year=None, make_name=None,
-                                               model_name=None,
-                                               submodel_name=None,
-                                               pies_segments=None):
-        """
-        Retrieves category queryset and returns **products by category**
-        data for queryset by category queryset method, category object
-        method, and SEMA API object method.
-
-        :type brand_ids: list
-        :type dataset_ids: list
-        :type base_vehicle_ids: list
-        :type vehicle_ids: list
-        :type part_numbers: list
-        :type year: int
-        :type make_name: str
-        :type model_name: str
-        :type submodel_name: str
-        :type pies_segments: list
-        :rtype: list
-
-        :raises: Exception on category queryset method exception
-
-        .. warnings also:: Filtering by year, make, model, or submodel
-        requires all four
-
-        .. Topic:: Return Format
-
-            [
-                {
-                    "ProductId": int,
-                    "PartNumber": str,
-                    "PiesAttributes": [],
-                    "category_id_" int
-                },
-                {...}
-            ]
-
-        """
-
-        try:
-            return self.get_queryset().get_products_by_category_data_from_api(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
-                base_vehicle_ids=base_vehicle_ids,
-                vehicle_ids=vehicle_ids,
-                part_numbers=part_numbers,
-                year=year,
-                make_name=make_name,
-                model_name=model_name,
-                submodel_name=submodel_name,
-                pies_segments=pies_segments
-            )
-        except Exception:
-            raise
+    # </editor-fold>
 
 
 class SemaProductManager(SemaBaseManager):
-    def get_full_api_data(self):  # TODO: implement
-        from .models import SemaDataset
-        datasets = SemaDataset.objects.filter(is_authorized=True)
-        all_data = []
-        try:
-            for dataset in datasets:
-                return dataset.get_products_by_brand_data_from_api()
-        except Exception:
-            raise
+    """
+    This manager class defines SEMA product methods.
 
-    def get_api_data(self, brand_ids=None, dataset_ids=None,  # TODO: replace
-                     year=None, make_name=None,
-                     model_name=None, submodel_name=None,
-                     base_vehicle_ids=None, vehicle_ids=None,
-                     part_numbers=None, pies_segments=None):
-        try:
-            return self.get_full_api_data()
-        except Exception:
-            raise
-
-    def parse_api_data(self, data):
-        from .models import SemaDataset
-        try:
-            pk = data['ProductId']
-            update_fields = {
-                'part_number': data['PartNumber'],
-                'dataset': SemaDataset.objects.get(
-                    dataset_id=data['dataset_id_']
-                )
-            }
-            return pk, update_fields
-        except Exception:
-            raise
-
-    def get_pk_list_from_api_data(self, data):
-        try:
-            return [item['ProductId'] for item in data]
-        except Exception:
-            raise
+    """
 
     def get_queryset(self):
         return SemaProductQuerySet(
@@ -1623,90 +10837,578 @@ class SemaProductManager(SemaBaseManager):
             using=self._db
         )
 
-    def perform_product_html_update(self):
-        return self.get_queryset().perform_product_html_update()
-
-    def perform_product_vehicle_update(self):
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, datasets, base_vehicle_ids=None,
+                               vehicle_ids=None, year=None,
+                               make_name=None, model_name=None,
+                               submodel_name=None, part_numbers=None,
+                               pies_segments=None, annotated=False):
         """
-        Retrieves product queryset and **vehicles by product** data for
-        product queryset by product queryset method, dataset queryset
-        method, dataset object method, brand object method, and SEMA API
-        object method and retrieves and updates product objects'
-        vehicles by product manager and products object methods and
-        returns a list of messages.
+        Retrieves product data from SEMA API.
 
-        :rtype: list
-
-        """
-
-        msgs = []
-        try:
-            msgs += self.get_queryset().perform_product_vehicle_update()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def perform_pies_attribute_update(self, attribute_model):
-        msgs = []
-        try:
-            msgs += self.get_queryset().perform_pies_attribute_update(
-                attribute_model
-            )
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
-    def perform_product_category_update(self, brand_ids=None, dataset_ids=None,
-                                        base_vehicle_ids=None,
-                                        vehicle_ids=None, part_numbers=None,
-                                        year=None, make_name=None,
-                                        model_name=None, submodel_name=None,
-                                        pies_segments=None):
-        """
-        Retrieves **products by category** data for available categories
-        by category queryset method, category object method and SEMA API
-        object method and retrieves and updates product objects'
-        categories by product manager and product object method, and
-        returns a list of messages.
-
-        :type brand_ids: list
-        :type dataset_ids: list
+        :param datasets: dataset queryset with which to retrieve
+        :type datasets: django.db.models.QuerySet
+        :param base_vehicle_ids: base vehicles IDs on which to filter
         :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
         :type vehicle_ids: list
-        :type part_numbers: list
+        :param year: year on which to filter
         :type year: int
+        :param make_name: make name on which to filter
         :type make_name: str
+        :param model_name: model name on which to filter
         :type model_name: str
+        :param submodel_name: submodel name on which to filter
         :type submodel_name: str
+        :param part_numbers: part numbers on which to filter
+        :type part_numbers: list
+        :param pies_segments: pies segments to include or ['all']
         :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: product data
         :rtype: list
 
-        """
-        from .models import SemaCategory
+        :raises Exception: on general exception
 
-        msgs = []
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
         try:
-            categories = SemaCategory.objects.filter(is_authorized=True)
-            data = categories.get_products_by_category_data_from_api(
-                brand_ids=brand_ids,
-                dataset_ids=dataset_ids,
+            return datasets.retrieve_products_by_brand_data_from_api(
                 base_vehicle_ids=base_vehicle_ids,
                 vehicle_ids=vehicle_ids,
-                part_numbers=part_numbers,
                 year=year,
                 make_name=make_name,
                 model_name=model_name,
                 submodel_name=submodel_name,
-                pies_segments=pies_segments
+                part_numbers=part_numbers,
+                pies_segments=pies_segments,
+                annotated=annotated
             )
-            msgs += self.update_product_categories_from_api_data(
-                data
+        except Exception:
+            raise
+
+    def retrieve_products_by_brand_data_from_api(self, base_vehicle_ids=None,
+                                                 vehicle_ids=None, year=None,
+                                                 make_name=None,
+                                                 model_name=None,
+                                                 submodel_name=None,
+                                                 pies_segments=None,
+                                                 annotated=False):
+        """
+        Retrieves products by brand data from SEMA API.
+
+        :param base_vehicle_ids: base vehicle IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: product data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>,
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_brand_data_from_api(
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                pies_segments=pies_segments,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_products_by_category_data_from_api(self, category_id,
+                                                    base_vehicle_ids=None,
+                                                    vehicle_ids=None,
+                                                    year=None, make_name=None,
+                                                    model_name=None,
+                                                    submodel_name=None,
+                                                    pies_segments=None,
+                                                    annotated=False):
+        """
+        Retrieves products by category data from SEMA API.
+
+        :param category_id: category ID on which to filter
+        :type category_id: int
+        :type base_vehicle_ids: int
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param pies_segments: pies segments to include or ['all']
+        :type pies_segments: list
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: products by category data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "category_id_": <int>,
+                        "brand_ids_": <list>, (if defined)
+                        "dataset_ids_": <list>, (if defined)
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "product_id_": <int>,
+                        "part_number_": <str>,
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return self.get_queryset().retrieve_products_by_category_data_from_api(
+                category_id=category_id,
+                base_vehicle_ids=base_vehicle_ids,
+                vehicle_ids=vehicle_ids,
+                year=year,
+                make_name=make_name,
+                model_name=model_name,
+                submodel_name=submodel_name,
+                pies_segments=pies_segments,
+                annotated=annotated
+            )
+        except Exception:
+            raise
+
+    def retrieve_product_html_data_from_api(self, annotated=False):
+        """
+        Retrieves products HTML data from SEMA API object.
+
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: products HTML
+        :rtype: list
+
+        :raises: Exception on SEMA API object method exception
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "product_id_": <int>,
+                        "html_": <str>
+                    },
+                    {...}
+                ]
+            else:
+                ret = [
+                    <str>,
+                    ...
+                ]
+        """
+
+        try:
+            return self.get_queryset().retrieve_product_html_data_from_api(
+                annotated=annotated
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def get_retrieve_data_from_api_params(self, **params):
+        """
+        Returns params with additional params datasets as authorized
+        datasets queryset if not already defined and annotated as true.
+
+        :param params: param kwargs to which to add additional params
+
+        :return: param kwargs
+        :rtype: dict
+
+        :raises Exception: on general exception
+
+        """
+
+        try:
+            if 'datasets' not in params:
+                from sema.models import SemaDataset
+                datasets = SemaDataset.objects.filter(is_authorized=True)
+                params['datasets'] = datasets
+            params['annotated'] = True
+            return params
+        except Exception:
+            raise
+
+    def flatten_api_data(self, data):
+        """
+        Flattens nested data and returns relevant key/values.
+
+        :param data: API data
+        :type data: list
+
+        :return: flat API data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "dataset_id_": <int>,
+                    "products_": [
+                        {
+                            "ProductId": <int>,
+                            "PartNumber": <str>,
+                        },
+                        {...}
+                    ]
+                },
+                {...}
+            ]
+
+        **-Return Format-**
+        ::
+            data = [
+                {
+                    "ProductId": <int>,
+                    "PartNumber": <str>,
+                    "dataset_id_": <int>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            flattened_data = []
+            for dataset in data:
+                for product in dataset['products_']:
+                    flattened_data.append(
+                        {
+                            'ProductId': product['ProductId'],
+                            'PartNumber': product['PartNumber'],
+                            'dataset_id_': dataset['dataset_id_']
+                        }
+                    )
+            return flattened_data
+        except Exception:
+            raise
+
+    def parse_api_data(self, data):
+        """
+        Returns object PK and field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "ProductId": <int>,
+                "PartNumber": <str>,
+                "dataset_id_": <int>
+            }
+
+        **-Return Format-**
+        ::
+            pk = <int>
+            fields = {
+                "part_number": <str>,
+                "dataset_id": <int>
+            }
+
+        """
+
+        try:
+            pk = data['ProductId']
+            fields = {
+                'part_number': data['PartNumber'],
+                'dataset_id': data['dataset_id_']
+            }
+            return pk, fields
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "ProductId": <int>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            return [item['ProductId'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_product_vehicles_update(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_product_vehicles_update()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_pies_attribute_update_from_api(self, pies_attr_model,
+                                               new_only=False, **filters):
+        """
+        Retrieves products PIES attribute data from SEMA API, and
+        creates and/or updates products PIES attribute objects.
+
+        :param pies_attr_model: SEMA PIES Attribute model class
+        :type pies_attr_model: sema.models.SemaBasePiesAttributeModel
+        :param new_only: whether or not to skip updating existing
+            objects
+        :type new_only: bool
+        :param filters: kwargs by which to filter data retrieve
+
+        :return: info, success, and/or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
+        try:
+            msgs += self.get_queryset(
+            ).perform_pies_attribute_update_from_api(
+                pies_attr_model=pies_attr_model,
+                new_only=new_only,
+                **filters
             )
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
@@ -1716,167 +11418,338 @@ class SemaProductManager(SemaBaseManager):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def get_products_by_brand_data_from_api(self, base_vehicle_ids=None,
-                                            vehicle_ids=None, year=None,
-                                            make_name=None, model_name=None,
-                                            submodel_name=None,
-                                            pies_segments=None):
+    def perform_product_html_update_from_api(self):
+        """
+        Retrieves products HTML data from SEMA API, and updates HTML
+        fields.
+
+        :return: update or error messages
+        :rtype: list
+
+        """
+
+        msgs = []
         try:
-            return self.get_queryset().get_products_by_brand_data_from_api(
+            msgs += self.get_queryset().perform_product_html_update_from_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+
+class SemaBasePiesAttributeManager(SemaBaseManager):
+    """
+    This base manager class defines base attributes for SEMA PIES
+    attribute managers.
+
+    """
+
+    DEFAULT_ATTRIBUTE_CODES = ['all']
+
+    def get_queryset(self):
+        return SemaBasePiesAttributeQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, products, base_vehicle_ids=None,
+                               vehicle_ids=None, year=None,
+                               make_name=None, model_name=None,
+                               submodel_name=None, annotated=False):
+        """
+        Retrieves product and attribute data from SEMA API.
+
+        :param products: products queryset with which to retrieve
+        :type products: django.db.models.QuerySet
+        :param base_vehicle_ids: base vehicles IDs on which to filter
+        :type base_vehicle_ids: list
+        :param vehicle_ids: vehicle IDs on which to filter
+        :type vehicle_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_name: make name on which to filter
+        :type make_name: str
+        :param model_name: model name on which to filter
+        :type model_name: str
+        :param submodel_name: submodel name on which to filter
+        :type submodel_name: str
+        :param annotated: whether or not to include filter annotation
+        :type annotated: bool
+
+        :return: product and attribute data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            `year` requires `make_name` and `model_name`
+
+            `make_name` requires `year` and `model_name`
+
+            `model_name` requires `year` and `make_name`
+
+            `submodel_name` requires `year`, `make_name`, and `model_name`
+
+            Only one of `base_vehicle_ids`, `vehicle_ids`, or named
+            year/make/model group allowed
+
+        **-Return Format-**
+        ::
+            if annotated:
+                ret = [
+                    {
+                        "brand_id_": <str>,
+                        "dataset_id_": <int>,
+                        "base_vehicle_ids_": <list>, (if defined)
+                        "vehicle_ids_": <list>, (if defined)
+                        "year_": <int>, (if defined)
+                        "make_name_": <str>, (if defined)
+                        "model_name_": <str>, (if defined)
+                        "submodel_name_": <str>, (if defined)
+                        "part_numbers_": <list>, (if defined)
+                        "products_": [
+                            {
+                                "ProductId": <int>,
+                                "PartNumber": <str>,
+                                "PiesAttributes": [
+                                    {
+                                        "PiesName": <str>,
+                                        "PiesSegment": <str>,
+                                        "Value": <str> or null
+                                    },
+                                    {...}
+                                ]
+                            },
+                            {...}
+                        ]
+                    }
+                ]
+            else:
+                ret = [
+                    {
+                        "ProductId": <int>,
+                        "PartNumber": <str>,
+                        "PiesAttributes": [
+                            {
+                                "PiesName": <str>,
+                                "PiesSegment": <str>,
+                                "Value": <str> or null
+                            },
+                            {...}
+                        ]
+                    },
+                    {...}
+                ]
+
+        """
+
+        try:
+            return products.retrieve_products_by_brand_data_from_api(
                 base_vehicle_ids=base_vehicle_ids,
                 vehicle_ids=vehicle_ids,
                 year=year,
                 make_name=make_name,
                 model_name=model_name,
                 submodel_name=submodel_name,
-                pies_segments=pies_segments
+                pies_segments=self.DEFAULT_ATTRIBUTE_CODES,
+                annotated=annotated
             )
         except Exception:
             raise
 
-    def get_vehicles_by_product_data_from_api(self):
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def get_retrieve_data_from_api_params(self, **params):
         """
-        Retrieves product queryset and returns **vehicles by product**
-        data for queryset by product queryset method, dataset object
-        method, brand object method, and SEMA API object method.
+        Returns params with additional params products as authorized
+        products queryset if not already defined and annotated as false.
 
-        :rtype: list
+        :param params: param kwargs to which to add additional params
 
-        :raises: Exception on dataset queryset method exception
+        :return: param kwargs
+        :rtype: dict
 
-        .. Topic:: Return Format
-
-            [
-                {
-                    "PartNumber": str,
-                    "Vehicles": [
-                        {
-                            "Year": int,
-                            "MakeName": str,
-                            "ModelName": str,
-                            "SubmodelName": str
-                        },
-                        {...}
-                    ],
-                    "brand_id_": str,
-                    "dataset_id_: int
-                },
-                {...}
-            ]
+        :raises Exception: on general exception
 
         """
 
         try:
-            return self.get_queryset().get_vehicles_by_product_data_from_api()
+            if 'products' not in params:
+                from sema.models import SemaProduct
+                products = SemaProduct.objects.filter(is_authorized=True)
+                params['products'] = products
+            params['annotated'] = False
+            return params
         except Exception:
             raise
 
-    def update_product_vehicles_from_api_data(self, data):
+    def flatten_api_data(self, data):
         """
-        Retrieves product object by data part number, updates
-        product vehicles by product object method, and returns a list
-        of messages.
+        Flattens nested data and returns relevant key/values.
 
+        :param data: API data
+        :type data: list
+
+        :return: flat API data
         :rtype: list
 
-        .. warnings also:: Does not remove vehicles not in data
+        :raises Exception: on general exception
 
-        .. Topic:: Expected Data Format
-
-            [
+        **-Expected Data Format-**
+        ::
+            data = [
                 {
-                    "PartNumber": str,
-                    "Vehicles": [
+                    "ProductId": <int>,
+                    "PartNumber": <str>,
+                    "PiesAttributes": [
                         {
-                            "Year": int,
-                            "MakeName": str,
-                            "ModelName": str,
-                            "SubmodelName": str
+                            "PiesName": <str>,
+                            "PiesSegment": <str>,
+                            "Value": <str> or null
                         },
                         {...}
-                    ],
-                    "brand_id_": str
+                    ]
                 },
                 {...}
             ]
 
-        """
-
-        msgs = []
-        try:
-            for item in data:
-                try:
-                    product = self.get(
-                        part_number=item['PartNumber'],
-                        dataset__brand__brand_id=item['brand_id_']
-                    )
-                    msgs += product.update_product_vehicles_from_api_data(
-                        item['Vehicles']
-                    )
-                except Exception as err:
-                    msgs.append(self.model.get_class_error_msg(f'{item, err}'))
-                    continue
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-        return msgs
-
-    def update_product_categories_from_api_data(self, data):
-        """
-        Retrieves product object by data product id, updates
-        product vehicles by product object method, and returns a list
-        of messages.
-
-        :rtype: list
-
-        .. warnings also:: Does not remove categories not in data
-
-        .. Topic:: Expected Data Format
-
-            [
+        **-Return Format-**
+        ::
+            data = [
                 {
-                    "ProductId": int,
-                    "PartNumber": str,
-                    "PiesAttributes": [],
-                    "category_id_" int
+                    "ProductId": <int>,
+                    "PiesSegment": <str>,
+                    "Value": <str> or null
                 },
                 {...}
             ]
 
         """
 
-        msgs = []
-        products_categories = defaultdict(list)
-        for item in data:
-            try:
-                products_categories[item['ProductId']].append(
-                    item['category_id_']
-                )
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
-                return msgs
+        try:
+            flattened_data = []
+            for product in data:
+                for pies_attribute in product['PiesAttributes']:
+                    if pies_attribute['Value']:
+                        flattened_data.append(
+                            {
+                                'ProductId': product['ProductId'],
+                                'PiesSegment': pies_attribute['PiesSegment'],
+                                'Value': pies_attribute['Value']
+                            }
+                        )
+            return flattened_data
+        except Exception:
+            raise
 
-        for product_id, categories in products_categories.items():
-            try:
-                product = self.get(product_id=product_id)
-                msgs += product.update_product_categories_from_api_data(
-                    categories
-                )
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(
-                    f"{product_id}, {err}")
-                )
-                continue
-        return msgs
+    def parse_api_data(self, data):
+        """
+        Returns NoneType (because PK is not defined in API data) and
+        object field/value dictionary from API data item.
 
-    def update_pies_attributes_from_api_data(self, attribute_model, data):
-        msgs = []
-        for item in data:
-            try:
-                product = self.get(product_id=item['ProductId'])
-                msgs += product.update_pies_attributes_from_api_data(
-                    attribute_model,
-                    item['PiesAttributes']
-                )
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
-        return msgs
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "ProductId": <int>,
+                "PiesSegment": <str>,
+                "Value": <str> or null
+            }
+
+        **-Return Format-**
+        ::
+            pk = None
+            fields = {
+                "product_id": <int>,
+                "segment": <str>,
+                "value": <str>
+            }
+
+        """
+
+        try:
+            fields = {
+                'product_id': data['ProductId'],
+                'segment': data['PiesSegment'],
+                'value': data['Value']
+            }
+            return None, fields
+        except Exception:
+            raise
+
+    def get_object_from_api_data(self, pk=None, product_id=None,
+                                 segment=None, value=None):
+        """
+        Returns object by product and segment.
+
+        :param pk: placeholder for overridden PK param
+        :param product_id: product ID field value
+        :type product_id: int
+        :param segment: segment field value
+        :type segment: str
+        :param value: placeholder for overridden value param
+        :type value: str
+
+        :return: model instance
+        :rtype: object
+
+        :raises Exception: missing product_id or segment, or on general
+            exception
+
+        """
+
+        if not (product_id and segment):
+            raise Exception('Product ID and segment required')
+
+        try:
+            return self.get(
+                product_id=product_id,
+                segment=segment
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaDescriptionPiesAttributeManager(SemaBasePiesAttributeManager):
+    """
+    This manager class defines SEMA description PIES attribute methods.
+
+    """
+
+    DEFAULT_ATTRIBUTE_CODES = ['C10']
+
+    def get_queryset(self):
+        return SemaDescriptionPiesAttributeQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class SemaDigitalAssetsPiesAttributeManager(SemaBasePiesAttributeManager):
+    """
+    This manager class defines SEMA digital assets PIES attribute
+    methods.
+
+    """
+
+    DEFAULT_ATTRIBUTE_CODES = ['P05', 'P80']
+
+    def get_queryset(self):
+        return SemaDigitalAssetsPiesAttributeQuerySet(
+            self.model,
+            using=self._db
+        )

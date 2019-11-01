@@ -7,7 +7,7 @@ from django.conf import settings
 from core.exceptions import ApiInvalidToken
 
 
-class PremierApi(object):
+class PremierApiClient(object):
     def __init__(self):
         self.token = self.retrieve_token()
 
@@ -64,4 +64,4 @@ class PremierApi(object):
             raise
 
 
-premier_api = PremierApi()
+premier_client = PremierApiClient()

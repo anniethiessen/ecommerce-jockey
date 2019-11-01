@@ -76,27 +76,22 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     )
 
     actions = (
-        'import_datasets_queryset_action',
-        # 'update_product_vehicles_queryset_action',  # TO NOTE: too long
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
     )
 
     changelist_actions = (
-        'import_class_action',
-        # 'update_product_vehicles_class_action'  # TO NOTE: too long
-    )
-
-    change_actions = (
-        'import_datasets_object_action',
-        # 'update_product_vehicles_object_action'  # TO NOTE: too long
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action'
     )
 
     list_display = (
         'details_link',
         'brand_id',
         'name',
-        'dataset_count',
+        'dataset_count_a',
         'primary_image_preview',
         'is_authorized',
         'is_relevant',
@@ -158,12 +153,16 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     readonly_fields = (
         'primary_image_preview',
         'relevancy_errors',
-        'dataset_count'
+        'dataset_count_a'
     )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def dataset_count_a(self, obj):
+        return f'{obj.dataset_relevant_count}/{obj.dataset_count}'
+    dataset_count_a.short_description = 'dataset count'
 
     def primary_image_preview(self, obj):
         if not obj.primary_image_url:
@@ -186,27 +185,30 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     )
 
     actions = (
-        'import_products_queryset_action',
-        # 'update_product_vehicles_queryset_action',  # TO NOTE: too long
+        'update_dataset_categories_queryset_action',  # TO NOTE: too long
+        'update_dataset_vehicles_queryset_action',  # TO NOTE: too long
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
     )
 
     changelist_actions = (
-        'import_class_action',
-        # 'update_product_vehicles_class_action'  # TO NOTE: too long
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action'
     )
 
-    # change_actions = (
-    #     'update_product_vehicles_object_action',  # TO NOTE: too long
-    # )
+    change_actions = (
+        'update_dataset_categories_object_action',
+        'update_dataset_vehicles_object_action'  # TO NOTE: too long
+    )
 
     list_display = (
         'details_link',
         'dataset_id',
         'name',
         'brand',
-        'product_count',
+        'product_count_a',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -256,6 +258,26 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             }
         ),
         (
+            'Categories', {
+                'fields': (
+                    'categories',
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Vehicles', {
+                'fields': (
+                    'vehicles',
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
             'Notes', {
                 'fields': (
                     'notes',
@@ -264,16 +286,18 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         )
     )
 
+    autocomplete_fields = (
+        'brand',
+        'categories',
+        'vehicles'
+    )
+
     readonly_fields = (
         'relevancy_errors',
         'may_be_relevant_flag',
-        'product_count',
+        'product_count_a',
         'details_link',
         'brand_link'
-    )
-
-    autocomplete_fields = (
-        'brand',
     )
 
     inlines = (
@@ -291,12 +315,21 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             obj.brand, 'See full brand')
     brand_link.short_description = ''
 
+    def product_count_a(self, obj):
+        return f'{obj.product_relevant_count}/{obj.product_count}'
+    product_count_a.short_description = 'product count'
+
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:
             return '~'
         else:
             return ''
     may_be_relevant_flag.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related(
+            'vehicles', 'categories'
+        )
 
 
 @admin.register(SemaYear)
@@ -311,13 +344,16 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     )
 
     changelist_actions = (
-        'import_class_action',
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action'
     )
 
     list_display = (
         'details_link',
         'year',
-        'make_year_count',
+        'make_year_count_a',
         'is_authorized',
         'is_relevant',
         'relevancy_errors',
@@ -366,7 +402,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
 
     readonly_fields = (
         'relevancy_errors',
-        'make_year_count',
+        'make_year_count_a',
         'details_link'
     )
 
@@ -377,6 +413,10 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def make_year_count_a(self, obj):
+        return f'{obj.make_year_relevant_count}/{obj.make_year_count}'
+    make_year_count_a.short_description = 'make year count'
 
 
 @admin.register(SemaMake)
@@ -392,14 +432,17 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     )
 
     changelist_actions = (
-        'import_class_action',
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action'
     )
 
     list_display = (
         'details_link',
         'make_id',
         'name',
-        'make_year_count',
+        'make_year_count_a',
         'is_authorized',
         'is_relevant',
         'relevancy_errors',
@@ -448,7 +491,7 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
 
     readonly_fields = (
         'relevancy_errors',
-        'make_year_count',
+        'make_year_count_a',
         'details_link'
     )
 
@@ -459,6 +502,10 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def make_year_count_a(self, obj):
+        return f'{obj.make_year_relevant_count}/{obj.make_year_count}'
+    make_year_count_a.short_description = 'make year count'
 
 
 @admin.register(SemaModel)
@@ -474,14 +521,17 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     )
 
     changelist_actions = (
-        'import_class_action',
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action',
     )
 
     list_display = (
         'details_link',
         'model_id',
         'name',
-        'base_vehicle_count',
+        'base_vehicle_count_a',
         'is_authorized',
         'is_relevant',
         'relevancy_errors',
@@ -530,7 +580,7 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
 
     readonly_fields = (
         'relevancy_errors',
-        'base_vehicle_count',
+        'base_vehicle_count_a',
         'details_link',
     )
 
@@ -541,6 +591,10 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def base_vehicle_count_a(self, obj):
+        return f'{obj.base_vehicle_relevant_count}/{obj.base_vehicle_count}'
+    base_vehicle_count_a.short_description = 'base vehicle count'
 
 
 @admin.register(SemaSubmodel)
@@ -556,14 +610,17 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
     )
 
     changelist_actions = (
-        'import_class_action',
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action',
     )
 
     list_display = (
         'details_link',
         'submodel_id',
         'name',
-        'vehicle_count',
+        'vehicle_count_a',
         'is_authorized',
         'is_relevant',
         'relevancy_errors',
@@ -588,9 +645,7 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
             None, {
                 'fields': (
                     'is_authorized',
-                    'may_be_relevant_flag',
-                    'is_relevant',
-                    'relevancy_errors'
+                    'is_relevant'
                 )
             }
         ),
@@ -613,7 +668,7 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
 
     readonly_fields = (
         'relevancy_errors',
-        'vehicle_count',
+        'vehicle_count_a',
         'details_link',
     )
 
@@ -625,6 +680,10 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
+    def vehicle_count_a(self, obj):
+        return f'{obj.vehicle_relevant_count}/{obj.vehicle_count}'
+    vehicle_count_a.short_description = 'vehicle count'
+
 
 @admin.register(SemaMakeYear)
 class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
@@ -633,19 +692,22 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'make'
     )
 
-    actions = (
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
-    )
-
     search_fields = (
         'year__year',
         'make__make_id',
         'make__name'
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     changelist_actions = (
-        'import_class_action',
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action'
     )
 
     list_display = (
@@ -653,7 +715,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'id',
         'year',
         'make',
-        'base_vehicle_count',
+        'base_vehicle_count_a',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -724,7 +786,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'id',
         'relevancy_errors',
         'may_be_relevant_flag',
-        'base_vehicle_count',
+        'base_vehicle_count_a',
         'details_link',
         'year_link',
         'make_link'
@@ -755,6 +817,10 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         return get_change_view_link(obj.make, 'See full make')
     make_link.short_description = ''
 
+    def base_vehicle_count_a(self, obj):
+        return f'{obj.base_vehicle_relevant_count}/{obj.base_vehicle_count}'
+    base_vehicle_count_a.short_description = 'base vehicle count'
+
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:
             return '~'
@@ -771,11 +837,6 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'model'
     )
 
-    actions = (
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
-    )
-
     search_fields = (
         'base_vehicle_id',
         'make_year__year__year',
@@ -785,8 +846,16 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'model__name'
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     changelist_actions = (
-        'import_class_action',
+        'import_new_class_action',  # TO NOTE: too long
+        # 'import_class_action',  # TO NOTE: too long
+        # 'unauthorize_class_action',  # TO NOTE: too long
+        # 'sync_class_action',  # TO NOTE: too long
     )
 
     list_display = (
@@ -794,7 +863,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'base_vehicle_id',
         'make_year',
         'model',
-        'vehicle_count',
+        'vehicle_count_a',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -865,7 +934,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     readonly_fields = (
         'relevancy_errors',
         'may_be_relevant_flag',
-        'vehicle_count',
+        'vehicle_count_a',
         'details_link',
         'make_year_link',
         'model_link'
@@ -895,6 +964,10 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
             return None
         return get_change_view_link(obj.model, 'See full model')
     model_link.short_description = ''
+
+    def vehicle_count_a(self, obj):
+        return f'{obj.vehicle_relevant_count}/{obj.vehicle_count}'
+    vehicle_count_a.short_description = 'vehicle count'
 
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:
@@ -929,7 +1002,10 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     changelist_actions = (
-        'import_class_action',
+        'import_new_class_action',  # TO NOTE: too long
+        # 'import_class_action',  # TO NOTE: too long
+        # 'unauthorize_class_action',  # TO NOTE: too long
+        # 'sync_class_action'  # TO NOTE: too long
     )
 
     list_display = (
@@ -937,7 +1013,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'vehicle_id',
         'base_vehicle',
         'submodel',
-        'product_count',
+        'product_count_a',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -1010,7 +1086,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',
-        'product_count',
+        'product_count_a',
         'base_vehicle_link',
         'submodel_link'
     )
@@ -1043,12 +1119,21 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         return get_change_view_link(obj.submodel, 'See full submodel')
     submodel_link.short_description = ''
 
+    def product_count_a(self, obj):
+        return f'{obj.product_relevant_count}/{obj.product_count}'
+    product_count_a.short_description = 'product count'
+
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:
             return '~'
         else:
             return ''
     may_be_relevant_flag.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related(
+            'datasets', 'products'
+        )
 
 
 @admin.register(SemaCategory)
@@ -1065,8 +1150,10 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     )
 
     changelist_actions = (
+        # 'import_new_class_action',  # TO NOTE: does not add m2m
         'import_class_action',
-        'update_category_products_class_action'
+        # 'unauthorize_class_action',
+        # 'sync_class_action'
     )
 
     change_actions = (
@@ -1077,9 +1164,9 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'details_link',
         'category_id',
         'name',
-        'parent_category_count',
-        'child_category_count',
-        'product_count',
+        'parent_category_count_a',
+        'child_category_count_a',
+        'product_count_a',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -1133,9 +1220,9 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     readonly_fields = (
         'relevancy_errors',
         'may_be_relevant_flag',
-        'parent_category_count',
-        'child_category_count',
-        'product_count',
+        'parent_category_count_a',
+        'child_category_count_a',
+        'product_count_a',
         'details_link'
     )
 
@@ -1149,12 +1236,35 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
+    def parent_category_count_a(self, obj):
+        return (
+            f'{obj.parent_category_relevant_count}'
+            f'/{obj.parent_category_count}'
+        )
+    parent_category_count_a.short_description = 'parent count'
+
+    def child_category_count_a(self, obj):
+        return (
+            f'{obj.child_category_relevant_count}'
+            f'/{obj.child_category_count}'
+        )
+    child_category_count_a.short_description = 'child count'
+
+    def product_count_a(self, obj):
+        return f'{obj.product_relevant_count}/{obj.product_count}'
+    product_count_a.short_description = 'product count'
+
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:
             return '~'
         else:
             return ''
     may_be_relevant_flag.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related(
+            'datasets', 'products'
+        )
 
 
 @admin.register(SemaProduct)
@@ -1186,16 +1296,17 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     changelist_actions = (
-        'import_class_action',
-        # 'update_product_categories_class_action',  # TO NOTE: too long
-        # 'update_product_vehicles_class_action'  # TO NOTE: too long
+        'import_new_class_action',
+        # 'import_class_action',
+        # 'unauthorize_class_action',
+        # 'sync_class_action'
     )
 
     change_actions = (
         'update_html_object_action',
         'update_product_vehicles_object_action',
         'update_description_pies_object_action',
-        'update_description_pies_object_action'
+        'update_digital_assets_pies_object_action'
     )
 
     list_display = (
@@ -1362,7 +1473,11 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related(
-            'vehicles', 'categories')
+            'vehicles',
+            'categories',
+            'description_pies_attributes',
+            'digital_assets_pies_attributes'
+        )
 
 
 class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
