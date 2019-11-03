@@ -1837,11 +1837,11 @@ class SemaDatasetQuerySet(SemaBaseQuerySet):
     # </editor-fold>
 
     # <editor-fold desc="perform properties ...">
-    def perform_dataset_categories_update(self, **filters):
+    def perform_dataset_categories_update_from_api(self, **filters):
         msgs = []
         for dataset in self:
             try:
-                msgs += dataset.perform_dataset_categories_update(
+                msgs += dataset.perform_dataset_categories_update_from_api(
                     **filters
                 )
             except Exception as err:
@@ -1851,11 +1851,11 @@ class SemaDatasetQuerySet(SemaBaseQuerySet):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def perform_dataset_vehicles_update(self):
+    def perform_dataset_vehicles_update_from_api(self):
         msgs = []
         for dataset in self:
             try:
-                msgs += dataset.perform_dataset_vehicles_update()
+                msgs += dataset.perform_dataset_vehicles_update_from_api()
             except Exception as err:
                 msgs.append(self.model.get_class_error_msg(str(err)))
 
@@ -4551,11 +4551,11 @@ class SemaProductQuerySet(SemaBaseQuerySet):
     # </editor-fold>
 
     # <editor-fold desc="perform properties ...">
-    def perform_product_vehicles_update(self):
+    def perform_product_vehicles_update_from_api(self):
         msgs = []
         for product in self:
             try:
-                msgs += product.perform_product_vehicles_update()
+                msgs += product.perform_product_vehicles_update_from_api()
             except Exception as err:
                 msgs.append(self.model.get_class_error_msg(str(err)))
 
@@ -6807,10 +6807,10 @@ class SemaDatasetManager(SemaBaseManager):
     # </editor-fold>
 
     # <editor-fold desc="perform properties ...">
-    def perform_dataset_categories_update(self, **filters):
+    def perform_dataset_categories_update_from_api(self, **filters):
         msgs = []
         try:
-            msgs += self.get_queryset().perform_dataset_categories_update(
+            msgs += self.get_queryset().perform_dataset_categories_update_from_api(
                 **filters
             )
         except Exception as err:
@@ -6820,10 +6820,10 @@ class SemaDatasetManager(SemaBaseManager):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
-    def perform_dataset_vehicles_update(self):
+    def perform_dataset_vehicles_update_from_api(self):
         msgs = []
         try:
-            msgs += self.get_queryset().perform_dataset_vehicles_update()
+            msgs += self.get_queryset().perform_dataset_vehicles_update_from_api()
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
 
@@ -11373,10 +11373,10 @@ class SemaProductManager(SemaBaseManager):
     # </editor-fold>
 
     # <editor-fold desc="perform properties ...">
-    def perform_product_vehicles_update(self):
+    def perform_product_vehicles_update_from_api(self):
         msgs = []
         try:
-            msgs += self.get_queryset().perform_product_vehicles_update()
+            msgs += self.get_queryset().perform_product_vehicles_update_from_api()
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
 

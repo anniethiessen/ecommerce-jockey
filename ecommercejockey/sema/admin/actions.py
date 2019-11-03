@@ -61,7 +61,7 @@ class SemaBaseActions(RelevancyActions):
 class SemaDatasetVehicleActions(SemaBaseActions):
     def update_dataset_vehicles_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.perform_dataset_vehicles_update()
+            msgs = queryset.perform_dataset_vehicles_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -72,7 +72,7 @@ class SemaDatasetVehicleActions(SemaBaseActions):
 
     def update_dataset_vehicles_object_action(self, request, obj):
         try:
-            msgs = obj.perform_dataset_vehicles_update()
+            msgs = obj.perform_dataset_vehicles_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -90,7 +90,7 @@ class SemaDatasetVehicleActions(SemaBaseActions):
 class SemaDatasetCategoryActions(SemaBaseActions):
     def update_dataset_categories_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.perform_dataset_categories_update()
+            msgs = queryset.perform_dataset_categories_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -101,7 +101,7 @@ class SemaDatasetCategoryActions(SemaBaseActions):
 
     def update_dataset_categories_object_action(self, request, obj):
         try:
-            msgs = obj.perform_dataset_categories_update()
+            msgs = obj.perform_dataset_categories_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))

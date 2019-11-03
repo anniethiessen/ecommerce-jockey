@@ -300,9 +300,9 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'brand_link'
     )
 
-    inlines = (
-        SemaProductTabularInline,
-    )
+    # inlines = (
+    #     SemaProductTabularInline,  # TO NOTE: too long
+    # )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')

@@ -640,7 +640,6 @@ class SemaApiClient(object):
         except Exception:
             raise
 
-    # X Dataset categories update
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
     def retrieve_categories(self, brand_ids=None, dataset_ids=None,
@@ -899,7 +898,6 @@ class SemaApiClient(object):
         except Exception:
             raise
 
-    # Product categories update
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
     def retrieve_products_by_category(self, category_id,
@@ -1083,7 +1081,6 @@ class SemaApiClient(object):
         except Exception:
             raise
 
-    # X Product vehicles update
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
     def retrieve_vehicles_by_product(self, brand_id=None, dataset_id=None,
@@ -1177,7 +1174,6 @@ class SemaApiClient(object):
         except Exception:
             raise
 
-    # X Dataset vehicles update
     @retry(exceptions=ApiInvalidToken, tries=2)
     @retry(exceptions=ApiRateLimitExceeded, tries=13, delay=5)
     def retrieve_vehicles_by_brand(self, brand_ids=None, dataset_ids=None):

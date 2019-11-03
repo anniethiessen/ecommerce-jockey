@@ -5726,7 +5726,7 @@ class SemaDataset(SemaBaseModel):
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
-    def perform_dataset_categories_update(self, **filters):
+    def perform_dataset_categories_update_from_api(self, **filters):
         msgs = []
         try:
             data = SemaCategory.objects.get_api_data(
@@ -5762,7 +5762,7 @@ class SemaDataset(SemaBaseModel):
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
-    def perform_dataset_vehicles_update(self):
+    def perform_dataset_vehicles_update_from_api(self):
         msgs = []
         try:
             data = self.retrieve_vehicles_by_brand_data_from_api(
@@ -6372,7 +6372,7 @@ class SemaProduct(SemaBaseModel):
     # </editor-fold>
 
     # <editor-fold desc="perform properties ...">
-    def perform_product_vehicles_update(self):
+    def perform_product_vehicles_update_from_api(self):
         msgs = []
         try:
             data = self.retrieve_vehicles_by_product_data_from_api(

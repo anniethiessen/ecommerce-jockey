@@ -114,7 +114,7 @@ def perform_sema_api_import_and_unauthorize(models=None):
     for index, model in enumerate(models, start=1):
         print(f'{index}. Syncing {model._meta.verbose_name.title()}...')
         try:
-            msgs += model.objects.import_and_unauthorize_from_api()
+            msgs += model.objects.perform_import_from_api()
         except Exception as err:
             msgs.append(f'Internal Error: {err}')
             print('--- errored')
@@ -134,26 +134,82 @@ def perform_sema_api_import_and_unauthorize(models=None):
 def perform_sema_api_update(tasks=None):
     if not tasks:
         tasks = [
-            'product_category',
-            'product_vehicle'
+            'dataset_categories',
+            'dataset_vehicles',
+            'category_products',
+            'product_vehicles',
+            'product_descriptions',
+            'product_digital_assets',
+            'product_html',
         ]
 
     msgs = []
     for index, task in enumerate(tasks, start=1):
-        if task == 'product_category':
-            print(f'{index}. Updating product categories...')
+        if task == 'dataset_categories':
+            print(f'{index}. Updating dataset categories...')
             try:
-                categories = SemaCategory.objects.filter(is_authorized=True)
-                msgs += categories.perform_product_category_update()
+                qs = SemaDataset.objects.filter(is_authorized=True)
+                msgs += qs.perform_dataset_categories_update_from_api()
                 print('--- complete')
             except Exception as err:
                 msgs.append(f'Internal Error: {err}')
                 print('--- errored')
-        elif task == 'product_vehicle':
+        elif task == 'dataset_vehicles':
+            print(f'{index}. Updating dataset vehicles...')
+            try:
+                qs = SemaDataset.objects.filter(is_authorized=True)
+                msgs += qs.perform_dataset_vehicles_update_from_api()
+                print('--- complete')
+            except Exception as err:
+                msgs.append(f'Internal Error: {err}')
+                print('--- errored')
+        elif task == 'category_products':
+            print(f'{index}. Updating category products...')
+            try:
+                qs = SemaCategory.objects.filter(is_authorized=True)
+                msgs += qs.perform_category_products_update_from_api()
+                print('--- complete')
+            except Exception as err:
+                msgs.append(f'Internal Error: {err}')
+                print('--- errored')
+        elif task == 'product_vehicles':
             print(f'{index}. Updating product vehicles...')
             try:
-                brands = SemaBrand.objects.filter(is_authorized=True)
-                msgs += brands.perform_product_vehicle_update()
+                qs = SemaProduct.objects.filter(is_authorized=True)
+                msgs += qs.perform_product_vehicles_update_from_api()
+                print('--- complete')
+            except Exception as err:
+                msgs.append(f'Internal Error: {err}')
+                print('--- errored')
+        elif task == 'product_descriptions':
+            print(f'{index}. Updating product descriptions...')
+            try:
+                from sema.models import SemaDescriptionPiesAttribute
+                qs = SemaProduct.objects.filter(is_relevant=True)
+                msgs += qs.perform_pies_attribute_update_from_api(
+                    pies_attr_model=SemaDescriptionPiesAttribute
+                )
+                print('--- complete')
+            except Exception as err:
+                msgs.append(f'Internal Error: {err}')
+                print('--- errored')
+        elif task == 'product_digital_assets':
+            print(f'{index}. Updating product assets...')
+            try:
+                from sema.models import SemaDigitalAssetsPiesAttribute
+                qs = SemaProduct.objects.filter(is_relevant=True)
+                msgs += qs.perform_pies_attribute_update_from_api(
+                    pies_attr_model=SemaDigitalAssetsPiesAttribute
+                )
+                print('--- complete')
+            except Exception as err:
+                msgs.append(f'Internal Error: {err}')
+                print('--- errored')
+        elif task == 'product_html':
+            print(f'{index}. Updating product HTML...')
+            try:
+                qs = SemaProduct.objects.filter(is_relevant=True)
+                msgs += qs.perform_product_html_update_from_api()
                 print('--- complete')
             except Exception as err:
                 msgs.append(f'Internal Error: {err}')
@@ -178,24 +234,40 @@ sema_update = perform_sema_api_update
 
 
 # TODO
-# sema classes update (when new brands)
+# PERIODICALLY & (WHEN NEW BRANDS)
+# sema brand import
+# sema dataset import
+# sema year import
+# sema make import
+# sema model import
+# sema submodel import
+# sema make year import
+# sema base vehicle import
+# sema vehicle import
+# sema category import
+# sema product import
+
+# sema dataset update categories
+# sema dataset update vehicles
+# sema category update products
+# sema products update vehicles
 #
-# create items
-# premier inventory update (if item)
-# premier pricing update (if item)
-# sema html update (if item)
+# sema mark relevant/create item
+# sema brand image
+# sema product html update
+# sema product pies update
+
+# premier import manufacturer csv
+# premier inventory update
+
+# premier mark relevant/create item
+# premier link images
+# premier pricing update
 #
-# WARN:
-# item missing prices
-# item missing inventory
-# item missing primary image
-# item missing html
-# item inventory in alberta updated to 0
-# incomplete items
 #
-# INFO:
-# non item premier products with inventory in Alberta
-# item with new category
+# INFO/WARNINGS:
+# may be relevant
+# shopify changes
 
 # ----
 #   NEW ORDER OF EVENTS
@@ -227,14 +299,3 @@ sema_update = perform_sema_api_update
 #   2. update premier product pricing for new relevant
 #   2. update premier product images for new relevant
 #   2. create/delete main items
-
-
-#   TODO item warnings
-#   no premier product
-#   premier product - not relevant
-#   premier product.manufacturer - no image
-#   premier product - no image
-#   premier product - no price
-#   premier product - no inventory
-#   no sema product
-#   sema product - not relevant
