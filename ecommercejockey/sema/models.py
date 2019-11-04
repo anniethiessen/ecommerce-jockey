@@ -177,7 +177,7 @@ class SemaYear(SemaBaseModel):
 
         """
 
-        return self.make_years.count()
+        return self.make_years.distinct().count()
     make_year_count.fget.short_description = 'Make Year Count'
 
     @property
@@ -190,7 +190,7 @@ class SemaYear(SemaBaseModel):
 
         """
 
-        return self.make_years.filter(is_relevant=True).count()
+        return self.make_years.filter(is_relevant=True).distinct().count()
     make_year_relevant_count.fget.short_description = (
         'Relevant Make Year Count'
     )
@@ -580,7 +580,7 @@ class SemaMake(SemaBaseModel):
 
         """
 
-        return self.make_years.count()
+        return self.make_years.distinct().count()
     make_year_count.fget.short_description = 'Make Year Count'
 
     @property
@@ -593,7 +593,7 @@ class SemaMake(SemaBaseModel):
 
         """
 
-        return self.make_years.filter(is_relevant=True).count()
+        return self.make_years.filter(is_relevant=True).distinct().count()
     make_year_relevant_count.fget.short_description = (
         'Relevant Make Year Count'
     )
@@ -934,7 +934,7 @@ class SemaModel(SemaBaseModel):
 
         """
 
-        return self.base_vehicles.count()
+        return self.base_vehicles.distinct().count()
     base_vehicle_count.fget.short_description = 'Base Vehicle Count'
 
     @property
@@ -947,7 +947,7 @@ class SemaModel(SemaBaseModel):
 
         """
 
-        return self.base_vehicles.filter(is_relevant=True).count()
+        return self.base_vehicles.filter(is_relevant=True).distinct().count()
     base_vehicle_relevant_count.fget.short_description = (
         'Relevant Base Vehicle Count'
     )
@@ -1210,7 +1210,7 @@ class SemaSubmodel(SemaBaseModel):
 
         """
 
-        return self.vehicles.count()
+        return self.vehicles.distinct().count()
     vehicle_count.fget.short_description = 'Vehicle Count'
 
     @property
@@ -1223,7 +1223,7 @@ class SemaSubmodel(SemaBaseModel):
 
         """
 
-        return self.vehicles.filter(is_relevant=True).count()
+        return self.vehicles.filter(is_relevant=True).distinct().count()
     vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
     # </editor-fold>
 
@@ -1285,7 +1285,7 @@ class SemaMakeYear(SemaBaseModel):
 
         """
 
-        return self.base_vehicles.count()
+        return self.base_vehicles.distinct().count()
     base_vehicle_count.fget.short_description = 'Base Vehicle Count'
 
     @property
@@ -1298,7 +1298,7 @@ class SemaMakeYear(SemaBaseModel):
 
         """
 
-        return self.base_vehicles.filter(is_relevant=True).count()
+        return self.base_vehicles.filter(is_relevant=True).distinct().count()
     base_vehicle_relevant_count.fget.short_description = (
         'Relevant Base Vehicle Count'
     )
@@ -1687,7 +1687,7 @@ class SemaBaseVehicle(SemaBaseModel):
 
         """
 
-        return self.vehicles.count()
+        return self.vehicles.distinct().count()
     vehicle_count.fget.short_description = 'Vehicle Count'
 
     @property
@@ -1700,7 +1700,7 @@ class SemaBaseVehicle(SemaBaseModel):
 
         """
 
-        return self.vehicles.filter(is_relevant=True).count()
+        return self.vehicles.filter(is_relevant=True).distinct().count()
     vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
     # </editor-fold>
 
@@ -2542,7 +2542,7 @@ class SemaVehicle(SemaBaseModel):
 
         """
 
-        return self.datasets.filter(is_relevant=True).count()
+        return self.datasets.filter(is_relevant=True).distinct().count()
     dataset_relevant_count.fget.short_description = 'Relevant Dataset Count'
 
     @property
@@ -2555,7 +2555,7 @@ class SemaVehicle(SemaBaseModel):
 
         """
 
-        return self.products.count()
+        return self.products.distinct().count()
     product_count.fget.short_description = 'Product Count'
 
     @property
@@ -2568,7 +2568,7 @@ class SemaVehicle(SemaBaseModel):
 
         """
 
-        return self.products.filter(is_relevant=True).count()
+        return self.products.filter(is_relevant=True).distinct().count()
     product_relevant_count.fget.short_description = 'Relevant Product Count'
     # </editor-fold>
 
@@ -3257,7 +3257,7 @@ class SemaCategory(SemaBaseModel):
 
         """
 
-        return self.datasets.filter(is_relevant=True).count()
+        return self.datasets.filter(is_relevant=True).distinct().count()
     dataset_relevant_count.fget.short_description = 'Relevant Dataset Count'
 
     @property
@@ -3283,7 +3283,7 @@ class SemaCategory(SemaBaseModel):
 
         """
 
-        return self.products.filter(is_relevant=True).count()
+        return self.products.filter(is_relevant=True).distinct().count()
     product_relevant_count.fget.short_description = 'Relevant Product Count'
 
     @property
@@ -3296,7 +3296,7 @@ class SemaCategory(SemaBaseModel):
 
         """
 
-        return self.parent_categories.count()
+        return self.parent_categories.distinct().count()
     parent_category_count.fget.short_description = 'Parent Count'
 
     @property
@@ -3309,7 +3309,9 @@ class SemaCategory(SemaBaseModel):
 
         """
 
-        return self.parent_categories.filter(is_relevant=True).count()
+        return self.parent_categories.filter(
+            is_relevant=True
+        ).distinct().count()
     parent_category_count.fget.short_description = 'Relevant Parent Count'
 
     @property
@@ -3322,7 +3324,7 @@ class SemaCategory(SemaBaseModel):
 
         """
 
-        return self.child_categories.count()
+        return self.child_categories.distinct().count()
     child_category_count.fget.short_description = 'Child Count'
 
     @property
@@ -3335,7 +3337,9 @@ class SemaCategory(SemaBaseModel):
 
         """
 
-        return self.child_categories.filter(is_relevant=True).count()
+        return self.child_categories.distinct().filter(
+            is_relevant=True
+        ).count()
     child_category_relevant_count.fget.short_description = (
         'Relevant Child Count'
     )
@@ -3662,7 +3666,7 @@ class SemaBrand(SemaBaseModel):
 
         """
 
-        return self.datasets.count()
+        return self.datasets.distinct().count()
     dataset_count.fget.short_description = 'Dataset Count'
 
     @property
@@ -3675,7 +3679,7 @@ class SemaBrand(SemaBaseModel):
 
         """
 
-        return self.datasets.filter(is_relevant=True).count()
+        return self.datasets.filter(is_relevant=True).distinct().count()
     dataset_relevant_count.fget.short_description = 'Relevant Dataset Count'
     # </editor-fold>
 
@@ -4671,7 +4675,7 @@ class SemaDataset(SemaBaseModel):
 
         """
 
-        return self.categories.count()
+        return self.categories.distinct().count()
     category_count.fget.short_description = 'Category Count'
 
     @property
@@ -4684,7 +4688,7 @@ class SemaDataset(SemaBaseModel):
 
         """
 
-        return self.categories.filter(is_relevant=True).count()
+        return self.categories.filter(is_relevant=True).distinct().count()
     category_relevant_count.fget.short_description = 'Relevant Category Count'
 
     @property
@@ -4697,7 +4701,7 @@ class SemaDataset(SemaBaseModel):
 
         """
 
-        return self.vehicles.count()
+        return self.vehicles.distinct().count()
     vehicle_count.fget.short_description = 'Vehicle Count'
 
     @property
@@ -4710,7 +4714,7 @@ class SemaDataset(SemaBaseModel):
 
         """
 
-        return self.vehicles.filter(is_relevant=True).count()
+        return self.vehicles.filter(is_relevant=True).distinct().count()
     vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
 
     @property
@@ -4723,7 +4727,7 @@ class SemaDataset(SemaBaseModel):
 
         """
 
-        return self.products.count()
+        return self.products.distinct().count()
     product_count.fget.short_description = 'Product Count'
 
     @property
@@ -4735,7 +4739,7 @@ class SemaDataset(SemaBaseModel):
         :rtype: int
 
         """
-        return self.products.filter(is_relevant=True).count()
+        return self.products.filter(is_relevant=True).distinct().count()
     product_relevant_count.fget.short_description = 'Relevant Product Count'
     # </editor-fold>
 
@@ -5848,58 +5852,6 @@ class SemaProduct(SemaBaseModel):
 
     # <editor-fold desc="count properties ...">
     @property
-    def category_count(self):
-        """
-        Returns category count.
-
-        :return: category count
-        :rtype: int
-
-        """
-
-        return self.categories.count()
-    category_count.fget.short_description = 'Category Count'
-
-    @property
-    def category_relevant_count(self):
-        """
-        Returns relevant category count.
-
-        :return: relevant category count
-        :rtype: int
-
-        """
-
-        return self.categories.filter(is_relevant=True).count()
-    category_relevant_count.fget.short_description = 'Relevant Category Count'
-
-    @property
-    def vehicle_count(self):
-        """
-        Returns vehicle count.
-
-        :return: vehicle count
-        :rtype: int
-
-        """
-
-        return self.vehicles.count()
-    vehicle_count.fget.short_description = 'Vehicle Count'
-
-    @property
-    def vehicle_relevant_count(self):
-        """
-        Returns relevant vehicle count.
-
-        :return: relevant vehicle count
-        :rtype: int
-
-        """
-
-        return self.vehicles.filter(is_relevant=True).count()
-    vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
-
-    @property
     def description_pies_attribute_count(self):
         """
         Returns description PIES attribute count.
@@ -5909,7 +5861,7 @@ class SemaProduct(SemaBaseModel):
 
         """
 
-        return self.description_pies_attributes.count()
+        return self.description_pies_attributes.distinct().count()
     description_pies_attribute_count.fget.short_description = (
         'Description Count'
     )
@@ -5926,7 +5878,7 @@ class SemaProduct(SemaBaseModel):
 
         return self.description_pies_attributes.filter(
             is_relevant=True
-        ).count()
+        ).distinct().count()
     description_pies_attribute_relevant_count.fget.short_description = (
         'Relevant Description Count'
     )
@@ -5941,7 +5893,7 @@ class SemaProduct(SemaBaseModel):
 
         """
 
-        return self.digital_assets_pies_attributes.count()
+        return self.digital_assets_pies_attributes.distinct().count()
     digital_assets_pies_attribute_count.fget.short_description = (
         'Digital Asset Count'
     )
@@ -5958,10 +5910,62 @@ class SemaProduct(SemaBaseModel):
 
         return self.digital_assets_pies_attributes.filter(
             is_relevant=True
-        ).count()
+        ).distinct().count()
     digital_assets_pies_attribute_relevant_count.fget.short_description = (
         'Relevant Digital Asset Count'
     )
+
+    @property
+    def category_count(self):
+        """
+        Returns category count.
+
+        :return: category count
+        :rtype: int
+
+        """
+
+        return self.categories.distinct().count()
+    category_count.fget.short_description = 'Category Count'
+
+    @property
+    def category_relevant_count(self):
+        """
+        Returns relevant category count.
+
+        :return: relevant category count
+        :rtype: int
+
+        """
+
+        return self.categories.filter(is_relevant=True).distinct().count()
+    category_relevant_count.fget.short_description = 'Relevant Category Count'
+
+    @property
+    def vehicle_count(self):
+        """
+        Returns vehicle count.
+
+        :return: vehicle count
+        :rtype: int
+
+        """
+
+        return self.vehicles.distinct().count()
+    vehicle_count.fget.short_description = 'Vehicle Count'
+
+    @property
+    def vehicle_relevant_count(self):
+        """
+        Returns relevant vehicle count.
+
+        :return: relevant vehicle count
+        :rtype: int
+
+        """
+
+        return self.vehicles.filter(is_relevant=True).distinct().count()
+    vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
     # </editor-fold>
 
     # <editor-fold desc="relevancy properties ...">

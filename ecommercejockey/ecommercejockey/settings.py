@@ -52,14 +52,27 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
+        'DIRS': [
+            os.path.join(BASE_DIR, 'core', 'templates'),
+            os.path.join(BASE_DIR, 'main', 'templates'),
+            os.path.join(BASE_DIR, 'premier', 'templates'),
+            os.path.join(BASE_DIR, 'sema', 'templates'),
+            os.path.join(BASE_DIR, 'shopify', 'templates')
+        ],
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages'
+            ],
+            'loaders': [
+                (
+                    'django.template.loaders.cached.Loader', [
+                        'django.template.loaders.filesystem.Loader',
+                        'django.template.loaders.app_directories.Loader'
+                    ]
+                ),
             ]
         }
     }

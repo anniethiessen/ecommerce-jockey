@@ -58,7 +58,7 @@ class SemaBaseActions(RelevancyActions):
     )
 
 
-class SemaDatasetVehicleActions(SemaBaseActions):
+class SemaDatasetVehiclesActions(SemaBaseActions):
     def update_dataset_vehicles_queryset_action(self, request, queryset):
         try:
             msgs = queryset.perform_dataset_vehicles_update_from_api()
@@ -87,7 +87,7 @@ class SemaDatasetVehicleActions(SemaBaseActions):
     )
 
 
-class SemaDatasetCategoryActions(SemaBaseActions):
+class SemaDatasetCategoriesActions(SemaBaseActions):
     def update_dataset_categories_queryset_action(self, request, queryset):
         try:
             msgs = queryset.perform_dataset_categories_update_from_api()
@@ -116,7 +116,7 @@ class SemaDatasetCategoryActions(SemaBaseActions):
     )
 
 
-class SemaProductVehicleActions(SemaBaseActions):
+class SemaProductVehiclesActions(SemaBaseActions):
     def update_product_vehicles_queryset_action(self, request, queryset):
         try:
             msgs = queryset.perform_product_vehicle_update()
@@ -145,7 +145,7 @@ class SemaProductVehicleActions(SemaBaseActions):
     )
 
 
-class SemaCategoryProductActions(SemaBaseActions):
+class SemaCategoryProductsActions(SemaBaseActions):
     def update_category_products_queryset_action(self, request, queryset):
         try:
             msgs = queryset.perform_category_products_update_from_api()
@@ -174,7 +174,7 @@ class SemaCategoryProductActions(SemaBaseActions):
     )
 
 
-class SemaProductPiesAttributeActions(SemaBaseActions):
+class SemaProductPiesAttributesActions(SemaBaseActions):
     def update_description_pies_object_action(self, request, obj):
         from sema.models import SemaDescriptionPiesAttribute
 
@@ -273,8 +273,8 @@ class SemaBrandActions(SemaBaseActions):
     pass
 
 
-class SemaDatasetActions(SemaDatasetCategoryActions,
-                         SemaDatasetVehicleActions):
+class SemaDatasetActions(SemaDatasetCategoriesActions,
+                         SemaDatasetVehiclesActions):
     pass
 
 
@@ -306,11 +306,11 @@ class SemaVehicleActions(SemaBaseActions):
     pass
 
 
-class SemaCategoryActions(SemaCategoryProductActions):
+class SemaCategoryActions(SemaCategoryProductsActions):
     pass
 
 
-class SemaProductActions(SemaProductVehicleActions,
-                         SemaProductPiesAttributeActions,
+class SemaProductActions(SemaProductVehiclesActions,
+                         SemaProductPiesAttributesActions,
                          SemaProductHtmlActions):
     pass

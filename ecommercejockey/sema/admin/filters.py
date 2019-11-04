@@ -38,6 +38,29 @@ class HasVehicle(SimpleListFilter):
             return queryset.filter(vehicles=None)
 
 
+class HasPrimaryImage(SimpleListFilter):
+    title = 'has primary image'
+    parameter_name = 'primary_image_url'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                Q(primary_image_url__isnull=False)
+                & ~Q(primary_image_url='')
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(primary_image_url__isnull=True)
+                | Q(primary_image_url='')
+            )
+
+
 class ByDecadeFilter(SimpleListFilter):
     title = 'year'
     parameter_name = 'year'

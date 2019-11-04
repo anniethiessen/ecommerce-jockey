@@ -1,3 +1,4 @@
+from functools import reduce
 from math import floor
 
 
@@ -11,3 +12,10 @@ def chunkify_list(lst, chunk_size=100):
     if chunk:
         chunkified.append(chunk)
     return chunkified
+
+
+def rgetattr(obj, attr, *args):
+    # noinspection PyShadowingNames
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+    return reduce(_getattr, [obj] + attr.split('.'))

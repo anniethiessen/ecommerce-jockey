@@ -42,6 +42,7 @@ from .filters import (
     HasCategory,
     HasHtml,
     HasItem,
+    HasPrimaryImage,
     HasVehicle,
     SemaBaseVehicleByDecade,
     SemaBaseVehicleMayBeRelevant,
@@ -54,27 +55,31 @@ from .filters import (
     SemaVehicleMayBeRelevant
 )
 from .inlines import (
-    SemaBaseVehicleTabularInline,
-    SemaCategoryChildrenTabularInline,
-    SemaCategoryParentsTabularInline,
+    SemaBaseVehicleVehiclesTabularInline,
+    SemaBrandDatasetsTabularInline,
+    SemaCategoryDatasetsTabularInline,
+    SemaCategoryChildCategoriesTabularInline,
+    SemaCategoryParentCategoriesTabularInline,
     SemaCategoryProductsTabularInline,
-    SemaDatasetTabularInline,
-    SemaDescriptionPiesAttributeTabularInline,
-    SemaDigitalAssetsPiesAttributeTabularInline,
-    # SemaMakeYearTabularInline,
-    SemaProductTabularInline,
+    SemaDatasetCategoriesTabularInline,
+    SemaDatasetProductsTabularInline,
+    SemaDatasetVehiclesTabularInline,
+    SemaMakeMakeYearsTabularInline,
+    SemaMakeYearBaseVehiclesTabularInline,
+    SemaModelBaseVehiclesTabularInline,
+    SemaProductCategoriesTabularInline,
+    SemaProductDescriptionPiesAttributeTabularInline,
+    SemaProductDigitalAssetsPiesAttributeTabularInline,
+    SemaProductVehiclesTabularInline,
+    SemaSubmodelVehiclesTabularInline,
+    SemaVehicleDatasetsTabularInline,
     SemaVehicleProductsTabularInline,
-    SemaVehicleTabularInline
+    SemaYearMakeYearsTabularInline
 )
 
 
 @admin.register(SemaBrand)
 class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
-    search_fields = (
-        'brand_id',
-        'name'
-    )
-
     actions = (
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
@@ -85,6 +90,11 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         # 'import_class_action',
         # 'unauthorize_class_action',
         # 'sync_class_action'
+    )
+
+    search_fields = (
+        'brand_id',
+        'name'
     )
 
     list_display = (
@@ -110,6 +120,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
+        HasPrimaryImage
     )
 
     fieldsets = (
@@ -147,7 +158,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     )
 
     inlines = (
-        SemaDatasetTabularInline,
+        SemaBrandDatasetsTabularInline,
     )
 
     readonly_fields = (
@@ -161,7 +172,8 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     details_link.short_description = ''
 
     def dataset_count_a(self, obj):
-        return f'{obj.dataset_relevant_count}/{obj.dataset_count}'
+        return f'{obj._dataset_relevant_count}/{obj._dataset_count}'
+    dataset_count_a.admin_order_field = '_dataset_relevant_count'
     dataset_count_a.short_description = 'dataset count'
 
     def primary_image_preview(self, obj):
@@ -170,20 +182,12 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         return get_image_preview(obj.primary_image_url, width="100")
     primary_image_preview.short_description = 'primary image'
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
 
 @admin.register(SemaDataset)
 class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
-    list_select_related = (
-        'brand',
-    )
-
-    search_fields = (
-        'brand__brand_id',
-        'brand__name',
-        'dataset_id',
-        'name'
-    )
-
     actions = (
         'update_dataset_categories_queryset_action',  # TO NOTE: too long
         'update_dataset_vehicles_queryset_action',  # TO NOTE: too long
@@ -203,11 +207,24 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'update_dataset_vehicles_object_action'  # TO NOTE: too long
     )
 
+    list_select_related = (
+        'brand',
+    )
+
+    search_fields = (
+        'brand__brand_id',
+        'brand__name',
+        'dataset_id',
+        'name'
+    )
+
     list_display = (
         'details_link',
         'dataset_id',
         'name',
         'brand',
+        'category_count_a',
+        'vehicle_count_a',
         'product_count_a',
         'is_authorized',
         'may_be_relevant_flag',
@@ -227,7 +244,8 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
-        SemaDatasetMayBeRelevant
+        SemaDatasetMayBeRelevant,
+        'brand'
     )
 
     fieldsets = (
@@ -258,26 +276,6 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             }
         ),
         (
-            'Categories', {
-                'fields': (
-                    'categories',
-                ),
-                'classes': (
-                    'collapse',
-                )
-            }
-        ),
-        (
-            'Vehicles', {
-                'fields': (
-                    'vehicles',
-                ),
-                'classes': (
-                    'collapse',
-                )
-            }
-        ),
-        (
             'Notes', {
                 'fields': (
                     'notes',
@@ -288,21 +286,23 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
 
     autocomplete_fields = (
         'brand',
-        'categories',
-        'vehicles'
     )
 
     readonly_fields = (
         'relevancy_errors',
         'may_be_relevant_flag',
+        'category_count_a',
+        'vehicle_count_a',
         'product_count_a',
         'details_link',
         'brand_link'
     )
 
-    # inlines = (
-    #     SemaProductTabularInline,  # TO NOTE: too long
-    # )
+    inlines = (
+        SemaDatasetCategoriesTabularInline,
+        SemaDatasetVehiclesTabularInline,
+        SemaDatasetProductsTabularInline
+    )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
@@ -315,8 +315,19 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             obj.brand, 'See full brand')
     brand_link.short_description = ''
 
+    def category_count_a(self, obj):
+        return f'{obj.category_relevant_count}/{obj.category_count}'
+    # category_count_a.admin_order_field = '_category_relevant_count'
+    category_count_a.short_description = 'category count'
+
+    def vehicle_count_a(self, obj):
+        return f'{obj.vehicle_relevant_count}/{obj.vehicle_count}'
+    # vehicle_count_a.admin_order_field = '_vehicle_relevant_count'
+    vehicle_count_a.short_description = 'vehicle count'
+
     def product_count_a(self, obj):
         return f'{obj.product_relevant_count}/{obj.product_count}'
+    # product_count_a.admin_order_field = '_product_relevant_count'
     product_count_a.short_description = 'product count'
 
     def may_be_relevant_flag(self, obj):
@@ -326,18 +337,12 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             return ''
     may_be_relevant_flag.short_description = ''
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'vehicles', 'categories'
-        )
+    # def get_queryset(self, request):  # FIXME
+    #     return super().get_queryset(request).with_admin_data()
 
 
 @admin.register(SemaYear)
 class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
-    search_fields = (
-        'year',
-    )
-
     actions = (
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
@@ -348,6 +353,10 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         # 'import_class_action',
         # 'unauthorize_class_action',
         # 'sync_class_action'
+    )
+
+    search_fields = (
+        'year',
     )
 
     list_display = (
@@ -406,26 +415,25 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         'details_link'
     )
 
-    # inlines = (
-    #     SemaMakeYearTabularInline,  # TO NOTE: too long
-    # )
+    inlines = (
+        SemaYearMakeYearsTabularInline,
+    )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
     def make_year_count_a(self, obj):
-        return f'{obj.make_year_relevant_count}/{obj.make_year_count}'
+        return f'{obj._make_year_relevant_count}/{obj._make_year_count}'
+    make_year_count_a.admin_order_field = '_make_year_relevant_count'
     make_year_count_a.short_description = 'make year count'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
 
 @admin.register(SemaMake)
 class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
-    search_fields = (
-        'make_id',
-        'name',
-    )
-
     actions = (
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
@@ -436,6 +444,11 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
         # 'import_class_action',
         # 'unauthorize_class_action',
         # 'sync_class_action'
+    )
+
+    search_fields = (
+        'make_id',
+        'name',
     )
 
     list_display = (
@@ -495,17 +508,21 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
         'details_link'
     )
 
-    # inlines = (
-    #     SemaMakeYearTabularInline,  # TO NOTE: too long
-    # )
+    inlines = (
+        SemaMakeMakeYearsTabularInline,
+    )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
     def make_year_count_a(self, obj):
-        return f'{obj.make_year_relevant_count}/{obj.make_year_count}'
+        return f'{obj._make_year_relevant_count}/{obj._make_year_count}'
+    make_year_count_a.admin_order_field = '_make_year_relevant_count'
     make_year_count_a.short_description = 'make year count'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
 
 @admin.register(SemaModel)
@@ -584,29 +601,33 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'details_link',
     )
 
-    # inlines = (
-    #     SemaBaseVehicleTabularInline,  # TO NOTE: too long
-    # )
+    inlines = (
+        SemaModelBaseVehiclesTabularInline,
+    )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
     def base_vehicle_count_a(self, obj):
-        return f'{obj.base_vehicle_relevant_count}/{obj.base_vehicle_count}'
+        return f'{obj._base_vehicle_relevant_count}/{obj._base_vehicle_count}'
+    base_vehicle_count_a.admin_order_field = '_base_vehicle_relevant_count'
     base_vehicle_count_a.short_description = 'base vehicle count'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
 
 @admin.register(SemaSubmodel)
 class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
-    search_fields = (
-        'submodel_id',
-        'name'
-    )
-
     actions = (
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
+    )
+
+    search_fields = (
+        'submodel_id',
+        'name'
     )
 
     changelist_actions = (
@@ -672,32 +693,25 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'details_link',
     )
 
-    # inlines = (
-    #     SemaVehicleTabularInline,  # TO NOTE: too long
-    # )
+    inlines = (
+        SemaSubmodelVehiclesTabularInline,
+    )
 
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
     def vehicle_count_a(self, obj):
-        return f'{obj.vehicle_relevant_count}/{obj.vehicle_count}'
+        return f'{obj._vehicle_relevant_count}/{obj._vehicle_count}'
+    vehicle_count_a.admin_order_field = '_vehicle_relevant_count'
     vehicle_count_a.short_description = 'vehicle count'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
 
 @admin.register(SemaMakeYear)
 class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
-    list_select_related = (
-        'year',
-        'make'
-    )
-
-    search_fields = (
-        'year__year',
-        'make__make_id',
-        'make__name'
-    )
-
     actions = (
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
@@ -708,6 +722,17 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         # 'import_class_action',
         # 'unauthorize_class_action',
         # 'sync_class_action'
+    )
+
+    list_select_related = (
+        'year',
+        'make'
+    )
+
+    search_fields = (
+        'year__year',
+        'make__make_id',
+        'make__name'
     )
 
     list_display = (
@@ -798,7 +823,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
     )
 
     inlines = (
-        SemaBaseVehicleTabularInline,
+        SemaMakeYearBaseVehiclesTabularInline,
     )
 
     def details_link(self, obj):
@@ -818,7 +843,8 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
     make_link.short_description = ''
 
     def base_vehicle_count_a(self, obj):
-        return f'{obj.base_vehicle_relevant_count}/{obj.base_vehicle_count}'
+        return f'{obj._base_vehicle_relevant_count}/{obj._base_vehicle_count}'
+    base_vehicle_count_a.admin_order_field = '_base_vehicle_relevant_count'
     base_vehicle_count_a.short_description = 'base vehicle count'
 
     def may_be_relevant_flag(self, obj):
@@ -828,10 +854,25 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
             return ''
     may_be_relevant_flag.short_description = ''
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
 
 @admin.register(SemaBaseVehicle)
 class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
                                 SemaBaseVehicleActions):
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
+    changelist_actions = (
+        'import_new_class_action',  # TO NOTE: too long
+        # 'import_class_action',  # TO NOTE: too long
+        # 'unauthorize_class_action',  # TO NOTE: too long
+        # 'sync_class_action',  # TO NOTE: too long
+    )
+
     list_select_related = (
         'make_year',
         'model'
@@ -844,18 +885,6 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'make_year__make__name',
         'model__model_id',
         'model__name'
-    )
-
-    actions = (
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
-    )
-
-    changelist_actions = (
-        'import_new_class_action',  # TO NOTE: too long
-        # 'import_class_action',  # TO NOTE: too long
-        # 'unauthorize_class_action',  # TO NOTE: too long
-        # 'sync_class_action',  # TO NOTE: too long
     )
 
     list_display = (
@@ -946,7 +975,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     inlines = (
-        SemaVehicleTabularInline,
+        SemaBaseVehicleVehiclesTabularInline,
     )
 
     def details_link(self, obj):
@@ -966,7 +995,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
     model_link.short_description = ''
 
     def vehicle_count_a(self, obj):
-        return f'{obj.vehicle_relevant_count}/{obj.vehicle_count}'
+        return f'{obj._vehicle_relevant_count}/{obj._vehicle_count}'
+    vehicle_count_a.admin_order_field = '_vehicle_relevant_count'
     vehicle_count_a.short_description = 'vehicle count'
 
     def may_be_relevant_flag(self, obj):
@@ -976,9 +1006,24 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
             return ''
     may_be_relevant_flag.short_description = ''
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
 
 @admin.register(SemaVehicle)
 class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
+    changelist_actions = (
+        'import_new_class_action',  # TO NOTE: too long
+        # 'import_class_action',  # TO NOTE: too long
+        # 'unauthorize_class_action',  # TO NOTE: too long
+        # 'sync_class_action'  # TO NOTE: too long
+    )
+
     list_select_related = (
         'base_vehicle',
         'submodel'
@@ -996,23 +1041,12 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'vehicle_id'
     )
 
-    actions = (
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
-    )
-
-    changelist_actions = (
-        'import_new_class_action',  # TO NOTE: too long
-        # 'import_class_action',  # TO NOTE: too long
-        # 'unauthorize_class_action',  # TO NOTE: too long
-        # 'sync_class_action'  # TO NOTE: too long
-    )
-
     list_display = (
         'details_link',
         'vehicle_id',
         'base_vehicle',
         'submodel',
+        'dataset_count_a',
         'product_count_a',
         'is_authorized',
         'may_be_relevant_flag',
@@ -1086,6 +1120,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',
+        'dataset_count_a',
         'product_count_a',
         'base_vehicle_link',
         'submodel_link'
@@ -1097,7 +1132,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     inlines = (
-        SemaVehicleProductsTabularInline,
+        SemaVehicleDatasetsTabularInline,
+        SemaVehicleProductsTabularInline
     )
 
     def details_link(self, obj):
@@ -1119,8 +1155,14 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         return get_change_view_link(obj.submodel, 'See full submodel')
     submodel_link.short_description = ''
 
+    def dataset_count_a(self, obj):
+        return f'{obj._dataset_relevant_count}/{obj._dataset_count}'
+    dataset_count_a.admin_order_field = '_dataset_relevant_count'
+    dataset_count_a.short_description = 'dataset count'
+
     def product_count_a(self, obj):
-        return f'{obj.product_relevant_count}/{obj.product_count}'
+        return f'{obj._product_relevant_count}/{obj._product_count}'
+    product_count_a.admin_order_field = '_product_relevant_count'
     product_count_a.short_description = 'product count'
 
     def may_be_relevant_flag(self, obj):
@@ -1131,18 +1173,11 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     may_be_relevant_flag.short_description = ''
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'datasets', 'products'
-        )
+        return super().get_queryset(request).with_admin_data()
 
 
 @admin.register(SemaCategory)
 class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
-    search_fields = (
-        'category_id',
-        'name'
-    )
-
     actions = (
         'update_category_products_queryset_action',
         'mark_as_relevant_queryset_action',
@@ -1160,12 +1195,19 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'update_category_products_object_action',
     )
 
+    search_fields = (
+        'category_id',
+        'name'
+    )
+
     list_display = (
         'details_link',
         'category_id',
         'name',
+        'level',
         'parent_category_count_a',
         'child_category_count_a',
+        'dataset_count_a',
         'product_count_a',
         'is_authorized',
         'may_be_relevant_flag',
@@ -1204,7 +1246,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
             'Category', {
                 'fields': (
                     'category_id',
-                    'name'
+                    'name',
+                    'level'
                 )
             }
         ),
@@ -1219,16 +1262,19 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     readonly_fields = (
         'relevancy_errors',
+        'level',
         'may_be_relevant_flag',
         'parent_category_count_a',
         'child_category_count_a',
+        'dataset_count_a',
         'product_count_a',
         'details_link'
     )
 
     inlines = (
-        SemaCategoryParentsTabularInline,
-        SemaCategoryChildrenTabularInline,
+        SemaCategoryParentCategoriesTabularInline,
+        SemaCategoryChildCategoriesTabularInline,
+        SemaCategoryDatasetsTabularInline,
         SemaCategoryProductsTabularInline
     )
 
@@ -1238,20 +1284,28 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     def parent_category_count_a(self, obj):
         return (
-            f'{obj.parent_category_relevant_count}'
-            f'/{obj.parent_category_count}'
+            f'{obj._parent_category_relevant_count}'
+            f'/{obj._parent_category_count}'
         )
+    parent_category_count_a.admin_order_field = '_parent_category_relevant_count'
     parent_category_count_a.short_description = 'parent count'
 
     def child_category_count_a(self, obj):
         return (
-            f'{obj.child_category_relevant_count}'
-            f'/{obj.child_category_count}'
+            f'{obj._child_category_relevant_count}'
+            f'/{obj._child_category_count}'
         )
+    child_category_count_a.admin_order_field = '_child_category_relevant_count'
     child_category_count_a.short_description = 'child count'
 
+    def dataset_count_a(self, obj):
+        return f'{obj._dataset_relevant_count}/{obj._dataset_count}'
+    dataset_count_a.admin_order_field = '_dataset_relevant_count'
+    dataset_count_a.short_description = 'dataset count'
+
     def product_count_a(self, obj):
-        return f'{obj.product_relevant_count}/{obj.product_count}'
+        return f'{obj._product_relevant_count}/{obj._product_count}'
+    product_count_a.admin_order_field = '_product_relevant_count'
     product_count_a.short_description = 'product count'
 
     def may_be_relevant_flag(self, obj):
@@ -1262,30 +1316,22 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     may_be_relevant_flag.short_description = ''
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'datasets', 'products'
-        )
+        return super().get_queryset(request).with_admin_data()
+
+    def get_inline_instances(self, request, obj=None):
+        inlines = list(self.inlines) or []
+        if (not obj.parent_category_count
+                and SemaCategoryParentCategoriesTabularInline in inlines):
+            inlines.remove(SemaCategoryParentCategoriesTabularInline)
+        if (not obj.child_category_count
+                and SemaCategoryChildCategoriesTabularInline in inlines):
+            inlines.remove(SemaCategoryChildCategoriesTabularInline)
+        self.inlines = inlines
+        return super().get_inline_instances(request, obj)
 
 
 @admin.register(SemaProduct)
 class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
-    list_select_related = (
-        'dataset',
-    )
-
-    ordering = (
-        'product_id',
-    )
-
-    search_fields = (
-        'dataset__brand__brand_id',
-        'dataset__brand__name',
-        'dataset__dataset_id',
-        'dataset__name',
-        'product_id',
-        'part_number'
-    )
-
     actions = (
         'update_html_queryset_action',
         'update_product_vehicles_queryset_action',
@@ -1309,11 +1355,32 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'update_digital_assets_pies_object_action'
     )
 
+    list_select_related = (
+        'dataset',
+    )
+
+    ordering = (
+        'product_id',
+    )
+
+    search_fields = (
+        'dataset__brand__brand_id',
+        'dataset__brand__name',
+        'dataset__dataset_id',
+        'dataset__name',
+        'product_id',
+        'part_number'
+    )
+
     list_display = (
         'details_link',
         'product_id',
         'part_number',
         'dataset',
+        'description_pies_attribute_count_a',
+        'digital_assets_pies_attribute_count_a',
+        'category_count_a',
+        'vehicle_count_a',
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
@@ -1330,10 +1397,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     list_filter = (
-        HasItem,
         'is_authorized',
         'is_relevant',
         # SemaProductMayBeRelevant,
+        HasItem,
         ('dataset__brand', RelatedOnlyFieldListFilter),
         HasCategory,
         HasVehicle,
@@ -1364,23 +1431,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                 'fields': (
                     'dataset_link',
                     'dataset'
-                )
-            }
-        ),
-        (
-            'Categories', {
-                'fields': (
-                    'categories',
-                )
-            }
-        ),
-        (
-            'Vehicles', {
-                'fields': (
-                    'vehicles',
-                ),
-                'classes': (
-                    'collapse',
                 )
             }
         ),
@@ -1419,6 +1469,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     readonly_fields = (
         'relevancy_errors',
         'may_be_relevant_flag',
+        'description_pies_attribute_count_a',
+        'digital_assets_pies_attribute_count_a',
+        'category_count_a',
+        'vehicle_count_a',
         'details_link',
         'dataset_link',
         'brand_link',
@@ -1427,8 +1481,10 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     inlines = (
-        SemaDescriptionPiesAttributeTabularInline,
-        SemaDigitalAssetsPiesAttributeTabularInline
+        SemaProductDescriptionPiesAttributeTabularInline,
+        SemaProductDigitalAssetsPiesAttributeTabularInline,
+        SemaProductCategoriesTabularInline,
+        SemaProductVehiclesTabularInline
     )
 
     def details_link(self, obj):
@@ -1446,6 +1502,38 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     def brand_a(self, obj):
         return str(obj.dataset.brand)
     brand_a.short_description = 'brand'
+
+    def description_pies_attribute_count_a(self, obj):
+        return (
+            f'{obj._description_pies_attribute_relevant_count}'
+            f'/{obj._description_pies_attribute_count}'
+        )
+    description_pies_attribute_count_a.admin_order_field = (
+        '_description_pies_attribute_relevant_count'
+    )
+    description_pies_attribute_count_a.short_description = 'description count'
+
+    def digital_assets_pies_attribute_count_a(self, obj):
+        return (
+            f'{obj._digital_assets_pies_attribute_relevant_count}'
+            f'/{obj._digital_assets_pies_attribute_count}'
+        )
+    digital_assets_pies_attribute_count_a.admin_order_field = (
+        '_digital_assets_pies_attribute_relevant_count'
+    )
+    digital_assets_pies_attribute_count_a.short_description = (
+        'digital assets count'
+    )
+
+    def category_count_a(self, obj):
+        return f'{obj._category_relevant_count}/{obj._category_count}'
+    category_count_a.admin_order_field = '_category_relevant_count'
+    category_count_a.short_description = 'category count'
+
+    def vehicle_count_a(self, obj):
+        return f'{obj._vehicle_relevant_count}/{obj._vehicle_count}'
+    vehicle_count_a.admin_order_field = '_vehicle_relevant_count'
+    vehicle_count_a.short_description = 'vehicle count'
 
     def html_preview(self, obj):
         if not obj.html:
@@ -1472,12 +1560,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     may_be_relevant_flag.short_description = ''
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'vehicles',
-            'categories',
-            'description_pies_attributes',
-            'digital_assets_pies_attributes'
-        )
+        return super().get_queryset(request).with_admin_data()
 
 
 class SemaPiesAttributeBaseModelAdmin(ModelAdmin):

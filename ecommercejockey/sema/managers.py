@@ -11,6 +11,7 @@ from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import (
     Manager,
     QuerySet,
+    Count,
     F,
     Q,
     ManyToManyField
@@ -51,6 +52,21 @@ class SemaBrandQuerySet(SemaBaseQuerySet):
     This queryset class defines SEMA brand queryset methods.
 
     """
+
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'datasets',
+        ).annotate(
+            _dataset_count=Count(
+                'datasets',
+                distinct=True
+            ),
+            _dataset_relevant_count=Count(
+                'datasets',
+                filter=Q(datasets__is_relevant=True),
+                distinct=True
+            )
+        )
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_years_data_from_api(self, annotated=False):
@@ -935,6 +951,41 @@ class SemaDatasetQuerySet(SemaBaseQuerySet):
     This queryset class defines SEMA dataset queryset methods.
 
     """
+
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'categories',
+            'vehicles',
+            'products'
+        ).annotate(
+            _category_count=Count(
+                'categories',
+                distinct=True
+            ),
+            _category_relevant_count=Count(
+                'categories',
+                filter=Q(categories__is_relevant=True),
+                distinct=True
+            ),
+            _vehicle_count=Count(
+                'vehicles',
+                distinct=True
+            ),
+            _vehicle_relevant_count=Count(
+                'vehicles',
+                filter=Q(vehicles__is_relevant=True),
+                distinct=True
+            ),
+            _product_count=Count(
+                'products',
+                distinct=True
+            ),
+            _product_relevant_count=Count(
+                'products',
+                filter=Q(products__is_relevant=True),
+                distinct=True
+            )
+        )
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_years_data_from_api(self, annotated=False):
@@ -1871,6 +1922,21 @@ class SemaYearQuerySet(SemaBaseQuerySet):
 
     """
 
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'make_years'
+        ).annotate(
+            _make_year_count=Count(
+                'make_years',
+                distinct=True
+            ),
+            _make_year_relevant_count=Count(
+                'make_years',
+                filter=Q(make_years__is_relevant=True),
+                distinct=True
+            )
+        )
+
     def with_year_data(self):
         """
         Annotates decade field to queryset.
@@ -2198,6 +2264,21 @@ class SemaMakeQuerySet(SemaBaseQuerySet):
 
     """
 
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'make_years'
+        ).annotate(
+            _make_year_count=Count(
+                'make_years',
+                distinct=True
+            ),
+            _make_year_relevant_count=Count(
+                'make_years',
+                filter=Q(make_years__is_relevant=True),
+                distinct=True
+            )
+        )
+
     # <editor-fold desc="retrieve properties ...">
     def retrieve_models_data_from_api(self, brand_ids=None, dataset_ids=None,
                                       year=None, annotated=False):
@@ -2451,6 +2532,21 @@ class SemaModelQuerySet(SemaBaseQuerySet):
 
     """
 
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'base_vehicles'
+        ).annotate(
+            _base_vehicle_count=Count(
+                'base_vehicles',
+                distinct=True
+            ),
+            _base_vehicle_relevant_count=Count(
+                'base_vehicles',
+                filter=Q(base_vehicles__is_relevant=True),
+                distinct=True
+            )
+        )
+
     # <editor-fold desc="retrieve properties ...">
     def retrieve_submodels_data_from_api(self, brand_ids=None,
                                          dataset_ids=None, year=None,
@@ -2637,7 +2733,20 @@ class SemaSubmodelQuerySet(SemaBaseQuerySet):
 
     """
 
-    pass
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'vehicles'
+        ).annotate(
+            _vehicle_count=Count(
+                'vehicles',
+                distinct=True
+            ),
+            _vehicle_relevant_count=Count(
+                'vehicles',
+                filter=Q(vehicles__is_relevant=True),
+                distinct=True
+            )
+        )
 
 
 class SemaMakeYearQuerySet(SemaBaseQuerySet):
@@ -2645,6 +2754,21 @@ class SemaMakeYearQuerySet(SemaBaseQuerySet):
     This queryset class defines SEMA vehicle make year queryset methods.
 
     """
+
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'base_vehicles'
+        ).annotate(
+            _base_vehicle_count=Count(
+                'base_vehicles',
+                distinct=True
+            ),
+            _base_vehicle_relevant_count=Count(
+                'base_vehicles',
+                filter=Q(base_vehicles__is_relevant=True),
+                distinct=True
+            )
+        )
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_models_data_from_api(self, brand_ids=None,
@@ -2891,6 +3015,21 @@ class SemaBaseVehicleQuerySet(SemaBaseQuerySet):
     This queryset class defines SEMA base vehicle queryset methods.
 
     """
+
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'vehicles'
+        ).annotate(
+            _vehicle_count=Count(
+                'vehicles',
+                distinct=True
+            ),
+            _vehicle_relevant_count=Count(
+                'vehicles',
+                filter=Q(vehicles__is_relevant=True),
+                distinct=True
+            )
+        )
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_submodels_data_from_api(self, brand_ids=None,
@@ -3548,6 +3687,31 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
 
     """
 
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'datasets',
+            'products'
+        ).annotate(
+            _dataset_count=Count(
+                'datasets',
+                distinct=True
+            ),
+            _dataset_relevant_count=Count(
+                'datasets',
+                filter=Q(datasets__is_relevant=True),
+                distinct=True
+            ),
+            _product_count=Count(
+                'products',
+                distinct=True
+            ),
+            _product_relevant_count=Count(
+                'products',
+                filter=Q(products__is_relevant=True),
+                distinct=True
+            )
+        )
+
     # <editor-fold desc="retrieve properties ...">
     def retrieve_vehicle_info_data_from_api(self, annotated=False):
         """
@@ -4043,6 +4207,51 @@ class SemaCategoryQuerySet(SemaBaseQuerySet):
 
     """
 
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'parent_categories',
+            'child_categories',
+            'datasets',
+            'products'
+        ).annotate(
+            _parent_category_count=Count(
+                'parent_categories',
+                distinct=True
+            ),
+            _parent_category_relevant_count=Count(
+                'parent_categories',
+                filter=Q(parent_categories__is_relevant=True),
+                distinct=True
+            ),
+            _child_category_count=Count(
+                'child_categories',
+                distinct=True
+            ),
+            _child_category_relevant_count=Count(
+                'child_categories',
+                filter=Q(child_categories__is_relevant=True),
+                distinct=True
+            ),
+            _dataset_count=Count(
+                'datasets',
+                distinct=True
+            ),
+            _dataset_relevant_count=Count(
+                'datasets',
+                filter=Q(datasets__is_relevant=True),
+                distinct=True
+            ),
+            _product_count=Count(
+                'products',
+                distinct=True
+            ),
+            _product_relevant_count=Count(
+                'products',
+                filter=Q(products__is_relevant=True),
+                distinct=True
+            )
+        )
+
     # <editor-fold desc="retrieve properties ...">
     def retrieve_products_by_category_data_from_api(self, brand_ids=None,
                                                     dataset_ids=None,
@@ -4196,6 +4405,51 @@ class SemaProductQuerySet(SemaBaseQuerySet):
     This queryset class defines SEMA product queryset methods.
 
     """
+
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'description_pies_attributes',
+            'digital_assets_pies_attributes',
+            'categories',
+            'vehicles'
+        ).annotate(
+            _description_pies_attribute_count=Count(
+                'description_pies_attributes',
+                distinct=True
+            ),
+            _description_pies_attribute_relevant_count=Count(
+                'description_pies_attributes',
+                filter=Q(description_pies_attributes__is_relevant=True),
+                distinct=True
+            ),
+            _digital_assets_pies_attribute_count=Count(
+                'digital_assets_pies_attributes',
+                distinct=True
+            ),
+            _digital_assets_pies_attribute_relevant_count=Count(
+                'digital_assets_pies_attributes',
+                filter=Q(digital_assets_pies_attributes__is_relevant=True),
+                distinct=True
+            ),
+            _category_count=Count(
+                'categories',
+                distinct=True
+            ),
+            _category_relevant_count=Count(
+                'categories',
+                filter=Q(categories__is_relevant=True),
+                distinct=True
+            ),
+            _vehicle_count=Count(
+                'vehicles',
+                distinct=True
+            ),
+            _vehicle_relevant_count=Count(
+                'vehicles',
+                filter=Q(vehicles__is_relevant=True),
+                distinct=True
+            )
+        )
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_products_by_brand_data_from_api(self, base_vehicle_ids=None,
@@ -5016,6 +5270,9 @@ class SemaBrandManager(SemaBaseManager):
             self.model,
             using=self._db
         )
+
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_data_from_api(self):
@@ -5905,6 +6162,9 @@ class SemaDatasetManager(SemaBaseManager):
             self.model,
             using=self._db
         )
+
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_data_from_api(self):
@@ -6845,6 +7105,9 @@ class SemaYearManager(SemaBaseManager):
             using=self._db
         )
 
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
+
     def with_year_data(self):
         """
         Retrieves queryset and annotates decade field.
@@ -7256,6 +7519,9 @@ class SemaMakeManager(SemaBaseManager):
             using=self._db
         )
 
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
+
     def get_or_create_by_names(self, make_name):
         try:
             make = self.get(name=make_name)
@@ -7641,6 +7907,9 @@ class SemaModelManager(SemaBaseManager):
             using=self._db
         )
 
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
+
     def get_or_create_by_names(self, model_name):
         try:
             model = self.get(name=model_name)
@@ -7970,6 +8239,9 @@ class SemaSubmodelManager(SemaBaseManager):
             using=self._db
         )
 
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
+
     def get_or_create_by_names(self, submodel_name):
         try:
             submodel = self.get(name=submodel_name)
@@ -8122,6 +8394,9 @@ class SemaMakeYearManager(SemaBaseManager):
             self.model,
             using=self._db
         )
+
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
 
     def get_by_ids(self, year, make_id):
         """
@@ -8683,6 +8958,9 @@ class SemaBaseVehicleManager(SemaBaseManager):
             self.model,
             using=self._db
         )
+
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
 
     def get_by_ids(self, year, make_id, model_id):
         """
@@ -9608,6 +9886,9 @@ class SemaVehicleManager(SemaBaseManager):
             using=self._db
         )
 
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
+
     def get_by_ids(self, year, make_id, model_id, submodel_id):
         """
         Returns vehicle object by year, make id, model id, and submodel
@@ -10384,6 +10665,9 @@ class SemaCategoryManager(SemaBaseManager):
             using=self._db
         )
 
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
+
     # <editor-fold desc="retrieve properties ...">
     def retrieve_data_from_api(self, datasets, base_vehicle_ids=None,
                                vehicle_ids=None, year=None,
@@ -10836,6 +11120,9 @@ class SemaProductManager(SemaBaseManager):
             self.model,
             using=self._db
         )
+
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_data_from_api(self, datasets, base_vehicle_ids=None,
