@@ -1,12 +1,6 @@
 from django.forms import BaseInlineFormSet
+
 from core.admin.site import INLINE_LIMIT
-
-
-class LimitedInlineFormSet(BaseInlineFormSet):
-    def get_queryset(self):
-        return super().get_queryset().order_by(
-            '-is_relevant'
-        ).distinct()[:INLINE_LIMIT]
 
 
 class LimitedManyToManyDatasetInlineFormSet(BaseInlineFormSet):

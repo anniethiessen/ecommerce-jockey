@@ -12,12 +12,14 @@ class ItemQuerySet(QuerySet):
 class VendorManager(Manager):
     def check_unlinked_vendors(self):
         from premier.models import PremierManufacturer
-        from .models import SemaBrand
+        from sema.models import SemaBrand
+        from shopify.models import ShopifyVendor
 
         msgs = []
 
         premier_manufacturers = PremierManufacturer.objects.all()
         sema_brands = SemaBrand.objects.filter(is_authorized=True)
+        shopify_vendors = ShopifyVendor.objects.all()
         vendors = self.model.objects.all()
 
         for manufacturer in premier_manufacturers:
@@ -48,6 +50,21 @@ class VendorManager(Manager):
             except self.model.DoesNotExist:
                 msgs.append(
                     brand.get_instance_error_msg('Does not exist')
+                )
+            except Exception as err:
+                msgs.append(self.model.get_class_error_msg(str(err)))
+
+        for _vendor in shopify_vendors:
+            try:
+                vendor = self.model.objects.get(shopify_vendor=_vendor)
+                msgs.append(
+                    vendor.get_instance_up_to_date_msg(
+                        message='Already exists'
+                    )
+                )
+            except self.model.DoesNotExist:
+                msgs.append(
+                    _vendor.get_instance_error_msg('Does not exist')
                 )
             except Exception as err:
                 msgs.append(self.model.get_class_error_msg(str(err)))

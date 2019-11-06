@@ -18,6 +18,7 @@ from django.db.models import (
 )
 
 from core.models import (
+    MessagesMixin,
     NotesBaseModel,
     RelevancyBaseModel
 )
@@ -101,9 +102,6 @@ class SemaBaseModel(RelevancyBaseModel, NotesBaseModel):
 
         try:
             prev = self.state
-            if not self.is_authorized:
-                self.is_authorized = True
-                self.save()
             for attr, value in update_fields.items():
                 if isinstance(
                         self._meta.model._meta.get_field(attr),
@@ -5867,23 +5865,6 @@ class SemaProduct(SemaBaseModel):
     )
 
     @property
-    def description_pies_attribute_relevant_count(self):
-        """
-        Returns relevant description PIES attribute count.
-
-        :return: relevant description PIES attribute count
-        :rtype: int
-
-        """
-
-        return self.description_pies_attributes.filter(
-            is_relevant=True
-        ).distinct().count()
-    description_pies_attribute_relevant_count.fget.short_description = (
-        'Relevant Description Count'
-    )
-
-    @property
     def digital_assets_pies_attribute_count(self):
         """
         Returns digital assets PIES attribute count.
@@ -5896,23 +5877,6 @@ class SemaProduct(SemaBaseModel):
         return self.digital_assets_pies_attributes.distinct().count()
     digital_assets_pies_attribute_count.fget.short_description = (
         'Digital Asset Count'
-    )
-
-    @property
-    def digital_assets_pies_attribute_relevant_count(self):
-        """
-        Returns relevant digital assets PIES attribute count.
-
-        :return: relevant digital assets PIES attribute count
-        :rtype: int
-
-        """
-
-        return self.digital_assets_pies_attributes.filter(
-            is_relevant=True
-        ).distinct().count()
-    digital_assets_pies_attribute_relevant_count.fget.short_description = (
-        'Relevant Digital Asset Count'
     )
 
     @property
@@ -5978,14 +5942,17 @@ class SemaProduct(SemaBaseModel):
         .. Topic:: **-May Be Relevant Conditions-**
 
             1. dataset is relevant, and
-            2. has relevant vehicles
+            2. has relevant vehicles (inherits dataset vehicles if none)
 
         :return: whether or not object may be relevant
         :rtype: bool
 
         """
-
-        return self.dataset.is_relevant and self.vehicle_relevant_count > 0
+        if self.vehicle_count:
+            relevant_vehicle_count = self.vehicle_relevant_count
+        else:
+            relevant_vehicle_count = self.dataset.vehicle_relevant_count
+        return self.dataset.is_relevant and relevant_vehicle_count > 0
 
     @property
     def relevancy_errors(self):
@@ -6005,19 +5972,24 @@ class SemaProduct(SemaBaseModel):
             if not self.dataset.is_relevant:
                 error = "dataset not relevant"
                 msgs.append(error)
-            if not self.vehicle_relevant_count:
-                error = "no relevant vehicles"
-                msgs.append(error)
+            if not self.vehicle_count:
+                if not self.dataset.vehicle_relevant_count:
+                    error = "no relevant vehicles"
+                    msgs.append(error)
+            else:
+                if not self.vehicle_relevant_count:
+                    error = "no relevant vehicles"
+                    msgs.append(error)
             if not self.html or self.html == '':
                 error = "no html"
                 msgs.append(error)
             if not self.category_relevant_count == 3:
                 error = f"{self.category_relevant_count} categories"
                 msgs.append(error)
-            if not self.description_pies_attribute_relevant_count:
+            if not self.description_pies_attribute_count:
                 error = "missing description PIES"
                 msgs.append(error)
-            if not self.digital_assets_pies_attribute_relevant_count:
+            if not self.digital_assets_pies_attribute_count:
                 error = "missing digital assets PIES"
                 msgs.append(error)
         return ', '.join(msgs)
@@ -6488,7 +6460,7 @@ class SemaProduct(SemaBaseModel):
         return f'{self.product_id} :: {self.dataset}'
 
 
-class SemaBasePiesAttributeModel(SemaBaseModel):
+class SemaBasePiesAttributeModel(Model, MessagesMixin):
     """
     This abstract model class defines base attributes for SEMA PIES
     attribute models.
@@ -6545,13 +6517,9 @@ class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
 
         """
 
-        state = dict(super().state)
-        state.update(
-            {
-                'Value': self.value
-            }
-        )
-        return state
+        return {
+            'Value': self.value
+        }
     # </editor-fold>
 
     class Meta:
@@ -6587,13 +6555,9 @@ class SemaDigitalAssetsPiesAttribute(SemaBasePiesAttributeModel):
 
         """
 
-        state = dict(super().state)
-        state.update(
-            {
-                'Value': self.value
-            }
-        )
-        return state
+        return {
+            'Value': self.value
+        }
     # </editor-fold>
 
     class Meta:

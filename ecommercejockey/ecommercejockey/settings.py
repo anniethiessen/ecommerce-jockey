@@ -14,6 +14,16 @@ SEMA_BASE_URL = 'https://sdc.semadatacoop.org/sdcapi'
 SEMA_USERNAME = os.environ['SEMA_USERNAME']
 SEMA_PASSWORD = os.environ['SEMA_PASSWORD']
 
+SHOPIFY_SHOP_NAME = os.environ['SHOPIFY_SHOP_NAME']
+SHOPIFY_API_KEY = os.environ['SHOPIFY_API_KEY']
+SHOPIFY_PASSWORD = os.environ['SHOPIFY_PASSWORD']
+SHOPIFY_SECRET = os.environ['SHOPIFY_SECRET']
+SHOPIFY_VERSION = '2019-10'
+SHOPIFY_BASE_URL = (
+    f'https://{SHOPIFY_API_KEY}:{SHOPIFY_PASSWORD}'
+    f'@{SHOPIFY_SHOP_NAME}.myshopify.com/admin/api/{SHOPIFY_VERSION}'
+)
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ['SECRET_KEY']
@@ -229,6 +239,44 @@ ADMIN_REORDER = (
             {
                 'model': 'sema.SemaDigitalAssetsPiesAttribute',
                 'label': 'Digital Assets PIES'  # TODO remove
+            }
+        )
+    },
+    {
+        'app': 'shopify',
+        'label': 'shopify',
+        'models': (
+            {
+                'model': 'shopify.ShopifyVendor',
+                'label': 'Vendors'
+            },
+            {
+                'model': 'shopify.ShopifyCollection',
+                'label': 'Collections'
+            },
+            {
+                'model': 'shopify.ShopifyCollectionRule',
+                'label': 'Rules'
+            },
+            {
+                'model': 'shopify.ShopifyTag',
+                'label': 'Tags'
+            },
+            {
+                'model': 'shopify.ShopifyProduct',
+                'label': 'Products'
+            },
+            {
+                'model': 'shopify.ShopifyVariant',
+                'label': 'Variants'
+            },
+            {
+                'model': 'shopify.ShopifyOption',
+                'label': 'Options'
+            },
+            {
+                'model': 'shopify.ShopifyImage',
+                'label': 'Images'
             }
         )
     }

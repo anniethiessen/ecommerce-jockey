@@ -527,11 +527,6 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
 
 @admin.register(SemaModel)
 class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
-    search_fields = (
-        'model_id',
-        'name'
-    )
-
     actions = (
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
@@ -542,6 +537,11 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         # 'import_class_action',
         # 'unauthorize_class_action',
         # 'sync_class_action',
+    )
+
+    search_fields = (
+        'model_id',
+        'name'
     )
 
     list_display = (
@@ -1504,22 +1504,16 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     brand_a.short_description = 'brand'
 
     def description_pies_attribute_count_a(self, obj):
-        return (
-            f'{obj._description_pies_attribute_relevant_count}'
-            f'/{obj._description_pies_attribute_count}'
-        )
+        return obj._description_pies_attribute_count
     description_pies_attribute_count_a.admin_order_field = (
-        '_description_pies_attribute_relevant_count'
+        '_description_pies_attribute_count'
     )
     description_pies_attribute_count_a.short_description = 'description count'
 
     def digital_assets_pies_attribute_count_a(self, obj):
-        return (
-            f'{obj._digital_assets_pies_attribute_relevant_count}'
-            f'/{obj._digital_assets_pies_attribute_count}'
-        )
+        return obj._digital_assets_pies_attribute_count
     digital_assets_pies_attribute_count_a.admin_order_field = (
-        '_digital_assets_pies_attribute_relevant_count'
+        '_digital_assets_pies_attribute_count'
     )
     digital_assets_pies_attribute_count_a.short_description = (
         'digital assets count'
@@ -1583,29 +1577,14 @@ class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
         'details_link',
         'product',
         'segment',
-        'value',
-        'is_authorized',
-        'is_relevant',
-        'notes'
+        'value'
     )
 
     list_display_links = (
         'details_link',
     )
 
-    list_editable = (
-        'is_relevant',
-    )
-
     fieldsets = (
-        (
-            None, {
-                'fields': (
-                    'is_authorized',
-                    'is_relevant'
-                )
-            }
-        ),
         (
             'Product', {
                 'fields': (
@@ -1654,21 +1633,10 @@ class SemaSemaDigitalAssetsPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdm
         'product',
         'segment',
         'value',
-        'image_preview',
-        'is_authorized',
-        'is_relevant',
-        'notes'
+        'image_preview'
     )
 
     fieldsets = (
-        (
-            None, {
-                'fields': (
-                    'is_authorized',
-                    'is_relevant'
-                )
-            }
-        ),
         (
             'Product', {
                 'fields': (
@@ -1700,5 +1668,4 @@ class SemaSemaDigitalAssetsPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdm
             return get_image_preview(obj.value, width="100")
         except Exception as err:
             return str(err)
-
     image_preview.short_description = ''

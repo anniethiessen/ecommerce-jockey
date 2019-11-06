@@ -19,6 +19,10 @@ from sema.models import (
     SemaBrand,
     SemaProduct
 )
+from shopify.models import (
+    ShopifyVendor,
+    ShopifyProduct
+)
 from .managers import (
     ItemManager,
     VendorManager
@@ -37,6 +41,11 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
         verbose_name='SEMA brand',
         related_name='vendor'
     )
+    shopify_vendor = OneToOneField(
+        ShopifyVendor,
+        on_delete=CASCADE,
+        related_name='vendor'
+    )
     slug = CharField(
         max_length=20,
         unique=True
@@ -48,6 +57,7 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
             self.premier_manufacturer
             and self.premier_manufacturer.is_relevant
             and self.sema_brand and self.sema_brand.is_relevant
+            and self.shopify_vendor
             and self.relevancy_errors == ''
         )
 
@@ -59,6 +69,9 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
 
         if not self.sema_brand:
             msgs.append('Missing SEMA brand')
+
+        if not self.shopify_vendor:
+            msgs.append('Missing Shopify vendor')
 
         if (self.premier_manufacturer
                 and self.premier_manufacturer.relevancy_errors):
@@ -75,7 +88,7 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
     objects = VendorManager()
 
     def __str__(self):
-        return f'{self.premier_manufacturer.name} :: {self.sema_brand.name}'
+        return self.slug
 
 
 class Item(RelevancyBaseModel, NotesBaseModel):
@@ -94,12 +107,20 @@ class Item(RelevancyBaseModel, NotesBaseModel):
         on_delete=SET_NULL,
         verbose_name='SEMA product'
     )
+    shopify_product = OneToOneField(
+        ShopifyProduct,
+        blank=True,
+        null=True,
+        related_name='item',
+        on_delete=SET_NULL
+    )
 
     @property
     def may_be_relevant(self):
         return bool(
             self.premier_product and self.premier_product.is_relevant
             and self.sema_product and self.sema_product.is_relevant
+            and self.shopify_product
             and self.relevancy_errors == ''
         )
 
@@ -111,6 +132,9 @@ class Item(RelevancyBaseModel, NotesBaseModel):
 
         if not self.sema_product:
             msgs.append('Missing SEMA product')
+
+        if not self.shopify_product:
+            msgs.append('Missing Shopify product')
 
         if self.premier_product and self.premier_product.relevancy_errors:
             msgs.append(
@@ -130,4 +154,6 @@ class Item(RelevancyBaseModel, NotesBaseModel):
             s = ' :: '.join([s, str(self.premier_product)])
         if self.sema_product:
             s = ' :: '.join([s, str(self.sema_product)])
+        if self.shopify_product:
+            s = ' :: '.join([s, str(self.shopify_product)])
         return s

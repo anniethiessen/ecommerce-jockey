@@ -13,7 +13,9 @@ class VendorActions(RelevancyActions):
     check_unlinked_vendors_class_action.allowed_permissions = ('view',)
     check_unlinked_vendors_class_action.label = 'Check for vendors'
     check_unlinked_vendors_class_action.short_description = (
-        'Check if any unlinked Premier manufacturers and SEMA brands exist')
+        'Check if any unlinked Premier manufacturers, SEMA brands, '
+        'or Shopify vendors exist'
+    )
 
 
 class ItemActions(RelevancyActions):

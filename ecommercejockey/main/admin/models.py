@@ -23,7 +23,8 @@ from .filters import (
 class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     list_select_related = (
         'premier_manufacturer',
-        'sema_brand'
+        'sema_brand',
+        'shopify_vendor'
     )
 
     actions = (
@@ -35,6 +36,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'premier_manufacturer__name',
         'sema_brand__brand_id',
         'sema_brand__name',
+        'shopify_vendor__name'
         'slug'
     )
 
@@ -45,9 +47,10 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     list_display = (
         'details_link',
         'id',
+        'slug',
         'premier_manufacturer',
         'sema_brand',
-        'slug',
+        'shopify_vendor',
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_errors',
@@ -101,6 +104,14 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
             }
         ),
         (
+            'Shopify Vendor', {
+                'fields': (
+                    'shopify_vendor_link',
+                    'shopify_vendor'
+                )
+            }
+        ),
+        (
             'Notes', {
                 'fields': (
                     'notes',
@@ -115,12 +126,14 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'id',
         'details_link',
         'premier_manufacturer_link',
+        'shopify_vendor_link',
         'sema_brand_link'
     )
 
     autocomplete_fields = (
         'premier_manufacturer',
-        'sema_brand'
+        'sema_brand',
+        'shopify_vendor'
     )
 
     def details_link(self, obj):
@@ -137,6 +150,11 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
             obj.sema_brand, 'See full SEMA brand')
     sema_brand_link.short_description = ''
 
+    def shopify_vendor_link(self, obj):
+        return get_change_view_link(
+            obj.shopify_vendor, 'See full Shopify vendor')
+    shopify_vendor_link.short_description = ''
+
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:
             return '~'
@@ -149,7 +167,8 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
 class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     list_select_related = (
         'premier_product',
-        'sema_product'
+        'sema_product',
+        'shopify_product'
     )
 
     actions = (
@@ -169,6 +188,12 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'sema_product__dataset__name',
         'sema_product__product_id',
         'sema_product__part_number',
+        'shopify_product__product_id',
+        'shopify_product__title',
+        'shopify_product__product_html',
+        'shopify_product__vendor__name',
+        'shopify_product__seo_title',
+        'shopify_product__seo_description',
         'id'
     )
 
@@ -182,6 +207,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'id',
         'premier_product',
         'sema_product',
+        'shopify_product',
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_errors',
@@ -237,6 +263,14 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
             }
         ),
         (
+            'Shopify Product', {
+                'fields': (
+                    'shopify_product_link',
+                    'shopify_product'
+                )
+            }
+        ),
+        (
             'Notes', {
                 'fields': (
                     'notes',
@@ -251,12 +285,14 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'details_link',
         'id',
         'premier_product_link',
-        'sema_product_link'
+        'sema_product_link',
+        'shopify_product_link'
     )
 
     autocomplete_fields = (
         'premier_product',
-        'sema_product'
+        'sema_product',
+        'shopify_product'
     )
 
     def details_link(self, obj):
@@ -275,7 +311,14 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
             return '-----'
         return get_change_view_link(
             obj.sema_product, 'See full SEMA product')
-    details_link.short_description = ''
+    sema_product_link.short_description = ''
+
+    def shopify_product_link(self, obj):
+        if not obj.shopify_product:
+            return '-----'
+        return get_change_view_link(
+            obj.shopify_product, 'See full Shopify product')
+    shopify_product_link.short_description = ''
 
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:

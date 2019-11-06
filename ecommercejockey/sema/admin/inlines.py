@@ -1,12 +1,12 @@
 from django.contrib.admin import TabularInline
 
+from core.admin.forms import LimitedInlineFormSet
 from core.admin.utils import (
     get_change_view_link,
     get_changelist_view_link,
     get_image_preview
 )
 from .forms import (
-    LimitedInlineFormSet,
     LimitedManyToManyCategoryInlineFormSet,
     LimitedManyToManyChildCategoryInlineFormSet,
     LimitedManyToManyDatasetInlineFormSet,
@@ -670,7 +670,6 @@ class SemaProductManyToManyBaseTabularInline(TabularInline):
 
 
 class SemaPiesAttributeBaseTabularInline(TabularInline):
-    formset = LimitedInlineFormSet
     extra = 0
     ordering = (
         'segment',
@@ -683,9 +682,7 @@ class SemaPiesAttributeBaseTabularInline(TabularInline):
         'details_link',
         'product',
         'segment',
-        'value',
-        'is_authorized',
-        'is_relevant'
+        'value'
     )
 
     readonly_fields = (
@@ -748,7 +745,7 @@ class SemaMakeYearBaseVehiclesTabularInline(SemaBaseVehicleBaseTabularInline):
 
 class SemaBaseVehicleVehiclesTabularInline(SemaVehicleBaseTabularInline):
     fk_name = 'base_vehicle'
-    all_link_query = 'base_vehicle__base_vehicle_id'
+    all_link_query = 'base_vehicle__base_vehicle_id__exact'
 
 
 class SemaVehicleDatasetsTabularInline(SemaDatasetManyToManyBaseTabularInline):

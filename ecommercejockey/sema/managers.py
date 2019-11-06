@@ -4417,18 +4417,8 @@ class SemaProductQuerySet(SemaBaseQuerySet):
                 'description_pies_attributes',
                 distinct=True
             ),
-            _description_pies_attribute_relevant_count=Count(
-                'description_pies_attributes',
-                filter=Q(description_pies_attributes__is_relevant=True),
-                distinct=True
-            ),
             _digital_assets_pies_attribute_count=Count(
                 'digital_assets_pies_attributes',
-                distinct=True
-            ),
-            _digital_assets_pies_attribute_relevant_count=Count(
-                'digital_assets_pies_attributes',
-                filter=Q(digital_assets_pies_attributes__is_relevant=True),
                 distinct=True
             ),
             _category_count=Count(
@@ -5195,7 +5185,6 @@ class SemaBaseManager(Manager):
                     create_fields[attr] = value
             obj = self.create(
                 pk=pk,
-                is_authorized=True,
                 **create_fields
             )
             for attr, value in m2m_fields.items():
@@ -6098,6 +6087,7 @@ class SemaBrandManager(SemaBaseManager):
         ::
             pk = <str>
             fields = {
+                "is_authorized": <bool>,
                 "name": <str>
             }
 
@@ -6106,6 +6096,7 @@ class SemaBrandManager(SemaBaseManager):
         try:
             pk = data['AAIABrandId']
             fields = {
+                'is_authorized': True,
                 'name': data['BrandName']
             }
             return pk, fields
@@ -7012,6 +7003,7 @@ class SemaDatasetManager(SemaBaseManager):
         ::
             pk = <int>
             fields = {
+                "is_authorized": <bool>,
                 "name": <str>,
                 "brand_id": <str>
             }
@@ -7021,6 +7013,7 @@ class SemaDatasetManager(SemaBaseManager):
         try:
             pk = data['DatasetId']
             fields = {
+                'is_authorized': True,
                 'name': data['DatasetName'],
                 'brand_id': data['AAIABrandId']
             }
@@ -7468,10 +7461,17 @@ class SemaYearManager(SemaBaseManager):
         **-Return Format-**
         ::
             pk = <int>
-            fields = {}
+            fields = {
+                "is_authorized": <bool>
+            }
 
         """
-        return data, {}
+
+        pk = data
+        fields = {
+            'is_authorized': True
+        }
+        return data, fields
     # </editor-fold>
 
     # <editor-fold desc="unauthorize properties ...">
@@ -7842,6 +7842,7 @@ class SemaMakeManager(SemaBaseManager):
         ::
             pk = <int>
             fields = {
+                "is_authorized": <bool>,
                 "name": <str>
             }
 
@@ -7850,6 +7851,7 @@ class SemaMakeManager(SemaBaseManager):
         try:
             pk = data['MakeID']
             fields = {
+                'is_authorized': True,
                 'name': data['MakeName']
             }
             return pk, fields
@@ -8174,6 +8176,7 @@ class SemaModelManager(SemaBaseManager):
         ::
             pk = <int>
             fields = {
+                "is_authorized": <bool>,
                 "name": <str>
             }
 
@@ -8182,6 +8185,7 @@ class SemaModelManager(SemaBaseManager):
         try:
             pk = data['ModelID']
             fields = {
+                'is_authorized': True,
                 'name': data['ModelName']
             }
             return pk, fields
@@ -8330,6 +8334,7 @@ class SemaSubmodelManager(SemaBaseManager):
         ::
             pk = <int>
             fields = {
+                "is_authorized": <bool>,
                 "name": <str>
             }
 
@@ -8338,6 +8343,7 @@ class SemaSubmodelManager(SemaBaseManager):
         try:
             pk = data['SubmodelID']
             fields = {
+                'is_authorized': True,
                 'name': data['SubmodelName']
             }
             return pk, fields
@@ -8853,6 +8859,7 @@ class SemaMakeYearManager(SemaBaseManager):
         ::
             pk = None
             fields = {
+                "is_authorized": <bool>,
                 "year_id": <int>,
                 "make_id": <int>
             }
@@ -8861,6 +8868,7 @@ class SemaMakeYearManager(SemaBaseManager):
 
         try:
             fields = {
+                'is_authorized': True,
                 'year_id': data['year_'],
                 'make_id': data['MakeID'],
             }
@@ -9819,6 +9827,7 @@ class SemaBaseVehicleManager(SemaBaseManager):
         ::
             pk = <int>
             fields = {
+                "is_authorized": <bool>,
                 "make_year_id": <int>,
                 "model_id": <int>
             }
@@ -9828,6 +9837,7 @@ class SemaBaseVehicleManager(SemaBaseManager):
         try:
             pk = data['BaseVehicleID']
             fields = {
+                'is_authorized': True,
                 'make_year_id': data['make_year_id_'],
                 'model_id': data['ModelID']
             }
@@ -10598,6 +10608,7 @@ class SemaVehicleManager(SemaBaseManager):
         ::
             pk = <int>
             fields = {
+                "is_authorized": <bool>,
                 "base_vehicle_id": <int>,
                 "submodel_id": <int>
             }
@@ -10607,6 +10618,7 @@ class SemaVehicleManager(SemaBaseManager):
         try:
             pk = data['VehicleID']
             fields = {
+                'is_authorized': True,
                 'base_vehicle_id': data['base_vehicle_id_'],
                 'submodel_id': data['SubmodelID']
             }
@@ -11034,10 +11046,12 @@ class SemaCategoryManager(SemaBaseManager):
             pk = <int>
             if data["ParentId"] == 0:
                 fields = {
+                    "is_authorized": <bool>,
                     "name": <int>
                 }
             else:
                 fields = {
+                    "is_authorized": <bool>,
                     "name": <int>,
                     "parent_categories": <int>
                 }
@@ -11047,6 +11061,7 @@ class SemaCategoryManager(SemaBaseManager):
         try:
             pk = data['CategoryId']
             fields = {
+                'is_authorized': True,
                 'name': data['Name']
             }
             if data['ParentId']:
@@ -11605,6 +11620,7 @@ class SemaProductManager(SemaBaseManager):
         ::
             pk = <int>
             fields = {
+                "is_authorized": <bool>,
                 "part_number": <str>,
                 "dataset_id": <int>
             }
@@ -11614,6 +11630,7 @@ class SemaProductManager(SemaBaseManager):
         try:
             pk = data['ProductId']
             fields = {
+                'is_authorized': True,
                 'part_number': data['PartNumber'],
                 'dataset_id': data['dataset_id_']
             }
