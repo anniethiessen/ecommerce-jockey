@@ -6,6 +6,7 @@ from django.utils.safestring import mark_safe
 
 from core.admin.utils import (
     get_change_view_link,
+    get_changelist_view_link,
     get_image_preview
 )
 from ..models import (
@@ -1421,6 +1422,9 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         (
             'Product', {
                 'fields': (
+                    'items_link',
+                    # 'premier_products_link',
+                    # 'shopify_products_link',
                     'product_id',
                     'part_number'
                 )
@@ -1474,6 +1478,9 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'category_count_a',
         'vehicle_count_a',
         'details_link',
+        'items_link',
+        # 'premier_products_link',
+        # 'shopify_products_link',
         'dataset_link',
         'brand_link',
         'brand_a',
@@ -1490,6 +1497,44 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def items_link(self, obj):
+        if not hasattr(obj, 'items'):
+            return '-----'
+        return get_changelist_view_link(
+            obj.items.first(),
+            'See Items',
+            query=f'sema_product__product_id__exact={obj.product_id}'
+        )
+    items_link.short_description = ''
+
+    # def premier_products_link(self, obj):  # FIXME
+    #     if (not hasattr(obj, 'items')
+    #             or not obj.items.filter(
+    #                 premier_product__isnull=False).exists()):
+    #         return '-----'
+    #     return get_changelist_view_link(
+    #         obj.items.filter(
+    #             premier_product__isnull=False
+    #         ).first().premier_product,
+    #         'See Premier products',
+    #         query=f'item__sema_product__product_id__exact={obj.product_id}'
+    #     )
+    # premier_products_link.short_description = ''
+
+    # def shopify_products_link(self, obj):  # FIXME
+    #     if (not hasattr(obj, 'items')
+    #             or not obj.items.filter(
+    #                 shopify_product__isnull=False).exists()):
+    #         return '-----'
+    #     return get_changelist_view_link(
+    #         obj.items.filter(
+    #             shopify_product__isnull=False
+    #         ).first().shopify_product,
+    #         'See Shopify products',
+    #         query=f'item__sema_product__product_id__exact={obj.product_id}'
+    #     )
+    # shopify_products_link.short_description = ''
 
     def dataset_link(self, obj):
         return get_change_view_link(obj.dataset, 'See full dataset')

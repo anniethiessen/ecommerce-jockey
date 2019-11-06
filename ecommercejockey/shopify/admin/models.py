@@ -359,6 +359,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'product_id',
         'title',
+        'body_html',
         'vendor',
         'is_published',
         'may_be_relevant_flag',
@@ -399,6 +400,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
             'Product', {
                 'fields': (
                     'item_link',
+                    'premier_product_link',
+                    'sema_product_link',
                     'id',
                     'product_id',
                     'product_type',
@@ -448,6 +451,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'relevancy_errors',
         'details_link',
         'item_link',
+        'premier_product_link',
+        'sema_product_link',
         'vendor_link',
         'title__',
         'title_match__',
@@ -482,6 +487,24 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
             return '-----'
         return get_change_view_link(obj.item, 'See full item')
     item_link.short_description = ''
+
+    def premier_product_link(self, obj):
+        if not hasattr(obj, 'item') or not obj.item.premier_product:
+            return '-----'
+        return get_change_view_link(
+            obj.item.premier_product,
+            'See Premier product'
+        )
+    premier_product_link.short_description = ''
+
+    def sema_product_link(self, obj):
+        if not hasattr(obj, 'item') or not obj.item.sema_product:
+            return '-----'
+        return get_change_view_link(
+            obj.item.sema_product,
+            'See SEMA product'
+        )
+    sema_product_link.short_description = ''
 
     def vendor_link(self, obj):
         if not obj.vendor:

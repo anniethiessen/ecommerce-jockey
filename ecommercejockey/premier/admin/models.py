@@ -198,6 +198,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             'Product', {
                 'fields': (
                     'item_link',
+                    'sema_product_link',
+                    'shopify_product_link',
                     'premier_part_number',
                     'description',
                     'vendor_part_number',
@@ -287,6 +289,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'details_link',
         'manufacturer_link',
         'item_link',
+        'sema_product_link',
+        'shopify_product_link',
         'primary_image_preview'
     )
 
@@ -299,6 +303,24 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
             return '-----'
         return get_change_view_link(obj.item, 'See full item')
     item_link.short_description = ''
+
+    def sema_product_link(self, obj):
+        if not hasattr(obj, 'item') or not obj.item.sema_product:
+            return '-----'
+        return get_change_view_link(
+            obj.item.sema_product,
+            'See SEMA product'
+        )
+    sema_product_link.short_description = ''
+
+    def shopify_product_link(self, obj):
+        if not hasattr(obj, 'item') or not obj.item.shopify_product:
+            return '-----'
+        return get_change_view_link(
+            obj.item.shopify_product,
+            'See Shopify product'
+        )
+    shopify_product_link.short_description = ''
 
     def manufacturer_link(self, obj):
         if not obj.manufacturer:

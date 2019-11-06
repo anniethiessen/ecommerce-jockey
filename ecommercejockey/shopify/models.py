@@ -262,14 +262,14 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
 
         .. Topic:: **-May Be Relevant Conditions-**
 
-            1.
+            1. No relevancy errors
 
         :return: whether or not object may be relevant
         :rtype: bool
 
         """
 
-        return False
+        return bool(not self.relevancy_errors)
 
     @property
     def relevancy_errors(self):
@@ -282,26 +282,43 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
         """
 
         msgs = []
-        if self.is_relevant:
-            # if not self.dataset.is_relevant:
-            #     error = "dataset not relevant"
-            #     msgs.append(error)
-            # if not self.vehicle_relevant_count:
-            #     error = "no relevant vehicles"
-            #     msgs.append(error)
-            # if not self.html or self.html == '':
-            #     error = "no html"
-            #     msgs.append(error)
-            # if not self.category_relevant_count == 3:
-            #     error = f"{self.category_relevant_count} categories"
-            #     msgs.append(error)
-            # if not self.description_pies_attribute_count:
-            #     error = "missing description PIES"
-            #     msgs.append(error)
-            # if not self.digital_assets_pies_attribute_count:
-            #     error = "missing digital assets PIES"
-            #     msgs.append(error)
-            pass
+        if not self.title:
+            error = "missing title"
+            msgs.append(error)
+        if not self.body_html:
+            error = "missing Body HTML"
+            msgs.append(error)
+        if not self.vendor:
+            error = "missing vendor"
+            msgs.append(error)
+        if not self.tags.all().count() >= 5:
+            error = "missing tags"
+            msgs.append(error)
+        if not self.images.all().count() >= 1:
+            error = "missing tags"
+            msgs.append(error)
+        if not self.variants.all().count() >= 1:
+            error = "missing variants"
+            msgs.append(error)
+        if not self.variants.first().title == 'Default Title':
+            error = "first variant not default title"
+            msgs.append(error)
+        if not (self.variants.first().weight
+                and self.variants.first().weight_unit):
+            error = "first variant missing weight"
+            msgs.append(error)
+        if not self.variants.first().price:
+            error = "first variant missing price"
+            msgs.append(error)
+        if not self.variants.first().cost:
+            error = "first variant missing cost"
+            msgs.append(error)
+        if not self.variants.first().sku:
+            error = "first variant missing SKU"
+            msgs.append(error)
+        if not self.variants.first().barcode:
+            error = "first variant missing barcode"
+            msgs.append(error)
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
@@ -580,10 +597,9 @@ class ShopifyCalculator(Model):
     def body_html_(self):
         if (self.__has_sema_product
                 and self.sema_product.description_pies_attributes.filter(
-                    segment='C10_SHO_EN').exists()):
-            value = self.sema_product.description_pies_attributes.get(
+                    segment='C10_EXT_EN').exists()):
+            return self.sema_product.description_pies_attributes.get(
                 segment='C10_EXT_EN').value
-            return f'<strong>{value}</strong>'
         return ''
     body_html_.fget.short_description = ''
 
