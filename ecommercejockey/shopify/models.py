@@ -4,13 +4,14 @@ from slugify import slugify
 
 from django.db.models import (
     Model,
+    BigIntegerField,
     BooleanField,
     CharField,
     DecimalField,
     ForeignKey,
     ManyToManyField,
     OneToOneField,
-    PositiveIntegerField,
+    IntegerField,
     TextField,
     URLField,
     CASCADE,
@@ -22,6 +23,7 @@ from core.models import (
     NotesBaseModel,
     RelevancyBaseModel
 )
+from .clients import shopify_client
 from .managers import (
     ShopifyProductManager,
     ShopifyVariantManager
@@ -88,7 +90,7 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         (BEST_SELLING_ORDER, 'Best Selling')
     ]
 
-    collection_id = PositiveIntegerField(
+    collection_id = BigIntegerField(
         blank=True,
         help_text='Populated by Shopify',
         null=True,
@@ -206,7 +208,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
         (GLOBAL_SCOPE, GLOBAL_SCOPE)
     ]
 
-    product_id = PositiveIntegerField(
+    product_id = BigIntegerField(
         blank=True,
         help_text='Populated by Shopify',
         null=True,
@@ -237,7 +239,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
     )
     published_scope = CharField(
         choices=PUBLISHED_SCOPE_CHOICES,
-        default=WEB_SCOPE,
+        default=GLOBAL_SCOPE,
         max_length=10
     )
     tags = ManyToManyField(
@@ -323,7 +325,116 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
     relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
+    # <editor-fold desc="format properties ...">
+    @property
+    def api_formatted_data(self):
+        data = {
+            'product_id': self.product_id,
+            'title': self.title,
+            'body_html': self.api_formatted_body_html,
+            'vendor': self.api_formatted_vendor,
+            'product_type': self.product_type,
+            'is_published': self.is_published,
+            'published_scope': self.published_scope,
+            'tags': self.api_formatted_tags,
+            'variants': self.api_formatted_variants,
+            'options': self.api_formatted_options,
+            'images': self.api_formatted_images,
+            'metafields': self.api_formatted_metafields
+        }
+        return dict((k, v) for k, v in data.items() if v)
+
+    @property
+    def api_formatted_body_html(self):
+        if not self.body_html:
+            return self.body_html
+        return f"<strong>{self.body_html}</strong>"
+
+    @property
+    def api_formatted_vendor(self):
+        return self.vendor.name
+
+    @property
+    def api_formatted_tags(self):
+        return ', '.join(self.tags.values_list('name', flat=True))
+
+    @property
+    def api_formatted_variants(self):
+        variants_data = []
+        for variant in self.variants.all():
+            variants_data.append(variant.api_formatted_data)
+        return variants_data
+
+    @property
+    def api_formatted_options(self):
+        options_data = []
+        for option in self.options.all():
+            options_data.append(option.api_formatted_data)
+        return options_data
+
+    @property
+    def api_formatted_images(self):
+        images_data = []
+        for image in self.images.all():
+            images_data.append(image.api_formatted_data)
+        return images_data
+
+    @property
+    def api_formatted_metafields(self):
+        metafields_data = []
+        for metafield in self.metafields.all():
+            metafields_data.append(metafield.api_formatted_data)
+        return metafields_data
+    # </editor-fold>
+
+    # <editor-fold desc="update properties ...">
+    def update_from_api_data(self, data):
+        msgs = []
+        try:
+            if self.product_id == data['id']:
+                msgs.append(self.get_instance_up_to_date_msg(
+                    message="ID up-to-data")
+                )
+            else:
+                self.product_id = data['id']
+                self.save()
+                msgs.append(self.get_update_success_msg(message='ID'))
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg("ID: " + str(err)))
+
+        for variant_data in data['variants']:
+            variant = self.variants.get(title=variant_data['title'])
+            msgs += variant.update_from_api_data(variant_data)
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
     # <editor-fold desc="perform properties ...">
+    def perform_create_to_api(self):
+        msgs = []
+        if self.product_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Already exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.create_product(
+                product_data=self.api_formatted_data
+            )
+            msgs.append(
+                self.get_create_success_msg(message="Created in Shopify")
+            )
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
     def perform_calculated_fields_update(self):
         try:
             if self.calculator.title_:
@@ -338,6 +449,17 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
                 image, _ = ShopifyImage.objects.get_or_create(
                     product=self,
                     src=image_src
+                )
+            if self.calculator.metafield_sema_html_:
+                metafield, _ = ShopifyMetafield.objects.update_or_create(
+                    product=self,
+                    owner_resource=ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
+                    namespace='sema',
+                    key='html',
+                    defaults={
+                        'value_type': ShopifyMetafield.STRING_VALUE_TYPE,
+                        'value': self.calculator.metafield_sema_html_
+                    }
                 )
             return self.get_update_success_msg()
         except Exception as err:
@@ -363,19 +485,18 @@ class ShopifyImage(Model):
         related_name='images',
         on_delete=CASCADE
     )
-    image_id = PositiveIntegerField(
-        blank=True,
-        help_text='Populated by Shopify',
-        null=True,
-        unique=True
-    )
     src = URLField(
         max_length=250
     )
-    position = PositiveIntegerField(
-        blank=True,
-        null=True
-    )
+
+    # <editor-fold desc="format properties ...">
+    @property
+    def api_formatted_data(self):
+        data = {
+            'src': self.src,
+        }
+        return dict((k, v) for k, v in data.items() if v)
+    # </editor-fold>
 
     def __str__(self):
         return str(self.product)
@@ -387,7 +508,7 @@ class ShopifyOption(Model):
         related_name='options',
         on_delete=CASCADE
     )
-    option_id = PositiveIntegerField(
+    option_id = BigIntegerField(
         blank=True,
         help_text='Populated by Shopify',
         null=True,
@@ -396,7 +517,18 @@ class ShopifyOption(Model):
     name = CharField(
         max_length=100
     )
-    value = TextField()
+    values = TextField()
+
+    # <editor-fold desc="format properties ...">
+    @property
+    def api_formatted_data(self):
+        data = {
+            'option_id': self.option_id,
+            'name': self.name,
+            'values': self.values.split(', ')
+        }
+        return dict((k, v) for k, v in data.items() if v)
+    # </editor-fold>
 
     def __str__(self):
         return f'{self.product} :: {self.name}'
@@ -440,31 +572,21 @@ class ShopifyVariant(Model, MessagesMixin):
         related_name='variants',
         on_delete=CASCADE
     )
-    variant_id = PositiveIntegerField(
+    variant_id = BigIntegerField(
         blank=True,
         help_text='Populated by Shopify',
         null=True,
         unique=True
     )
-    image_id = PositiveIntegerField(
-        blank=True,
-        help_text='Populated by Shopify',
-        null=True
-    )
-    inventory_item_id = PositiveIntegerField(
-        blank=True,
-        help_text='Populated by Shopify',
-        null=True
-    )
     title = CharField(
         default='Default Title',
         max_length=30
     )
-    grams = PositiveIntegerField(
+    grams = IntegerField(
         blank=True,
         null=True
     )
-    weight = PositiveIntegerField(
+    weight = IntegerField(
         blank=True,
         null=True
     )
@@ -476,7 +598,7 @@ class ShopifyVariant(Model, MessagesMixin):
     )
     inventory_management = CharField(
         choices=INVENTORY_MANAGEMENT_CHOICES,
-        default=SHOPIFY_INVENTORY,
+        default=MANUAL_FULFILLMENT,
         max_length=100
     )
     inventory_policy = CharField(
@@ -523,6 +645,61 @@ class ShopifyVariant(Model, MessagesMixin):
         max_length=20
     )
 
+    # <editor-fold desc="format properties ...">
+    @property
+    def api_formatted_data(self):
+        data = {
+            'variant_id': self.variant_id,
+            'title': self.title,
+            'grams': self.grams,
+            'weight': self.weight,
+            'weight_unit': self.weight_unit,
+            # 'inventory_management': self.inventory_management,
+            # 'inventory_policy': self.inventory_policy,
+            # 'fulfillment_service': self.fulfillment_service,
+            'price': self.price,
+            'compare_at_price': self.compare_at_price,
+            'cost': self.cost,
+            'sku': self.sku,
+            'barcode': self.barcode,
+            'tax_code': self.tax_code,
+            'taxable': self.is_taxable
+        }
+        return dict((k, v) for k, v in data.items() if v)
+    # </editor-fold>
+
+    # <editor-fold desc="update properties ...">
+    def update_from_api_data(self, data):
+        msgs = []
+        try:
+            if self.variant_id == data['id']:
+                msgs.append(self.get_instance_up_to_date_msg(
+                    message='ID up to date')
+                )
+            else:
+                self.variant_id = data['id']
+                self.save()
+                msgs.append(self.get_update_success_msg(message='ID'))
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg("ID: " + str(err)))
+
+        try:
+            if self.grams == data['grams']:
+                msgs.append(self.get_instance_up_to_date_msg(
+                    message='grams up to date')
+                )
+            else:
+                self.grams = data['grams']
+                self.save()
+                msgs.append(self.get_update_success_msg(message='grams'))
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg("grams: " + str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
     # <editor-fold desc="perform properties ...">
     def perform_calculated_fields_update(self):
         try:
@@ -551,6 +728,78 @@ class ShopifyVariant(Model, MessagesMixin):
         if self.title:
             s += f' :: {self.title}'
         return s
+
+
+class ShopifyMetafield(Model):
+    PRODUCT_OWNER_RESOURCE = 'product'
+    OWNER_RESOURCE_CHOICES = [
+        (PRODUCT_OWNER_RESOURCE, PRODUCT_OWNER_RESOURCE)
+    ]
+
+    STRING_VALUE_TYPE = 'string'
+    INTEGER_VALUE_TYPE = 'integer'
+    JSON_VALUE_TYPE = 'json'
+    VALUE_TYPE_CHOICES = [
+        (STRING_VALUE_TYPE, STRING_VALUE_TYPE),
+        (INTEGER_VALUE_TYPE, INTEGER_VALUE_TYPE),
+        (JSON_VALUE_TYPE, JSON_VALUE_TYPE)
+    ]
+
+    product = ForeignKey(
+        ShopifyProduct,
+        related_name='metafields',
+        on_delete=CASCADE
+    )
+    metafield_id = BigIntegerField(
+        blank=True,
+        help_text='Populated by Shopify',
+        null=True,
+        unique=True
+    )
+    owner_resource = CharField(
+        choices=OWNER_RESOURCE_CHOICES,
+        default=PRODUCT_OWNER_RESOURCE,
+        max_length=10
+    )
+    namespace = CharField(
+        max_length=20
+    )
+    value_type = CharField(
+        choices=VALUE_TYPE_CHOICES,
+        default=STRING_VALUE_TYPE,
+        max_length=10
+    )
+    key = CharField(
+        max_length=30
+    )
+    value = TextField(
+        max_length=100
+    )
+
+    # <editor-fold desc="format properties ...">
+    @property
+    def api_formatted_data(self):
+        data = {
+            'metafield_id': self.metafield_id,
+            'owner_resource': self.owner_resource,
+            'namespace': self.namespace,
+            'value_type': self.value_type,
+            'key': self.key,
+            'value': self.value
+        }
+        return dict((k, v) for k, v in data.items() if v)
+    # </editor-fold>
+
+    class Meta:
+        unique_together = [
+            'product',
+            'owner_resource',
+            'namespace',
+            'key'
+        ]
+
+    def __str__(self):
+        return f'{self.product} :: {self.namespace} :: {self.key}'
 
 
 class ShopifyCalculator(Model):
@@ -604,11 +853,11 @@ class ShopifyCalculator(Model):
     body_html_.fget.short_description = ''
 
     @property
-    def meta_field_sema_html_(self):
+    def metafield_sema_html_(self):
         if self.__has_sema_product and self.sema_product.html:
             return self.sema_product.html
         return ''
-    meta_field_sema_html_.fget.short_description = ''
+    metafield_sema_html_.fget.short_description = ''
 
     @property
     def vendor_tags_(self):

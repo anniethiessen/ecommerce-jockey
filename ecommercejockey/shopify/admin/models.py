@@ -12,6 +12,7 @@ from ..models import (
     ShopifyCollection,
     ShopifyCollectionRule,
     ShopifyImage,
+    ShopifyMetafield,
     ShopifyOption,
     ShopifyProduct,
     ShopifyTag,
@@ -22,6 +23,7 @@ from .actions import (
     ShopifyCollectionActions,
     ShopifyCollectionRuleActions,
     ShopifyImageActions,
+    ShopifyMetafieldActions,
     ShopifyOptionActions,
     ShopifyProductActions,
     ShopifyTagActions,
@@ -32,6 +34,7 @@ from .inlines import (
     ShopifyCollectionRulesManyToManyTabularInline,
     ShopifyCollectionTagsManyToManyTabularInline,
     ShopifyProductImagesTabularInline,
+    ShopifyProductMetafieldsTabularInline,
     ShopifyProductOptionsTabularInline,
     ShopifyProductTagsManyToManyTabularInline,
     ShopifyProductVariantsStackedInline,
@@ -331,12 +334,14 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
                                ShopifyProductActions):
     actions = (
         'update_calculated_fields_queryset_action',
+        'export_to_api_queryset_action',
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
     )
 
     change_actions = (
         'update_calculated_fields_object_action',
+        'export_to_api_object_action'
     )
 
     list_select_related = (
@@ -348,7 +353,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'product_id',
         'title',
-        'product_html',
+        'body_html',
         'vendor__name',
         'seo_title',
         'seo_description'
@@ -432,7 +437,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
             'Other Calculated', {
                 'fields': (
                     ('tags__', 'tags_match__'),
-                    ('images__', 'images_match__')
+                    ('images__', 'images_match__'),
+                    ('metafields__', 'metafields_match__')
                 )
             }
         ),
@@ -462,6 +468,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'tags_match__',
         'images__',
         'images_match__',
+        'metafields__',
+        'metafields_match__',
         'all_match__'
     )
 
@@ -471,6 +479,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
 
     inlines = (
         ShopifyProductVariantsStackedInline,
+        ShopifyProductMetafieldsTabularInline,
         ShopifyProductImagesTabularInline,
         ShopifyProductOptionsTabularInline,
         ShopifyProductTagsManyToManyTabularInline
@@ -569,12 +578,34 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         return str(obj.calculator.images_)
     images__.short_description = 'images'
 
+    def metafields_match__(self, obj):
+        from ..models import ShopifyMetafield
+        try:
+            sema_html_metafield = obj.metafields.get(
+                owner_resource=ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
+                namespace='sema',
+                key='html',
+                value_type=ShopifyMetafield.STRING_VALUE_TYPE
+            ).value
+        except ShopifyMetafield.DoesNotExist:
+            sema_html_metafield = ''
+        return bool(sema_html_metafield == obj.calculator.metafield_sema_html_)
+    metafields_match__.boolean = True
+    metafields_match__.short_description = ''
+
+    def metafields__(self, obj):
+        if self.metafields_match__(obj):
+            return ''
+        return str(obj.calculator.metafield_sema_html_[:10])
+    metafields__.short_description = 'metafields'
+
     def all_match__(self, obj):
         self_match = bool(
             self.title_match__(obj)
             and self.body_html_match__(obj)
             and self.tags_match__(obj)
             and self.images_match__(obj)
+            and self.metafields_match__(obj)
         )
         for variant in obj.variants.all():
             if not bool(
@@ -618,16 +649,13 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
         'product__seo_title',
         'product__seo_description',
         'id',
-        'image_id',
         'src'
     )
 
     list_display = (
         'details_link',
         'id',
-        'image_id',
-        'product',
-        'position'
+        'product'
     )
 
     list_display_links = (
@@ -639,9 +667,7 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
             'Image', {
                 'fields': (
                     'id',
-                    'image_id',
-                    'src',
-                    'position'
+                    'src'
                 )
             }
         ),
@@ -677,14 +703,6 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
 
-    def get_readonly_fields(self, request, obj=None):
-        readonly_fields = super().get_readonly_fields(request, obj)
-        if not request.user.is_superuser:
-            readonly_fields += (
-                'image_id',
-            )
-        return readonly_fields
-
 
 @admin.register(ShopifyOption)
 class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
@@ -703,7 +721,7 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
         'id',
         'option_id',
         'name',
-        'value'
+        'values'
     )
 
     list_display = (
@@ -712,7 +730,7 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
         'option_id',
         'product',
         'name',
-        'value'
+        'values'
     )
 
     list_display_links = (
@@ -726,7 +744,7 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
                     'id',
                     'option_id',
                     'name',
-                    'value'
+                    'values'
                 )
             }
         ),
@@ -782,14 +800,12 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
         'product__id',
         'product__product_id',
         'product__title',
-        'product__product_html',
+        'product__body_html',
         'product__vendor__name',
         'product__seo_title',
         'product__seo_description',
         'id',
         'variant_id',
-        'image_id',
-        'inventory_item_id',
         'title',
         'sku',
         'barcode'
@@ -813,8 +829,6 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
                 'fields': (
                     'id',
                     'variant_id',
-                    'image_id',
-                    'inventory_item_id',
                     'title',
                     'sku',
                     'barcode'
@@ -893,7 +907,101 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
         if not request.user.is_superuser:
             readonly_fields += (
                 'variant_id',
-                'image_id',
-                'inventory_item_id'
+            )
+        return readonly_fields
+
+
+@admin.register(ShopifyMetafield)
+class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
+                                 ShopifyMetafieldActions):
+    list_select_related = (
+        'product',
+    )
+
+    search_fields = (
+        'product__id',
+        'product__product_id',
+        'product__title',
+        'product__product_html',
+        'product__vendor__name',
+        'product__seo_title',
+        'product__seo_description',
+        'id',
+        'metafield_id',
+        'value'
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'metafield_id',
+        'product',
+        'namespace',
+        'key',
+        'value_type'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_filter = (
+        'owner_resource',
+        'namespace',
+        'key',
+        'value_type'
+    )
+
+    fieldsets = (
+        (
+            'Metafield', {
+                'fields': (
+                    'id',
+                    'metafield_id',
+                    'owner_resource',
+                    'namespace',
+                    'value_type',
+                    'key',
+                    'value'
+                )
+            }
+        ),
+        (
+            'Product', {
+                'fields': (
+                    'product_link',
+                    'product'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'id',
+        'details_link',
+        'product_link'
+    )
+
+    autocomplete_fields = (
+        'product',
+    )
+
+    def details_link(self, obj):
+        if not obj:
+            return None
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def product_link(self, obj):
+        if not obj.product:
+            return None
+        return get_change_view_link(obj.product, 'See full product')
+    product_link.short_description = ''
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += (
+                'metafield_id',
             )
         return readonly_fields

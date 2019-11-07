@@ -25,7 +25,7 @@ class SemaApiClient(object):
 
     def __init__(self):
         """
-        Initializes model by setting base url and retrieving token and
+        Initializes class by setting base url and retrieving token and
         content token.
 
         """

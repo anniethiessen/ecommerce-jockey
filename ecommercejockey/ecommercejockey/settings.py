@@ -277,6 +277,10 @@ ADMIN_REORDER = (
             {
                 'model': 'shopify.ShopifyImage',
                 'label': 'Images'
+            },
+            {
+                'model': 'shopify.ShopifyMetafield',
+                'label': 'Metafields'
             }
         )
     }

@@ -12,6 +12,7 @@ from core.admin.utils import (
 from ..models import (
     ShopifyCollection,
     ShopifyImage,
+    ShopifyMetafield,
     ShopifyOption,
     ShopifyProduct,
     ShopifyVariant
@@ -85,9 +86,6 @@ class ShopifyProductImagesTabularInline(TabularInline):
     verbose_name_plural = 'images'
     all_link_query = 'product__id__exact'
     extra = 0
-    ordering = (
-        'position',
-    )
     classes = (
         'collapse',
     )
@@ -96,10 +94,8 @@ class ShopifyProductImagesTabularInline(TabularInline):
         'all_link',
         'details_link',
         'id',
-        'image_id',
         'product',
-        'src',
-        'position'
+        'src'
     )
 
     readonly_fields = (
@@ -128,14 +124,6 @@ class ShopifyProductImagesTabularInline(TabularInline):
             formfield.choices = formfield.choices
         return formfield
 
-    def get_readonly_fields(self, request, obj=None):
-        readonly_fields = super().get_readonly_fields(request, obj)
-        if not request.user.is_superuser:
-            readonly_fields += (
-                'image_id',
-            )
-        return readonly_fields
-
 
 class ShopifyProductOptionsTabularInline(TabularInline):
     model = ShopifyOption
@@ -154,7 +142,7 @@ class ShopifyProductOptionsTabularInline(TabularInline):
         'option_id',
         'product',
         'name',
-        'value'
+        'values'
     )
 
     readonly_fields = (
@@ -202,8 +190,6 @@ class ShopifyProductVariantsStackedInline(StackedInline):
             'Variant', {
                 'fields': (
                     'variant_id',
-                    'image_id',
-                    'inventory_item_id',
                     'title',
                     ('sku', 'sku_match__', 'sku__'),
                     ('barcode', 'barcode_match__', 'barcode__')
@@ -333,8 +319,63 @@ class ShopifyProductVariantsStackedInline(StackedInline):
         if not request.user.is_superuser:
             readonly_fields += (
                 'variant_id',
-                'image_id',
-                'inventory_item_id'
+            )
+        return readonly_fields
+
+
+class ShopifyProductMetafieldsTabularInline(TabularInline):
+    model = ShopifyMetafield
+    fk_name = 'product'
+    verbose_name_plural = 'metafields'
+    all_link_query = 'product__id__exact'
+    extra = 0
+    classes = (
+        'collapse',
+    )
+
+    fields = (
+        'all_link',
+        'details_link',
+        'id',
+        'metafield_id',
+        'product',
+        'owner_resource',
+        'namespace',
+        'value_type',
+        'key'
+    )
+
+    readonly_fields = (
+        'id',
+        'details_link',
+        'all_link'
+    )
+
+    def get_rel_obj(self, obj):
+        return getattr(obj, self.fk_name)
+
+    def all_link(self, obj):
+        query = f'{self.all_link_query}={getattr(self.get_rel_obj(obj), "pk")}'
+        return get_changelist_view_link(obj, 'See All', query)
+    all_link.short_description = ''
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, **kwargs)
+        if db_field.name == 'product':
+            formfield.choices = formfield.choices
+        return formfield
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += (
+                'metafield_id',
             )
         return readonly_fields
 

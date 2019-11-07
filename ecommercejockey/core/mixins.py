@@ -30,11 +30,15 @@ class MessagesMixin(object):
             f"{self._meta.model._meta.verbose_name.title()} {self}, {error}"
         )
 
-    def get_create_success_msg(self):
-        return (
-            "Success: "
-            f"{self._meta.model._meta.verbose_name.title()} {self} created"
-        )
+    def get_create_success_msg(self, message=None):
+        msg = "Success: "
+        if message:
+            msg += message
+        else:
+            msg += (
+                f"{self._meta.model._meta.verbose_name.title()} {self} created"
+            )
+        return msg
 
     def get_update_success_msg(self, previous_data=None, new_data=None,
                                message=None, include_up_to_date=True):
