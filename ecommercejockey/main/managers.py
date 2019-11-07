@@ -6,7 +6,39 @@ class VendorQuerySet(QuerySet):
 
 
 class ItemQuerySet(QuerySet):
-    pass
+    def create_shopify_products(self):
+        from .models import ShopifyProduct
+
+        msgs = []
+        for item in self:
+            if item.shopify_product:
+                msgs.append(
+                    item.get_instance_error_msg(
+                        error='Shopify product already exists'
+                    )
+                )
+                continue
+
+            if not (item.premier_product and item.sema_product):
+                msgs.append(
+                    item.get_instance_error_msg(
+                        error='Missing Premier and/or SEMA products'
+                    )
+                )
+                continue
+
+            try:
+                vendor = item.premier_product.manufacturer.vendor.shopify_vendor
+                shopify_product = ShopifyProduct.objects.create(vendor=vendor)
+                item.shopify_product = shopify_product
+                item.save()
+                msgs.append(shopify_product.get_create_success_msg())
+            except Exception as err:
+                msgs.append(item.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
 
 
 class VendorManager(Manager):
@@ -232,6 +264,18 @@ class ItemManager(Manager):
                 )
             except Exception as err:
                 msgs.append(product.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def create_shopify_products(self):
+        msgs = []
+
+        try:
+            msgs += self.get_queryset().create_shopify_products()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
 
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())

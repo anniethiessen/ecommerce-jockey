@@ -15,6 +15,7 @@ from .actions import (
 from .filters import (
     HasPremierProduct,
     HasSemaProduct,
+    HasShopifyProduct,
     IsCompleteItem
 )
 
@@ -165,15 +166,25 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
 
 @admin.register(Item)
 class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
+    actions = (
+        'create_shopify_products_queryset_action',
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
+    changelist_actions = (
+        'create_items_class_action',
+        'link_products_class_action'
+    )
+
+    change_actions = (
+        'create_shopify_products_object_action',
+    )
+
     list_select_related = (
         'premier_product',
         'sema_product',
         'shopify_product'
-    )
-
-    actions = (
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
     )
 
     search_fields = (
@@ -195,11 +206,6 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'shopify_product__seo_title',
         'shopify_product__seo_description',
         'id'
-    )
-
-    changelist_actions = (
-        'create_items_class_action',
-        'link_products_class_action'
     )
 
     list_display = (
@@ -226,7 +232,8 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'is_relevant',
         IsCompleteItem,
         HasPremierProduct,
-        HasSemaProduct
+        HasSemaProduct,
+        HasShopifyProduct
     )
 
     fieldsets = (

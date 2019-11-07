@@ -25,12 +25,13 @@ from core.models import (
 )
 from .clients import shopify_client
 from .managers import (
+    ShopifyOptionManager,
     ShopifyProductManager,
     ShopifyVariantManager
 )
 
 
-class ShopifyVendor(Model):
+class ShopifyVendor(Model, MessagesMixin):
     name = CharField(
         max_length=255,
         unique=True
@@ -40,7 +41,7 @@ class ShopifyVendor(Model):
         return self.name
 
 
-class ShopifyTag(Model):
+class ShopifyTag(Model, MessagesMixin):
     name = CharField(
         max_length=255,
         unique=True
@@ -239,7 +240,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
     )
     published_scope = CharField(
         choices=PUBLISHED_SCOPE_CHOICES,
-        default=GLOBAL_SCOPE,
+        default=WEB_SCOPE,
         max_length=10
     )
     tags = ManyToManyField(
@@ -334,7 +335,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
             'body_html': self.api_formatted_body_html,
             'vendor': self.api_formatted_vendor,
             'product_type': self.product_type,
-            'is_published': self.is_published,
+            'published': self.is_published,
             'published_scope': self.published_scope,
             'tags': self.api_formatted_tags,
             'variants': self.api_formatted_variants,
@@ -388,23 +389,231 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
-    def update_from_api_data(self, data):
-        msgs = []
+    @property
+    def state(self):
+        return {
+            'product_id': str(self.product_id),
+            'title': self.title,
+            'body_html': self.body_html,
+            'vendor': str(self.vendor),
+            'product_type': self.product_type,
+            'published': str(self.is_published),
+            'published_scope': self.published_scope,
+            'tags': str(self.tags.count()),
+            'seo_title': self.seo_title,
+            'seo_description': self.seo_description
+        }
+
+    def update_product_id_from_api_data(self, value):
         try:
-            if self.product_id == data['id']:
-                msgs.append(self.get_instance_up_to_date_msg(
-                    message="ID up-to-data")
-                )
-            else:
-                self.product_id = data['id']
+            if not self.product_id == value:
+                self.product_id = value
                 self.save()
-                msgs.append(self.get_update_success_msg(message='ID'))
-        except Exception as err:
-            msgs.append(self.get_instance_error_msg("ID: " + str(err)))
+            return
+        except Exception:
+            raise
+
+    def update_title_from_api_data(self, value):
+        try:
+            if not self.title == value:
+                self.title = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_body_html_from_api_data(self, value):
+        try:
+            if not self.body_html == value:
+                self.body_html = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_vendor_from_api_data(self, value):
+        try:
+            msgs = []
+            if not self.vendor or not self.vendor.name == value:
+                vendor, created = ShopifyVendor.objects.get_or_create(
+                    name=value
+                )
+                self.vendor = vendor
+                self.save()
+                if created:
+                    msgs.append(vendor.get_create_success_msg())
+            return msgs
+        except Exception:
+            raise
+
+    def update_product_type_from_api_data(self, value):
+        try:
+            if not self.product_type == value:
+                self.product_type = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_is_published_from_api_data(self, value):
+        try:
+            value = bool(value)
+            if not self.is_published == value:
+                self.is_published = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_published_scope_from_api_data(self, value):
+        try:
+            if not self.published_scope == value:
+                self.published_scope = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_tags_from_api_data(self, value):
+        try:
+            msgs = []
+            _msgs = ''
+            tag_values = value.split(', ')
+            tags = list(self.tags.values_list('name', flat=True))
+            for tag_value in tag_values:
+                if tag_value not in tags:
+                    tag, created = ShopifyTag.objects.get_or_create(
+                        name=tag_value
+                    )
+                    self.tags.add(tag)
+                    self.save()
+                    if created:
+                        msgs.append(tag.get_create_success_msg())
+                    _msgs += f'tag {tag} added, '
+            for tag in tags:
+                if tag not in tag_values:
+                    tag = ShopifyTag.objects.get(name=tag)
+                    self.tags.remove(tag)
+                    self.save()
+                    _msgs += f'tag {tag} removed, '
+
+            if _msgs:
+                msgs.append(self.get_update_success_msg(message=_msgs))
+            return msgs
+        except Exception:
+            raise
+
+    def update_from_api_data(self, data, *fields):
+        field_map = {
+            'product_id': {
+                'data': 'id',
+                'function': 'update_product_id_from_api_data'
+            },
+            'title': {
+                'data': 'title',
+                'function': 'update_title_from_api_data'
+            },
+            'body_html': {
+                'data': 'body_html',
+                'function': 'update_body_html_from_api_data'
+            },
+            'vendor': {
+                'data': 'vendor',
+                'function': 'update_vendor_from_api_data'
+            },
+            'product_type': {
+                'data': 'product_type',
+                'function': 'update_product_type_from_api_data'
+            },
+            'is_published': {
+                'data': 'published_at',
+                'function': 'update_is_published_from_api_data'
+            },
+            'published_scope': {
+                'data': 'published_scope',
+                'function': 'update_published_scope_from_api_data'
+            },
+            'tags': {
+                'data': 'tags',
+                'function': 'update_tags_from_api_data'
+            }
+            # 'seo_title': {
+            #     'data': '',
+            #     'function': ''
+            # },
+            # 'seo_description': {
+            #     'data': '',
+            #     'function': ''
+            # }
+        }
+
+        if fields:
+            for field in fields:
+                if field not in field_map.keys():
+                    raise Exception('Invalid update field')
+        else:
+            fields = field_map.keys()
+
+        msgs = []
+        prev = self.state
+        for field in fields:
+            try:
+                extra_msgs = getattr(
+                    self,
+                    field_map[field]['function']
+                )(data[field_map[field]['data']])
+
+                if extra_msgs:
+                    msgs += extra_msgs
+            except Exception as err:
+                msgs.append(
+                    self.get_instance_error_msg(
+                        error=f'{field} update error: {err}')
+                )
+                continue
+
+        self.refresh_from_db()
+        new = self.state
+        msgs.append(
+            self.get_update_success_msg(
+                previous_data=prev,
+                new_data=new
+            )
+        )
 
         for variant_data in data['variants']:
-            variant = self.variants.get(title=variant_data['title'])
-            msgs += variant.update_from_api_data(variant_data)
+            try:
+                variant = self.variants.get(
+                    Q(variant_id=variant_data['id'])
+                    | Q(title=variant_data['title'])
+                )
+                msgs += variant.update_from_api_data(variant_data)
+            except ShopifyVariant.DoesNotExist:
+                msgs.append(
+                    ShopifyVariant.objects.create_from_api_data(
+                        product=self,
+                        data=variant_data
+                    )
+                )
+            except Exception as err:
+                msgs.append(self.get_instance_error_msg(str(err)))
+
+        for option_data in data['options']:
+            try:
+                option = self.options.get(
+                    Q(option_id=option_data['id'])
+                    | Q(name=option_data['name'])
+                )
+                msgs += option.update_from_api_data(option_data)
+            except ShopifyOption.DoesNotExist:
+                msgs.append(
+                    ShopifyOption.objects.create_from_api_data(
+                        product=self,
+                        data=option_data
+                    )
+                )
+            except Exception as err:
+                msgs.append(self.get_instance_error_msg(str(err)))
 
         if not msgs:
             msgs.append(self.get_instance_up_to_date_msg())
@@ -502,7 +711,7 @@ class ShopifyImage(Model):
         return str(self.product)
 
 
-class ShopifyOption(Model):
+class ShopifyOption(Model, MessagesMixin):
     product = ForeignKey(
         ShopifyProduct,
         related_name='options',
@@ -515,9 +724,13 @@ class ShopifyOption(Model):
         unique=True
     )
     name = CharField(
+        default='Title',
         max_length=100
     )
-    values = TextField()
+    values = CharField(
+        default="['Default Title']",
+        max_length=255
+    )
 
     # <editor-fold desc="format properties ...">
     @property
@@ -529,6 +742,100 @@ class ShopifyOption(Model):
         }
         return dict((k, v) for k, v in data.items() if v)
     # </editor-fold>
+
+    # <editor-fold desc="update properties ...">
+    @property
+    def state(self):
+        return {
+            'option_id': str(self.option_id),
+            'name': self.name,
+            'values': self.values
+        }
+
+    def update_option_id_from_api_data(self, value):
+        try:
+            if not self.option_id == value:
+                self.option_id = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_name_from_api_data(self, value):
+        try:
+            if not self.name == value:
+                self.name = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_values_from_api_data(self, value):
+        try:
+            value = str(value)
+            if not self.values == value:
+                self.values = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_from_api_data(self, data, *fields):
+        field_map = {
+            'option_id': {
+                'data': 'id',
+                'function': 'update_option_id_from_api_data'
+            },
+            'name': {
+                'data': 'name',
+                'function': 'update_name_from_api_data'
+            },
+            'values': {
+                'data': 'values',
+                'function': 'update_values_from_api_data'
+            }
+        }
+
+        if fields:
+            for field in fields:
+                if field not in field_map.keys():
+                    raise Exception('Invalid update field')
+        else:
+            fields = field_map.keys()
+
+        msgs = []
+        prev = self.state
+        for field in fields:
+            try:
+                extra_msgs = getattr(
+                    self,
+                    field_map[field]['function']
+                )(data[field_map[field]['data']])
+
+                if extra_msgs:
+                    msgs += extra_msgs
+            except Exception as err:
+                msgs.append(
+                    self.get_instance_error_msg(
+                        error=f'{field} update error: {err}')
+                )
+                continue
+
+        self.refresh_from_db()
+        new = self.state
+        msgs.append(
+            self.get_update_success_msg(
+                previous_data=prev,
+                new_data=new
+            )
+        )
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    objects = ShopifyOptionManager()
 
     def __str__(self):
         return f'{self.product} :: {self.name}'
@@ -586,29 +893,30 @@ class ShopifyVariant(Model, MessagesMixin):
         blank=True,
         null=True
     )
-    weight = IntegerField(
+    weight = DecimalField(
         blank=True,
+        decimal_places=2,
+        max_digits=10,
         null=True
     )
     weight_unit = CharField(
         blank=True,
         choices=WEIGHT_UNIT_CHOICES,
-        max_length=3,
-        null=True
+        max_length=3
     )
     inventory_management = CharField(
+        blank=True,
         choices=INVENTORY_MANAGEMENT_CHOICES,
-        default=MANUAL_FULFILLMENT,
         max_length=100
     )
     inventory_policy = CharField(
+        blank=True,
         choices=INVENTORY_POLICY_CHOICES,
-        default=ALLOW_POLICY,
         max_length=10
     )
     fulfillment_service = CharField(
+        blank=True,
         choices=FULFILLMENT_SERVICE_CHOICES,
-        default=MANUAL_FULFILLMENT,
         max_length=100
     )
     price = DecimalField(
@@ -669,31 +977,241 @@ class ShopifyVariant(Model, MessagesMixin):
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
-    def update_from_api_data(self, data):
-        msgs = []
-        try:
-            if self.variant_id == data['id']:
-                msgs.append(self.get_instance_up_to_date_msg(
-                    message='ID up to date')
-                )
-            else:
-                self.variant_id = data['id']
-                self.save()
-                msgs.append(self.get_update_success_msg(message='ID'))
-        except Exception as err:
-            msgs.append(self.get_instance_error_msg("ID: " + str(err)))
+    @property
+    def state(self):
+        return {
+            'variant_id': str(self.variant_id),
+            'title': self.title,
+            'grams': str(self.grams),
+            'weight': str(self.weight),
+            'weight_unit': self.weight_unit,
+            'inventory_management': self.inventory_management,
+            'inventory_policy': self.inventory_policy,
+            'fulfillment_service': self.fulfillment_service,
+            'price': str(self.price),
+            'compare_at_price': str(self.compare_at_price),
+            'cost': str(self.cost),
+            'sku': self.sku,
+            'barcode': self.barcode,
+            'taxable': str(self.is_taxable),
+            'tax_code': self.tax_code
+        }
 
+    def update_variant_id_from_api_data(self, value):
         try:
-            if self.grams == data['grams']:
-                msgs.append(self.get_instance_up_to_date_msg(
-                    message='grams up to date')
-                )
-            else:
-                self.grams = data['grams']
+            if not self.variant_id == value:
+                self.variant_id = value
                 self.save()
-                msgs.append(self.get_update_success_msg(message='grams'))
-        except Exception as err:
-            msgs.append(self.get_instance_error_msg("grams: " + str(err)))
+            return
+        except Exception:
+            raise
+
+    def update_title_from_api_data(self, value):
+        try:
+            if not self.title == value:
+                self.title = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_grams_from_api_data(self, value):
+        try:
+            if not self.grams == value:
+                self.grams = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_weight_from_api_data(self, value):
+        try:
+            if not self.weight == value:
+                self.weight = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_weight_unit_from_api_data(self, value):
+        try:
+            if not self.weight_unit == value:
+                self.weight_unit = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_inventory_management_from_api_data(self, value):
+        try:
+            value = value or ''
+            if not self.inventory_management == value:
+                self.inventory_management = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_inventory_policy_from_api_data(self, value):
+        try:
+            if not self.inventory_policy == value:
+                self.inventory_policy = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_fulfillment_service_from_api_data(self, value):
+        try:
+            if not self.fulfillment_service == value:
+                self.fulfillment_service = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_price_from_api_data(self, value):
+        try:
+            if not self.price == value:
+                self.price = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_compare_at_price_from_api_data(self, value):
+        try:
+            if not self.compare_at_price == value:
+                self.compare_at_price = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_sku_from_api_data(self, value):
+        try:
+            if not self.sku == value:
+                self.sku = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_barcode_from_api_data(self, value):
+        try:
+            if not self.barcode == value:
+                self.barcode = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_is_taxable_from_api_data(self, value):
+        try:
+            if not self.is_taxable == value:
+                self.is_taxable = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_from_api_data(self, data, *fields):
+        field_map = {
+            'variant_id': {
+                'data': 'id',
+                'function': 'update_variant_id_from_api_data'
+            },
+            'title': {
+                'data': 'title',
+                'function': 'update_title_from_api_data'
+            },
+            'grams': {
+                'data': 'grams',
+                'function': 'update_grams_from_api_data'
+            },
+            'weight': {
+                'data': 'weight',
+                'function': 'update_weight_from_api_data'
+            },
+            'weight_unit': {
+                'data': 'weight_unit',
+                'function': 'update_weight_unit_from_api_data'
+            },
+            'inventory_management': {
+                'data': 'inventory_management',
+                'function': 'update_inventory_management_from_api_data'
+            },
+            'inventory_policy': {
+                'data': 'inventory_policy',
+                'function': 'update_inventory_policy_from_api_data'
+            },
+            'fulfillment_service': {
+                'data': 'fulfillment_service',
+                'function': 'update_fulfillment_service_from_api_data'
+            },
+            'price': {
+                'data': 'price',
+                'function': 'update_price_from_api_data'
+            },
+            'compare_at_price': {
+                'data': 'compare_at_price',
+                'function': 'update_compare_at_price_from_api_data'
+            },
+            # 'cost': {
+            #     'data': '',
+            #     'function': ''
+            # },
+            'sku': {
+                'data': 'sku',
+                'function': 'update_sku_from_api_data'
+            },
+            'barcode': {
+                'data': 'barcode',
+                'function': 'update_barcode_from_api_data'
+            },
+            'is_taxable': {
+                'data': 'taxable',
+                'function': 'update_is_taxable_from_api_data'
+            }
+            # 'tax_code': {
+            #     'data': '',
+            #     'function': ''
+            # }
+        }
+
+        if fields:
+            for field in fields:
+                if field not in field_map.keys():
+                    raise Exception('Invalid update field')
+        else:
+            fields = field_map.keys()
+
+        msgs = []
+        prev = self.state
+        for field in fields:
+            try:
+                extra_msgs = getattr(
+                    self,
+                    field_map[field]['function']
+                )(data[field_map[field]['data']])
+
+                if extra_msgs:
+                    msgs += extra_msgs
+            except Exception as err:
+                msgs.append(
+                    self.get_instance_error_msg(
+                        error=f'{field} update error: {err}')
+                )
+                continue
+
+        self.refresh_from_db()
+        new = self.state
+        msgs.append(
+            self.get_update_success_msg(
+                previous_data=prev,
+                new_data=new
+            )
+        )
 
         if not msgs:
             msgs.append(self.get_instance_up_to_date_msg())
@@ -922,7 +1440,7 @@ class ShopifyCalculator(Model):
     @property
     def weight_(self):
         if self.__has_premier_product and self.premier_product.weight:
-            return int(self.premier_product.weight)
+            return round(self.premier_product.weight, 2)
         return ''
     weight_.fget.short_description = ''
 

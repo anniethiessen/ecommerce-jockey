@@ -33,7 +33,6 @@ class ItemActions(RelevancyActions):
     )
 
     def link_products_class_action(self, request, queryset):
-        msgs = []
         try:
             msgs = self.model.objects.link_products()
             self.display_messages(request, msgs, include_info=False)
@@ -43,4 +42,28 @@ class ItemActions(RelevancyActions):
     link_products_class_action.label = 'Link products'
     link_products_class_action.short_description = (
         'Link missing Premier and SEMA products by part numbers'
+    )
+
+    def create_shopify_products_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.create_shopify_products()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    create_shopify_products_queryset_action.allowed_permissions = ('view',)
+    create_shopify_products_queryset_action.short_description = (
+        'Create Shopify products for selected %(verbose_name_plural)s'
+    )
+
+    def create_shopify_products_object_action(self, request, obj):
+        try:
+            queryset = self.model.objects.filter(pk=obj.pk)
+            msgs = queryset.create_shopify_products()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    create_shopify_products_object_action.allowed_permissions = ('view',)
+    create_shopify_products_object_action.label = 'Create Shopify Product'
+    create_shopify_products_object_action.short_description = (
+        'Create Shopify product for item'
     )
