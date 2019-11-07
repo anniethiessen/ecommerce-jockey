@@ -26,6 +26,30 @@ class ShopifyProductQuerySet(QuerySet):
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
+    def perform_update_to_api(self):
+        msgs = []
+        for product in self:
+            try:
+                msgs += product.perform_update_to_api()
+            except Exception as err:
+                msgs.append(product.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        for product in self:
+            try:
+                msgs += product.perform_update_from_api()
+            except Exception as err:
+                msgs.append(product.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
 
 class ShopifyVariantQuerySet(QuerySet):
     def perform_calculated_fields_update(self):
@@ -67,6 +91,28 @@ class ShopifyProductManager(Manager):
         msgs = []
         try:
             msgs += self.get_queryset().perform_create_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_from_api()
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
 

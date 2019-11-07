@@ -330,7 +330,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
     @property
     def api_formatted_data(self):
         data = {
-            'product_id': self.product_id,
+            'id': self.product_id,
             'title': self.title,
             'body_html': self.api_formatted_body_html,
             'vendor': self.api_formatted_vendor,
@@ -424,6 +424,13 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
 
     def update_body_html_from_api_data(self, value):
         try:
+            value = value.replace(
+                '<strong>', ''
+            ).replace(
+                '</strong>', ''
+            ).replace(
+                '&amp;', '&'
+            )
             if not self.body_html == value:
                 self.body_html = value
                 self.save()
@@ -644,6 +651,48 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
             msgs.append(self.get_instance_up_to_date_msg())
         return msgs
 
+    def perform_update_to_api(self):
+        msgs = []
+        if not self.product_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            formatted_data = self.api_formatted_data
+            formatted_data.pop('metafields', [])
+            formatted_data.pop('images', [])
+            data = shopify_client.update_product(product_data=formatted_data)
+            msgs.append(
+                self.get_update_success_msg(message="Updated in Shopify")
+            )
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        if not self.product_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.retrieve_product(product_id=self.product_id)
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
     def perform_calculated_fields_update(self):
         try:
             if self.calculator.title_:
@@ -736,7 +785,7 @@ class ShopifyOption(Model, MessagesMixin):
     @property
     def api_formatted_data(self):
         data = {
-            'option_id': self.option_id,
+            'id': self.option_id,
             'name': self.name,
             'values': self.values.split(', ')
         }
@@ -957,7 +1006,7 @@ class ShopifyVariant(Model, MessagesMixin):
     @property
     def api_formatted_data(self):
         data = {
-            'variant_id': self.variant_id,
+            'id': self.variant_id,
             'title': self.title,
             'grams': self.grams,
             'weight': self.weight,
@@ -1298,7 +1347,7 @@ class ShopifyMetafield(Model):
     @property
     def api_formatted_data(self):
         data = {
-            'metafield_id': self.metafield_id,
+            'id': self.metafield_id,
             'owner_resource': self.owner_resource,
             'namespace': self.namespace,
             'value_type': self.value_type,
@@ -1475,7 +1524,7 @@ class ShopifyCalculator(Model):
     @property
     def barcode_(self):
         if self.__has_premier_product and self.premier_product.upc:
-            return self.premier_product.upc
+            return self.premier_product.upc.strip()
         return ''
     barcode_.fget.short_description = ''
 

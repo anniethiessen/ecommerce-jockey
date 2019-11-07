@@ -335,13 +335,15 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
     actions = (
         'update_calculated_fields_queryset_action',
         'export_to_api_queryset_action',
+        'import_from_api_queryset_action',
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
     )
 
     change_actions = (
         'update_calculated_fields_object_action',
-        'export_to_api_object_action'
+        'export_to_api_object_action',
+        'import_from_api_object_action'
     )
 
     list_select_related = (
