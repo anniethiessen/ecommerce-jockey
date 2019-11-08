@@ -16,6 +16,7 @@ from ..models import (
     SemaDataset,
     SemaDescriptionPiesAttribute,
     SemaDigitalAssetsPiesAttribute,
+    SemaEngine,
     SemaMake,
     SemaMakeYear,
     SemaModel,
@@ -29,6 +30,7 @@ from .actions import (
     SemaBrandActions,
     SemaCategoryActions,
     SemaDatasetActions,
+    SemaEngineActions,
     SemaMakeActions,
     SemaMakeYearActions,
     SemaModelActions,
@@ -49,6 +51,8 @@ from .filters import (
     SemaBaseVehicleMayBeRelevant,
     # SemaCategoryMayBeRelevant,
     SemaDatasetMayBeRelevant,
+    SemaEngineByDecade,
+    SemaEngineMayBeRelevant,
     SemaMakeYearByDecade,
     SemaMakeYearMayBeRelevant,
     # SemaProductMayBeRelevant,
@@ -74,6 +78,7 @@ from .inlines import (
     SemaProductVehiclesTabularInline,
     SemaSubmodelVehiclesTabularInline,
     SemaVehicleDatasetsTabularInline,
+    SemaVehicleEnginesTabularInline,
     SemaVehicleProductsTabularInline,
     SemaYearMakeYearsTabularInline
 )
@@ -1047,6 +1052,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'vehicle_id',
         'base_vehicle',
         'submodel',
+        'engine_count_a',
         'dataset_count_a',
         'product_count_a',
         'is_authorized',
@@ -1121,6 +1127,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',
+        'engine_count_a',
         'dataset_count_a',
         'product_count_a',
         'base_vehicle_link',
@@ -1133,6 +1140,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
     )
 
     inlines = (
+        SemaVehicleEnginesTabularInline,
         SemaVehicleDatasetsTabularInline,
         SemaVehicleProductsTabularInline
     )
@@ -1156,6 +1164,11 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         return get_change_view_link(obj.submodel, 'See full submodel')
     submodel_link.short_description = ''
 
+    def engine_count_a(self, obj):
+        return f'{obj._engine_relevant_count}/{obj._engine_count}'
+    engine_count_a.admin_order_field = '_engine_relevant_count'
+    engine_count_a.short_description = 'engine count'
+
     def dataset_count_a(self, obj):
         return f'{obj._dataset_relevant_count}/{obj._dataset_count}'
     dataset_count_a.admin_order_field = '_dataset_relevant_count'
@@ -1175,6 +1188,167 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
+
+
+@admin.register(SemaEngine)
+class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
+    changelist_actions = (
+        'import_new_class_action',  # TO NOTE: too long
+        # 'import_class_action',  # TO NOTE: too long
+        # 'unauthorize_class_action',  # TO NOTE: too long
+        # 'sync_class_action'  # TO NOTE: too long
+    )
+
+    list_select_related = (
+        'vehicle',
+    )
+
+    search_fields = (
+        'vehicle__base_vehicle__base_vehicle_id',
+        'vehicle__base_vehicle__make_year__year__year',
+        'vehicle__base_vehicle__make_year__make__make_id',
+        'vehicle__base_vehicle__make_year__make__name',
+        'vehicle__base_vehicle__model__model_id',
+        'vehicle__base_vehicle__model__name',
+        'vehicle__submodel__submodel_id',
+        'vehicle__submodel__name',
+        'vehicle__vehicle_id',
+        'id'
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'vehicle',
+        'litre',
+        'cylinders',
+        'block_type',
+        'cylinder_head_type',
+        'fuel_type',
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors',
+        'notes'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_editable = (
+        'is_relevant',
+    )
+
+    list_filter = (
+        'is_authorized',
+        'is_relevant',
+        SemaEngineMayBeRelevant,
+        'litre',
+        'cc',
+        'cid',
+        'cylinders',
+        'block_type',
+        'valves_per_engine',
+        'cylinder_head_type',
+        'fuel_type',
+        'ignition_system_type',
+        'manufacturer',
+        SemaEngineByDecade,
+        ('vehicle__base_vehicle__make_year__make', RelatedOnlyFieldListFilter),
+        ('vehicle__base_vehicle__model', RelatedOnlyFieldListFilter),
+        ('vehicle__submodel', RelatedOnlyFieldListFilter)
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'is_authorized',
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Engine', {
+                'fields': (
+                    'id',
+                    'litre',
+                    'cc',
+                    'cid',
+                    'cylinders',
+                    'block_type',
+                    'engine_bore_in',
+                    'engine_bore_metric',
+                    'engine_stroke_in',
+                    'engine_stroke_metric',
+                    'valves_per_engine',
+                    'aspiration',
+                    'cylinder_head_type',
+                    'fuel_type',
+                    'ignition_system_type',
+                    'manufacturer',
+                    'horse_power',
+                    'kilowatt_power',
+                    'engine_designation'
+                )
+            }
+        ),
+        (
+            'Vehicle', {
+                'fields': (
+                    'vehicle_link',
+                    'vehicle'
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'id',
+        'relevancy_errors',
+        'may_be_relevant_flag',
+        'details_link',
+        'vehicle_link'
+    )
+
+    autocomplete_fields = (
+        'vehicle',
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def vehicle_link(self, obj):
+        if not obj.vehicle:
+            return None
+        return get_change_view_link(
+            obj.vehicle,
+            'See full vehicle'
+        )
+    vehicle_link.short_description = ''
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
 
 @admin.register(SemaCategory)

@@ -74,6 +74,7 @@ def retrieve_sema_api_data(models=None):
             SemaMakeYear,
             SemaBaseVehicle,
             SemaVehicle,
+            SemaEngine,
             SemaCategory,
             SemaProduct
         ]
@@ -106,6 +107,7 @@ def perform_sema_api_import_and_unauthorize(models=None):
             SemaMakeYear,
             SemaBaseVehicle,
             SemaVehicle,
+            SemaEngine,
             SemaCategory,
             SemaProduct
         ]

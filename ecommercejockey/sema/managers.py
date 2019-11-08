@@ -3692,6 +3692,15 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
             'datasets',
             'products'
         ).annotate(
+            _engine_count=Count(
+                'engines',
+                distinct=True
+            ),
+            _engine_relevant_count=Count(
+                'engines',
+                filter=Q(engines__is_relevant=True),
+                distinct=True
+            ),
             _dataset_count=Count(
                 'datasets',
                 distinct=True
@@ -4199,6 +4208,15 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
         except Exception:
             raise
     # </editor-fold>
+
+
+class SemaEngineQuerySet(SemaBaseQuerySet):
+    """
+    This queryset class defines SEMA vehicle engines queryset methods.
+
+    """
+
+    pass
 
 
 class SemaCategoryQuerySet(SemaBaseQuerySet):
@@ -10660,6 +10678,363 @@ class SemaVehicleManager(SemaBaseManager):
 
         try:
             return [item['VehicleID'] for item in data]
+        except Exception:
+            raise
+    # </editor-fold>
+
+
+class SemaEngineManager(SemaBaseManager):
+    """
+    This manager class defines SEMA vehicle engine methods.
+
+    """
+
+    def get_queryset(self):
+        return SemaEngineQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    # <editor-fold desc="retrieve properties ...">
+    def retrieve_data_from_api(self, brand_ids=None, dataset_ids=None,
+                               year=None, make_id=None, model_id=None):
+        """
+        Retrieves engine data from SEMA API.
+
+        :param brand_ids: brand IDs on which to filter
+        :type brand_ids: list
+        :param dataset_ids: dataset IDs on which to filter
+        :type dataset_ids: list
+        :param year: year on which to filter
+        :type year: int
+        :param make_id: make ID on which to filter
+        :type make_id: int
+        :param model_id: model ID on which to filter
+        :type model_id: int
+
+        :return: vehicle engine data
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Parameters-**
+
+            Only one of `brand_ids` or `dataset_ids` allowed
+
+        **-Return Format-**
+        ::
+            ret = [
+                {
+                    "VehicleID": <int>,
+                    "Liter": <str>,
+                    "CC": <str>,
+                    "CID": <str>,
+                    "Cylinders": <str>,
+                    "BlockType": <str>,
+                    "EngBoreIn": <str>,
+                    "EngBoreMetric": <str>,
+                    "EngStrokeIn": <str>,
+                    "EngStrokeMetric": <str>,
+                    "ValvesPerEngine": "<str>,
+                    "AspirationName": <str>,
+                    "CylinderHeadTypeName": <str>,
+                    "FuelTypeName": <str>,
+                    "IgnitionSystemTypeName": <str>,
+                    "MfrName": <str>,
+                    "HorsePower": <str>,
+                    "KilowattPower": <str>,
+                    "EngineDesignationName": <str>
+                },
+                {...}
+            ]
+
+        """
+
+        try:
+            return sema_client.retrieve_engines(
+                brand_ids=brand_ids,
+                dataset_ids=dataset_ids,
+                year=year,
+                make_id=make_id,
+                model_id=model_id
+            )
+        except Exception:
+            raise
+    # </editor-fold>
+
+    # <editor-fold desc="import properties ...">
+    def parse_api_data(self, data):
+        """
+        Returns NoneType (because PK is not defined in API data) and
+        field/value dictionary from API data item.
+
+        :param data: API data item
+        :type data: dict
+
+        :return: object PK and field/value dictionary
+        :rtype: tuple
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = {
+                "VehicleID": <int>,
+                "Liter": <str>,
+                "CC": <str>,
+                "CID": <str>,
+                "Cylinders": <str>,
+                "BlockType": <str>,
+                "EngBoreIn": <str>,
+                "EngBoreMetric": <str>,
+                "EngStrokeIn": <str>,
+                "EngStrokeMetric": <str>,
+                "ValvesPerEngine": "<str>,
+                "AspirationName": <str>,
+                "CylinderHeadTypeName": <str>,
+                "FuelTypeName": <str>,
+                "IgnitionSystemTypeName": <str>,
+                "MfrName": <str>,
+                "HorsePower": <str>,
+                "KilowattPower": <str>,
+                "EngineDesignationName": <str>
+            }
+
+        **-Return Format-**
+        ::
+            pk = None
+            fields = {
+                "is_authorized": <bool>,
+                "vehicle_id": <int>,
+                "litre": <str>,
+                "cc": <str>,
+                "cid": <str>,
+                "cylinders": <str>,
+                "block_type": <str>,
+                "engine_bore_in": <str>,
+                "engine_bore_metric": <str>,
+                "engine_stroke_in": <str>,
+                "engine_stroke_metric": <str>,
+                "valves_per_engine": "<str>,
+                "aspiration": <str>,
+                "cylinder_head_type": <str>,
+                "fuel_type": <str>,
+                "ignition_system_type": <str>,
+                "manufacturer": <str>,
+                "horse_power": <str>,
+                "kilowatt_power": <str>,
+                "engine_designation": <str>
+            }
+
+        """
+
+        try:
+            fields = {
+                'is_authorized': True,
+                'vehicle_id': data['VehicleID'],
+                'litre': data['Liter'],
+                'cc': data['CC'],
+                'cid': data['CID'],
+                'cylinders': data['Cylinders'],
+                'block_type': data['BlockType'],
+                'engine_bore_in': data['EngBoreIn'],
+                'engine_bore_metric': data['EngBoreMetric'],
+                'engine_stroke_in': data['EngStrokeIn'],
+                'engine_stroke_metric': data['EngStrokeMetric'],
+                'valves_per_engine': data['ValvesPerEngine'],
+                'aspiration': data['AspirationName'],
+                'cylinder_head_type': data['CylinderHeadTypeName'],
+                'fuel_type': data['FuelTypeName'],
+                'ignition_system_type': data['IgnitionSystemTypeName'],
+                'manufacturer': data['MfrName'],
+                'horse_power': data['HorsePower'],
+                'kilowatt_power': data['KilowattPower'],
+                'engine_designation': data['EngineDesignationName']
+            }
+            return None, fields
+        except Exception:
+            raise
+
+    def get_object_from_api_data(self, pk=None, vehicle_id=None, litre=None,
+                                 cc=None, cid=None, cylinders=None,
+                                 block_type=None, engine_bore_in=None,
+                                 engine_bore_metric=None,
+                                 engine_stroke_in=None,
+                                 engine_stroke_metric=None,
+                                 valves_per_engine=None, aspiration=None,
+                                 cylinder_head_type=None, fuel_type=None,
+                                 ignition_system_type=None, manufacturer=None,
+                                 horse_power=None, kilowatt_power=None,
+                                 engine_designation=None):
+        """
+        Returns object by all engine fields.
+
+        :param pk: placeholder for overridden PK param
+        :param vehicle_id: vehicle ID field value
+        :type vehicle_id: int
+        :param litre: litre field value
+        :type litre: str
+        :param cc: CC field value
+        :type cc: str
+        :param cid: CID field value
+        :type cid: str
+        :param cylinders: cylinders field value
+        :type cylinders: str
+        :param block_type: block type field value
+        :type block_type: str
+        :param engine_bore_in: engine bore inches field value
+        :type engine_bore_in: str
+        :param engine_bore_metric: engine bore metric field value
+        :type engine_bore_metric: str
+        :param engine_stroke_in: engine stroke inches field value
+        :type engine_stroke_in: str
+        :param engine_stroke_metric: engine stroke metric field value
+        :type engine_stroke_metric: str
+        :param valves_per_engine: valves per engine field value
+        :type valves_per_engine: str
+        :param aspiration: aspiration field value
+        :type aspiration: str
+        :param cylinder_head_type: cylinder head type field value
+        :type cylinder_head_type: str
+        :param fuel_type: fuel type field value
+        :type fuel_type: str
+        :param ignition_system_type: ignition system type field value
+        :type ignition_system_type: str
+        :param manufacturer: manufacturer field value
+        :type manufacturer: str
+        :param horse_power: horse power field value
+        :type horse_power: str
+        :param kilowatt_power: kilowatt power field value
+        :type kilowatt_power: str
+        :param engine_designation: engine designation field value
+        :type engine_designation: str
+
+
+        :return: model instance
+        :rtype: object
+
+        :raises Exception: missing year_id or make_id, or on general
+            exception
+
+        """
+        if not (litre and cc and cid and cylinders and block_type
+                and engine_bore_in and engine_bore_metric
+                and engine_stroke_in and engine_stroke_metric
+                and valves_per_engine and aspiration and cylinder_head_type
+                and fuel_type and ignition_system_type and manufacturer
+                and horse_power and kilowatt_power and engine_designation):
+            raise Exception(
+                'litre, CC, CID, cylinders, block type, engine bore inches,'
+                'engine bore metric, engine stroke inches, engine stroke '
+                'metric, valves per engine, aspiration, cylinder head type, '
+                'fuel type, ignition system type, manufacturer, horse power, '
+                'kilowatt power, and engine designation required'
+            )
+
+        try:
+            return self.get(
+                vehicle__vehicle_id=vehicle_id,
+                litre=litre,
+                cc=cc,
+                cid=cid,
+                cylinders=cylinders,
+                block_type=block_type,
+                engine_bore_in=engine_bore_in,
+                engine_bore_metric=engine_bore_metric,
+                engine_stroke_in=engine_stroke_in,
+                engine_stroke_metric=engine_stroke_metric,
+                valves_per_engine=valves_per_engine,
+                aspiration=aspiration,
+                cylinder_head_type=cylinder_head_type,
+                fuel_type=fuel_type,
+                ignition_system_type=ignition_system_type,
+                manufacturer=manufacturer,
+                horse_power=horse_power,
+                kilowatt_power=kilowatt_power,
+                engine_designation=engine_designation
+            )
+        except Exception:
+            raise
+    # </editor-fold
+
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "VehicleID": <int>,
+                    "Liter": <str>,
+                    "CC": <str>,
+                    "CID": <str>,
+                    "Cylinders": <str>,
+                    "BlockType": <str>,
+                    "EngBoreIn": <str>,
+                    "EngBoreMetric": <str>,
+                    "EngStrokeIn": <str>,
+                    "EngStrokeMetric": <str>,
+                    "ValvesPerEngine": "<str>,
+                    "AspirationName": <str>,
+                    "CylinderHeadTypeName": <str>,
+                    "FuelTypeName": <str>,
+                    "IgnitionSystemTypeName": <str>,
+                    "MfrName": <str>,
+                    "HorsePower": <str>,
+                    "KilowattPower": <str>,
+                    "EngineDesignationName": <str>
+                },
+                {...}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            pk_list = []
+            for item in data:
+                try:
+                    engine = self.get(
+                        vehicle__vehicle_id=data['VehicleID'],
+                        litre=data['Liter'],
+                        cc=data['CC'],
+                        cid=data['CID'],
+                        cylinders=data['Cylinders'],
+                        block_type=data['BlockType'],
+                        engine_bore_in=data['EngBoreIn'],
+                        engine_bore_metric=data['EngBoreMetric'],
+                        engine_stroke_in=data['EngStrokeIn'],
+                        engine_stroke_metric=data['EngStrokeMetric'],
+                        valves_per_engine=data['ValvesPerEngine'],
+                        aspiration=data['AspirationName'],
+                        cylinder_head_type=data['CylinderHeadTypeName'],
+                        fuel_type=data['FuelTypeName'],
+                        ignition_system_type=data['IgnitionSystemTypeName'],
+                        manufacturer=data['MfrName'],
+                        horse_power=data['HorsePower'],
+                        kilowatt_power=data['KilowattPower'],
+                        engine_designation=data['EngineDesignationName']
+                    )
+                    pk_list.append(engine.pk)
+                except self.model.DoesNotExist:
+                    pass
+            return pk_list
         except Exception:
             raise
     # </editor-fold>

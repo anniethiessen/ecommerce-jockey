@@ -306,6 +306,10 @@ class SemaVehicleActions(SemaBaseActions):
     pass
 
 
+class SemaEngineActions(SemaBaseActions):
+    pass
+
+
 class SemaCategoryActions(SemaCategoryProductsActions):
     pass
 

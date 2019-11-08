@@ -227,6 +227,10 @@ ADMIN_REORDER = (
                 'label': 'Vehicles'
             },
             {
+                'model': 'sema.SemaEngine',
+                'label': 'Engines'
+            },
+            {
                 'model': 'sema.SemaCategory',
                 'label': 'Categories'
             },

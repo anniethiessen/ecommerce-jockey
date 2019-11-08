@@ -20,6 +20,7 @@ from ..models import (
     SemaDataset,
     SemaDescriptionPiesAttribute,
     SemaDigitalAssetsPiesAttribute,
+    SemaEngine,
     SemaMakeYear,
     SemaProduct,
     SemaVehicle
@@ -323,6 +324,58 @@ class SemaVehicleBaseTabularInline(TabularInline):
     def formfield_for_dbfield(self, db_field, **kwargs):
         formfield = super().formfield_for_dbfield(db_field, **kwargs)
         if db_field.name in ['base_vehicle', 'submodel']:
+            formfield.choices = formfield.choices
+        return formfield
+
+
+class SemaEngineBaseTabularInline(TabularInline):
+    model = SemaEngine
+    fk_name = None
+    formset = LimitedInlineFormSet
+    verbose_name_plural = 'engines (top 10)'
+    all_link_query = None
+    extra = 0
+    classes = (
+        'collapse',
+    )
+
+    fields = (
+        'all_link',
+        'details_link',
+        'id',
+        'vehicle',
+        'litre',
+        'cylinders',
+        'block_type',
+        'cylinder_head_type',
+        'fuel_type',
+        'is_authorized',
+        'is_relevant'
+    )
+
+    readonly_fields = (
+        'id',
+        'all_link',
+        'details_link'
+    )
+
+    def get_rel_obj(self, obj):
+        return getattr(obj, self.fk_name)
+
+    def all_link(self, obj):
+        query = f'{self.all_link_query}={getattr(self.get_rel_obj(obj), "pk")}'
+        return get_changelist_view_link(obj, 'See All', query)
+    all_link.short_description = ''
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, **kwargs)
+        if db_field.name == 'vehicle':
             formfield.choices = formfield.choices
         return formfield
 
@@ -746,6 +799,11 @@ class SemaMakeYearBaseVehiclesTabularInline(SemaBaseVehicleBaseTabularInline):
 class SemaBaseVehicleVehiclesTabularInline(SemaVehicleBaseTabularInline):
     fk_name = 'base_vehicle'
     all_link_query = 'base_vehicle__base_vehicle_id__exact'
+
+
+class SemaVehicleEnginesTabularInline(SemaEngineBaseTabularInline):
+    fk_name = 'vehicle'
+    all_link_query = 'vehicle__vehicle_id__exact'
 
 
 class SemaVehicleDatasetsTabularInline(SemaDatasetManyToManyBaseTabularInline):

@@ -32,6 +32,7 @@ from .managers import (
     SemaDatasetManager,
     SemaDescriptionPiesAttributeManager,
     SemaDigitalAssetsPiesAttributeManager,
+    SemaEngineManager,
     SemaMakeManager,
     SemaMakeYearManager,
     SemaModelManager,
@@ -2544,6 +2545,32 @@ class SemaVehicle(SemaBaseModel):
     dataset_relevant_count.fget.short_description = 'Relevant Dataset Count'
 
     @property
+    def engine_count(self):
+        """
+        Returns engine count.
+
+        :return: engine count
+        :rtype: int
+
+        """
+
+        return self.engines.distinct().count()
+    engine_count.fget.short_description = 'Engine Count'
+
+    @property
+    def engine_relevant_count(self):
+        """
+        Returns relevant engine count.
+
+        :return: relevant engine count
+        :rtype: int
+
+        """
+
+        return self.engines.filter(is_relevant=True).distinct().count()
+    engine_relevant_count.fget.short_description = 'Relevant Engine Count'
+
+    @property
     def product_count(self):
         """
         Returns product count.
@@ -3196,6 +3223,163 @@ class SemaVehicle(SemaBaseModel):
 
     def __str__(self):
         return f'{self.base_vehicle} :: {self.submodel}'
+
+
+class SemaEngine(SemaBaseModel):
+    """
+    This model class defines SEMA vehicle engines.
+
+    """
+
+    vehicle = ForeignKey(
+        SemaVehicle,
+        on_delete=CASCADE,
+        related_name='engines'
+    )
+    litre = CharField(
+        max_length=10
+    )
+    cc = CharField(
+        max_length=10
+    )
+    cid = CharField(
+        max_length=10
+    )
+    cylinders = CharField(
+        max_length=10
+    )
+    block_type = CharField(
+        max_length=10
+    )
+    engine_bore_in = CharField(
+        max_length=10
+    )
+    engine_bore_metric = CharField(
+        max_length=10
+    )
+    engine_stroke_in = CharField(
+        max_length=10
+    )
+    engine_stroke_metric = CharField(
+        max_length=10
+    )
+    valves_per_engine = CharField(
+        max_length=10
+    )
+    aspiration = CharField(
+        max_length=10
+    )
+    cylinder_head_type = CharField(
+        max_length=10
+    )
+    fuel_type = CharField(
+        max_length=10
+    )
+    ignition_system_type = CharField(
+        max_length=10
+    )
+    manufacturer = CharField(
+        max_length=10
+    )
+    horse_power = CharField(
+        max_length=10
+    )
+    kilowatt_power = CharField(
+        max_length=10
+    )
+    engine_designation = CharField(
+        max_length=10
+    )
+
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. vehicle is relevant, and
+            2. fuel type is diesel
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return self.vehicle.is_relevant and self.fuel_type == 'DIESEL'
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if super().relevancy_errors:
+            msgs.append(super().relevancy_errors)
+
+        if self.is_relevant:
+            if not self.vehicle.is_relevant:
+                error = "vehicle not relevant"
+                msgs.append(error)
+            if not self.fuel_type == 'DIESEL':
+                error = "not diesel"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
+    # <editor-fold desc="update properties ...">
+    @property
+    def state(self):
+        """
+        Returns a dictionary of fields and values relevant to updates.
+
+        :return: current values of fields relevant to updates
+        :rtype: dict
+
+        """
+
+        state = dict(super().state)
+        state.update(
+            {
+                'Vehicle': str(self.vehicle),
+                'Litre': self.litre,
+                'CC': self.cc,
+                'CID': self.cid,
+                'Cylinders': self.cylinders,
+                'Block': self.block_type,
+                'Bore In': self.engine_bore_in,
+                'Bore Met': self.engine_bore_metric,
+                'Stroke In': self.engine_stroke_in,
+                'Stroke Met': self.engine_stroke_metric,
+                'Valves': self.valves_per_engine,
+                'Aspiration': self.aspiration,
+                'Cylinder Head': self.cylinder_head_type,
+                'Fuel': self.fuel_type,
+                'Ignition System': self.ignition_system_type,
+                'Manufacturer': self.manufacturer,
+                'Horse Power': self.horse_power,
+                'Kilowatt Power': self.kilowatt_power,
+                'Engine Designation': self.engine_designation
+            }
+        )
+        return state
+    # </editor-fold>
+
+    objects = SemaEngineManager()
+
+    class Meta:
+        verbose_name = 'SEMA engine'
+
+    def __str__(self):
+        return f'{self.vehicle} :: {self.litre} :: {self.fuel_type}'
 
 
 class SemaCategory(SemaBaseModel):

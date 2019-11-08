@@ -127,6 +127,19 @@ class SemaVehicleByDecade(ByDecadeFilter):
             )
 
 
+class SemaEngineByDecade(ByDecadeFilter):
+    def queryset(self, request, queryset):
+        from sema.models import SemaYear
+
+        if self.value():
+            years = SemaYear.objects.with_year_data().filter(
+                decade=int(self.value())
+            )
+            return queryset.filter(
+                vehicle__base_vehicle__make_year__year__in=years
+            )
+
+
 class ByCategoryLevel(SimpleListFilter):
     title = 'category level'
     parameter_name = 'category_level'
@@ -245,6 +258,20 @@ class SemaVehicleMayBeRelevant(MayBeRelevantFilter):
             return queryset.filter(
                 Q(base_vehicle__is_relevant=False)
                 | Q(submodel__is_relevant=False)
+            )
+
+
+class SemaEngineMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                Q(vehicle__is_relevant=True)
+                & Q(fuel_type__exact='DIESEL')
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(vehicle__is_relevant=False)
+                | ~Q(fuel_type__exact='DIESEL')
             )
 
 
