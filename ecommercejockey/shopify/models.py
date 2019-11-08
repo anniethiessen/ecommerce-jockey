@@ -104,9 +104,11 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         blank=True
     )
     image_src = URLField(
+        blank=True,
         max_length=250
     )
     image_alt = CharField(
+        blank=True,
         max_length=30
     )
     is_published = BooleanField(
