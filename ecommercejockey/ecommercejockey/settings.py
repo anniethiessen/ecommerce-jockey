@@ -14,11 +14,12 @@ SEMA_BASE_URL = 'https://sdc.semadatacoop.org/sdcapi'
 SEMA_USERNAME = os.environ['SEMA_USERNAME']
 SEMA_PASSWORD = os.environ['SEMA_PASSWORD']
 
+SHOPIFY_VERSION = '2019-10'
 SHOPIFY_SHOP_NAME = os.environ['SHOPIFY_SHOP_NAME']
 SHOPIFY_API_KEY = os.environ['SHOPIFY_API_KEY']
 SHOPIFY_PASSWORD = os.environ['SHOPIFY_PASSWORD']
 SHOPIFY_SECRET = os.environ['SHOPIFY_SECRET']
-SHOPIFY_VERSION = '2019-10'
+SHOPIFY_WEBHOOK_SIGNATURE = os.environ['SHOPIFY_WEBHOOK_SIGNATURE']
 SHOPIFY_BASE_URL = (
     f'https://{SHOPIFY_API_KEY}:{SHOPIFY_PASSWORD}'
     f'@{SHOPIFY_SHOP_NAME}.myshopify.com/admin/api/{SHOPIFY_VERSION}'
@@ -40,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'core.apps.CoreAppConfig',
     'main.apps.MainAppConfig',
     'premier.apps.PremierAppConfig',
