@@ -605,5 +605,46 @@ class ShopifyApiClient(object):
         except Exception:
             raise
 
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def create_collection(self, collection_data):
+        url = f'{self.base_url}/smart_collections.json'
+        body = {
+            'smart_collection': collection_data
+        }
+
+        try:
+            response = requests.post(url=url, json=body)
+            return self.get_json_body(response)['smart_collection']
+        except Exception as err:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def update_collection(self, collection_data):
+        try:
+            collection_id = collection_data.pop('id')
+        except Exception:
+            raise
+
+        url = f'{self.base_url}/smart_collections/{collection_id}.json'
+        body = {
+            'smart_collection': collection_data
+        }
+
+        try:
+            response = requests.put(url=url, json=body)
+            return self.get_json_body(response)['smart_collection']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_collection(self, collection_id):
+        url = f'{self.base_url}/smart_collection/{collection_id}.json'
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['smart_collection']
+        except Exception:
+            raise
+
 
 shopify_client = ShopifyApiClient()

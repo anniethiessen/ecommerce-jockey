@@ -1,7 +1,5 @@
 from decimal import Decimal
 
-from slugify import slugify
-
 from django.db.models import (
     Model,
     BigIntegerField,
@@ -25,6 +23,7 @@ from core.models import (
 )
 from .clients import shopify_client
 from .managers import (
+    ShopifyCollectionManager,
     ShopifyOptionManager,
     ShopifyProductManager,
     ShopifyVariantManager
@@ -154,7 +153,7 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
 
         """
 
-        return False
+        return True
 
     @property
     def relevancy_errors(self):
@@ -191,6 +190,368 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
+
+    # <editor-fold desc="format properties ...">
+    @property
+    def api_formatted_data(self):
+        data = {
+            'id': self.collection_id,
+            'title': self.title,
+            'body_html': self.api_formatted_body_html,
+            'published': self.is_published,
+            'published_scope': self.published_scope,
+            'rules': self.api_formatted_rules,
+            'disjunctive': self.disjunctive,
+            'sort_order': self.sort_order
+        }
+        if self.image_src:
+            image_data = {
+                'image_src': self.image_src,
+                'image_alt': self.image_alt
+            }
+            data['image'] = image_data
+        return dict((k, v) for k, v in data.items() if v)
+
+    @property
+    def api_formatted_body_html(self):
+        if not self.body_html:
+            return self.body_html
+        return f"<strong>{self.body_html}</strong>"
+
+    @property
+    def api_formatted_rules(self):
+        rules = []
+        for rule in self.rules.all():
+            rules.append(
+                {
+                    "column": rule.column,
+                    "relation": rule.relation,
+                    "condition": rule.condition
+                }
+            )
+        for tag in self.tags.all():
+            rules.append(
+                {
+                    "column": 'tag',
+                    "relation": 'equals',
+                    "condition": tag.name
+                }
+            )
+        return rules
+    # </editor-fold>
+
+    # <editor-fold desc="update properties ...">
+    @property
+    def state(self):
+        return {
+            'collection_id': str(self.collection_id),
+            'title': self.title,
+            'body_html': self.body_html,
+            'image_src': self.image_src,
+            'image_alt': self.image_alt,
+            'published': str(self.is_published),
+            'published_scope': self.published_scope,
+            'tags': str(self.tags.count()),
+            'rules': str(self.rules.count()),
+            'disjunctive': str(self.disjunctive),
+            'sort_order': self.sort_order
+        }
+
+    def update_collection_id_from_api_data(self, value):
+        try:
+            if not self.collection_id == value:
+                self.collection_id = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_title_from_api_data(self, value):
+        try:
+            if not self.title == value:
+                self.title = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_body_html_from_api_data(self, value):
+        try:
+            if value:
+                value = value.replace(
+                    '<strong>', ''
+                ).replace(
+                    '</strong>', ''
+                ).replace(
+                    '&amp;', '&'
+                )
+            else:
+                value = ''
+            if not self.body_html == value:
+                self.body_html = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_is_published_from_api_data(self, value):
+        try:
+            value = bool(value)
+            if not self.is_published == value:
+                self.is_published = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_published_scope_from_api_data(self, value):
+        try:
+            if not self.published_scope == value:
+                self.published_scope = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_rules_from_api_data(self, values):
+        try:
+            msgs = []
+            for value in values:
+                if value['column'] == 'tag' and value['relation'] == 'equals':
+                    tag, created = ShopifyTag.objects.get_or_create(
+                        name=value['condition']
+                    )
+                    if created:
+                        msgs.append(tag.get_create_success_msg())
+                    if tag not in self.tags.all():
+                        self.tags.add(tag)
+                        self.save()
+                        msgs.append(
+                            self.get_update_success_msg(
+                                message=f'{tag} added'
+                            )
+                        )
+                else:
+                    rule, created = ShopifyCollectionRule.objects.get_or_create(
+                        column=value['column'],
+                        relation=value['relation'],
+                        condition=value['condition']
+                    )
+                    if created:
+                        msgs.append(rule.get_create_success_msg())
+                    if rule not in self.rules.all():
+                        self.rules.add(rule)
+                        self.save()
+                        msgs.append(
+                            self.get_update_success_msg(
+                                message=f'{rule} added'
+                            )
+                        )
+
+            tag_values = [
+                value['condition'] for value in values
+                if value['column'] == 'tag' and value['relation'] == 'equals'
+            ]
+            for tag in self.tags.all():
+                if tag.name not in tag_values:
+                    self.tags.remove(tag)
+                    self.save()
+                    msgs.append(
+                        self.get_update_success_msg(
+                            message=f'{tag} removed'
+                        )
+                    )
+            rule_values = [
+                value for value in values
+                if value['column'] != 'tag' or value['relation'] != 'equals'
+            ]
+            for rule in self.rules.all():
+                if {
+                    'column': rule.column,
+                    'relation': rule.relation,
+                    'condition': rule.condition
+                } not in tag_values:
+                    self.rules.remove(rule)
+                    self.save()
+                    msgs.append(
+                        self.get_update_success_msg(
+                            message=f'{rule} removed'
+                        )
+                    )
+            return msgs
+        except Exception:
+            raise
+
+    def update_disjunctive_from_api_data(self, value):
+        try:
+            value = bool(value)
+            if not self.disjunctive == value:
+                self.disjunctive = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_sort_order_from_api_data(self, value):
+        try:
+            if not self.sort_order == value:
+                self.sort_order = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_from_api_data(self, data, *fields):
+        field_map = {
+            'collection_id': {
+                'data': 'id',
+                'function': 'update_collection_id_from_api_data'
+            },
+            'title': {
+                'data': 'title',
+                'function': 'update_title_from_api_data'
+            },
+            'body_html': {
+                'data': 'body_html',
+                'function': 'update_body_html_from_api_data'
+            },
+            # 'image_src': {
+            #     'data': '',
+            #     'function': ''
+            # },
+            # 'image_alt': {
+            #     'data': '',
+            #     'function': ''
+            # },
+            'is_published': {
+                'data': 'published_at',
+                'function': 'update_is_published_from_api_data'
+            },
+            'published_scope': {
+                'data': 'published_scope',
+                'function': 'update_published_scope_from_api_data'
+            },
+            'rules': {
+                'data': 'rules',
+                'function': 'update_rules_from_api_data'
+            },
+            'disjunctive': {
+                'data': 'disjunctive',
+                'function': 'update_disjunctive_from_api_data'
+            },
+            'sort_order': {
+                'data': 'sort_order',
+                'function': 'update_sort_order_from_api_data'
+            }
+        }
+
+        if fields:
+            for field in fields:
+                if field not in field_map.keys():
+                    raise Exception('Invalid update field')
+        else:
+            fields = field_map.keys()
+
+        msgs = []
+        prev = self.state
+        for field in fields:
+            try:
+                extra_msgs = getattr(
+                    self,
+                    field_map[field]['function']
+                )(data[field_map[field]['data']])
+
+                if extra_msgs:
+                    msgs += extra_msgs
+            except Exception as err:
+                msgs.append(
+                    self.get_instance_error_msg(
+                        error=f'{field} update error: {err}')
+                )
+                continue
+
+        self.refresh_from_db()
+        new = self.state
+        msgs.append(
+            self.get_update_success_msg(
+                previous_data=prev,
+                new_data=new
+            )
+        )
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_create_to_api(self):
+        msgs = []
+        if self.collection_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Already exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.create_collection(
+                collection_data=self.api_formatted_data
+            )
+            msgs.append(
+                self.get_create_success_msg(message="Created in Shopify")
+            )
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        if not self.collection_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.update_collection(
+                collection_data=self.api_formatted_data
+            )
+            msgs.append(
+                self.get_update_success_msg(message="Updated in Shopify")
+            )
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        if not self.collection_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.retrieve_collection(
+                collection_id=self.collection_id)
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    objects = ShopifyCollectionManager()
 
     def __str__(self):
         return self.title
@@ -1444,9 +1805,9 @@ class ShopifyCalculator(Model):
                     is_relevant=True).exists()):
             categories = self.sema_product.categories.filter(
                 is_relevant=True
-            ).values_list('name', flat=True)
+            )
             for category in categories:
-                tags.append(f'category:{slugify(category)}')
+                tags.append(category.tag_name)
         return tags
     category_tags_.fget.short_description = ''
 

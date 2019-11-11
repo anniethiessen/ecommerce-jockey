@@ -4,6 +4,8 @@ This module defines all models for the SEMA app.
 """
 
 
+from slugify import slugify
+
 from django.db.models import (
     Model,
     BooleanField,
@@ -3401,6 +3403,10 @@ class SemaCategory(SemaBaseModel):
         related_name='child_categories',
         symmetrical=False
     )
+
+    @property
+    def tag_name(self):
+        return f'category:{slugify(self.name)}'
 
     @property
     def level(self):

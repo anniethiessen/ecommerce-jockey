@@ -820,8 +820,8 @@ class SemaVehicleProductsTabularInline(SemaProductManyToManyBaseTabularInline):
 
 class SemaCategoryParentCategoriesTabularInline(SemaCategoryManyToManyBaseTabularInline):
     model = SemaCategory.parent_categories.through
-    obj_name = 'from_semacategory'
-    fk_name = 'to_semacategory'
+    obj_name = 'to_semacategory'
+    fk_name = 'from_semacategory'
     formset = LimitedManyToManyParentCategoryInlineFormSet
     verbose_name_plural = 'parent categories (top 10)'
     all_link_query = 'child_categories__category_id__exact'
@@ -829,8 +829,8 @@ class SemaCategoryParentCategoriesTabularInline(SemaCategoryManyToManyBaseTabula
 
 class SemaCategoryChildCategoriesTabularInline(SemaCategoryManyToManyBaseTabularInline):
     model = SemaCategory.parent_categories.through
-    obj_name = 'to_semacategory'
-    fk_name = 'from_semacategory'
+    obj_name = 'from_semacategory'
+    fk_name = 'to_semacategory'
     formset = LimitedManyToManyChildCategoryInlineFormSet
     verbose_name_plural = 'child categories (top 10)'
     all_link_query = 'parent_categories__category_id__exact'

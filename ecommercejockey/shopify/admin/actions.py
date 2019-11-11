@@ -16,7 +16,37 @@ class ShopifyCollectionRuleActions(BaseActions):
 
 
 class ShopifyCollectionActions(RelevancyActions):
-    pass
+    def export_to_api_queryset_action(self, request, queryset):
+        msgs = []
+        try:
+            new = queryset.filter(collection_id__isnull=True)
+            existing = queryset.filter(collection_id__isnull=False)
+            msgs += new.perform_create_to_api()
+            msgs += existing.perform_update_to_api()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    export_to_api_queryset_action.allowed_permissions = ('view',)
+    export_to_api_queryset_action.short_description = (
+        'Create or update selected %(verbose_name_plural)s in Shopify'
+    )
+
+    def export_to_api_object_action(self, request, obj):
+        msgs = []
+        try:
+            if obj.collection_id:
+                msgs += obj.perform_update_to_api()
+            else:
+                msgs += obj.perform_create_to_api()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    export_to_api_object_action.allowed_permissions = ('view',)
+    export_to_api_object_action.label = "Create/Update in Shopify"
+    export_to_api_object_action.short_description = (
+        'Creates or updates in Shopify. '
+        'WARNING: Related objects must be up-to-date.'
+    )
 
 
 class ShopifyProductActions(RelevancyActions):

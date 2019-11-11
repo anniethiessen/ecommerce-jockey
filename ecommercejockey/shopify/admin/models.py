@@ -97,8 +97,13 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
 class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
                                   ShopifyCollectionActions):
     actions = (
+        'export_to_api_queryset_action',
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
+    )
+
+    change_actions = (
+        'export_to_api_object_action',
     )
 
     search_fields = (

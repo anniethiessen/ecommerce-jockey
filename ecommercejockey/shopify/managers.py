@@ -1,6 +1,44 @@
 from django.db.models import QuerySet, Manager
 
 
+class ShopifyCollectionQuerySet(QuerySet):
+    def perform_create_to_api(self):
+        msgs = []
+        for collection in self:
+            try:
+                msgs += collection.perform_create_to_api()
+            except Exception as err:
+                msgs.append(collection.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        for collection in self:
+            try:
+                msgs += collection.perform_update_to_api()
+            except Exception as err:
+                msgs.append(collection.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        for collection in self:
+            try:
+                msgs += collection.perform_update_from_api()
+            except Exception as err:
+                msgs.append(collection.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+
 class ShopifyProductQuerySet(QuerySet):
     def perform_calculated_fields_update(self):
         msgs = []
@@ -67,6 +105,47 @@ class ShopifyVariantQuerySet(QuerySet):
 
 class ShopifyOptionQuerySet(QuerySet):
     pass
+
+
+class ShopifyCollectionManager(Manager):
+    def get_queryset(self):
+        return ShopifyCollectionQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def perform_create_to_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_create_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_from_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
 
 
 class ShopifyProductManager(Manager):
