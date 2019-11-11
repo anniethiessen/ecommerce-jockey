@@ -3267,19 +3267,19 @@ class SemaEngine(SemaBaseModel):
         max_length=10
     )
     aspiration = CharField(
-        max_length=10
+        max_length=50
     )
     cylinder_head_type = CharField(
         max_length=10
     )
     fuel_type = CharField(
-        max_length=10
+        max_length=20
     )
     ignition_system_type = CharField(
-        max_length=10
+        max_length=50
     )
     manufacturer = CharField(
-        max_length=10
+        max_length=50
     )
     horse_power = CharField(
         max_length=10

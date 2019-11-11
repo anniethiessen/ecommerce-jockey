@@ -1226,8 +1226,8 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
         'id',
         'vehicle',
         'litre',
-        'cylinders',
         'block_type',
+        'cylinders',
         'cylinder_head_type',
         'fuel_type',
         'is_authorized',
@@ -1249,16 +1249,14 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
         'is_authorized',
         'is_relevant',
         SemaEngineMayBeRelevant,
+        'manufacturer',
         'litre',
-        'cc',
-        'cid',
-        'cylinders',
         'block_type',
+        'cylinders',
         'valves_per_engine',
         'cylinder_head_type',
         'fuel_type',
         'ignition_system_type',
-        'manufacturer',
         SemaEngineByDecade,
         ('vehicle__base_vehicle__make_year__make', RelatedOnlyFieldListFilter),
         ('vehicle__base_vehicle__model', RelatedOnlyFieldListFilter),
@@ -1744,6 +1742,11 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     category_count_a.short_description = 'category count'
 
     def vehicle_count_a(self, obj):
+        if not obj._vehicle_count:
+            return (
+                f'{obj.dataset.vehicle_relevant_count}'
+                f'/{obj.dataset.vehicle_count} (D)'
+            )
         return f'{obj._vehicle_relevant_count}/{obj._vehicle_count}'
     vehicle_count_a.admin_order_field = '_vehicle_relevant_count'
     vehicle_count_a.short_description = 'vehicle count'

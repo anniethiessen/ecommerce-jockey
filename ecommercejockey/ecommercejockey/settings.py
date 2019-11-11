@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'premier.apps.PremierAppConfig',
     'sema.apps.SemaAppConfig',
     'shopify.apps.ShopifyAppConfig',
+    'django_extensions',
     'admin_reorder',
     'import_export',
     'imagekit'

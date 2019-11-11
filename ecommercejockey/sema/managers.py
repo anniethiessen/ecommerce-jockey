@@ -3689,6 +3689,7 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
 
     def with_admin_data(self):
         return self.prefetch_related(
+            'engines',
             'datasets',
             'products'
         ).annotate(
@@ -8894,11 +8895,10 @@ class SemaMakeYearManager(SemaBaseManager):
         except Exception:
             raise
 
-    def get_object_from_api_data(self, pk=None, year_id=None, make_id=None):
+    def get_object_from_api_data(self, year_id=None, make_id=None, **kwargs):
         """
         Returns object by year and make.
 
-        :param pk: placeholder for overridden PK param
         :param year_id: year ID field value
         :type year_id: int
         :param make_id: make ID field value
@@ -10855,7 +10855,7 @@ class SemaEngineManager(SemaBaseManager):
         except Exception:
             raise
 
-    def get_object_from_api_data(self, pk=None, vehicle_id=None, litre=None,
+    def get_object_from_api_data(self, vehicle_id=None, litre=None,
                                  cc=None, cid=None, cylinders=None,
                                  block_type=None, engine_bore_in=None,
                                  engine_bore_metric=None,
@@ -10865,11 +10865,10 @@ class SemaEngineManager(SemaBaseManager):
                                  cylinder_head_type=None, fuel_type=None,
                                  ignition_system_type=None, manufacturer=None,
                                  horse_power=None, kilowatt_power=None,
-                                 engine_designation=None):
+                                 engine_designation=None, **kwargs):
         """
         Returns object by all engine fields.
 
-        :param pk: placeholder for overridden PK param
         :param vehicle_id: vehicle ID field value
         :type vehicle_id: int
         :param litre: litre field value
