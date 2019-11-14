@@ -137,6 +137,12 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         max_length=15
     )
 
+    # <editor-fold desc="count properties ...">
+    @property
+    def tag_count(self):
+        return self.tags.count()
+    # </editor-fold>
+
     # <editor-fold desc="relevancy properties ...">
     @property
     def may_be_relevant(self):

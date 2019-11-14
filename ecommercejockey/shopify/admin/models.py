@@ -118,6 +118,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'collection_id',
         'title',
+        'tag_count',
         'is_published',
         'may_be_relevant_flag',
         'is_relevant',
@@ -185,6 +186,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
+        'tag_count',
         'may_be_relevant_flag',
         'relevancy_errors',
         'details_link'

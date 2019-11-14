@@ -170,7 +170,8 @@ ADMIN_REORDER = (
         'label': COMPANY_NICKNAME,
         'models': (
             'main.Vendor',
-            'main.Item'
+            'main.Item',
+            'main.CategoryPath'
         )
     },
     {

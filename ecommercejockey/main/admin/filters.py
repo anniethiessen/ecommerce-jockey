@@ -1,6 +1,8 @@
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
 
+from core.admin.filters import MayBeRelevantFilter
+
 
 class IsCompleteItem(SimpleListFilter):  # TODO add product checks
     title = 'is complete'
@@ -25,23 +27,6 @@ class IsCompleteItem(SimpleListFilter):  # TODO add product checks
                 | Q(sema_product__isnull=True)
                 | Q(shopify_product__isnull=True)
             )
-
-
-class HasPremierProduct(SimpleListFilter):
-    title = 'has Premier product'
-    parameter_name = 'premier_product'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
-    def queryset(self, request, queryset):
-        if self.value() == 'Yes':
-            return queryset.filter(premier_product__isnull=False)
-        if self.value() == 'No':
-            return queryset.filter(premier_product__isnull=True)
 
 
 class HasSemaProduct(SimpleListFilter):
@@ -76,3 +61,19 @@ class HasShopifyProduct(SimpleListFilter):
             return queryset.filter(shopify_product__isnull=False)
         if self.value() == 'No':
             return queryset.filter(shopify_product__isnull=True)
+
+
+class CategoryPathMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(
+                sema_root_category__is_relevant=True,
+                sema_branch_category__is_relevant=True,
+                sema_leaf_category__is_relevant=True,
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(sema_root_category__is_relevant=False)
+                | Q(sema_branch_category__is_relevant=False)
+                | Q(sema_leaf_category__is_relevant=False)
+            )

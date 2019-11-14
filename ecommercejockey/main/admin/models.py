@@ -5,15 +5,17 @@ from django.contrib.admin import ModelAdmin
 
 from core.admin.utils import get_change_view_link
 from ..models import (
+    CategoryPath,
     Item,
     Vendor
 )
 from .actions import (
+    CategoryPathActions,
     ItemActions,
     VendorActions
 )
 from .filters import (
-    HasPremierProduct,
+    CategoryPathMayBeRelevant,
     HasSemaProduct,
     HasShopifyProduct,
     IsCompleteItem
@@ -173,8 +175,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     )
 
     changelist_actions = (
-        'create_items_class_action',
-        'link_products_class_action'
+        'create_and_link_items_class_action',
     )
 
     change_actions = (
@@ -201,7 +202,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'sema_product__part_number',
         'shopify_product__product_id',
         'shopify_product__title',
-        'shopify_product__product_html',
+        'shopify_product__body_html',
         'shopify_product__vendor__name',
         'shopify_product__seo_title',
         'shopify_product__seo_description',
@@ -231,7 +232,6 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     list_filter = (
         'is_relevant',
         IsCompleteItem,
-        HasPremierProduct,
         HasSemaProduct,
         HasShopifyProduct
     )
@@ -326,6 +326,172 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         return get_change_view_link(
             obj.shopify_product, 'See full Shopify product')
     shopify_product_link.short_description = ''
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
+
+
+@admin.register(CategoryPath)
+class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
+    actions = (
+        'create_shopify_collections_queryset_action',
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
+    changelist_actions = (
+        'create_and_link_items_class_action',
+    )
+
+    change_actions = (
+        'create_shopify_collections_object_action',
+    )
+
+    list_select_related = (
+        'sema_root_category',
+        'sema_branch_category',
+        'sema_leaf_category'
+    )
+
+    ordering = (
+        'sema_root_category',
+        'sema_branch_category',
+        'sema_leaf_category'
+    )
+
+    search_fields = (
+        'id',
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'sema_root_category',
+        'sema_branch_category',
+        'sema_leaf_category',
+        'shopify_collection_count',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_errors',
+        'notes'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    list_editable = (
+        'is_relevant',
+    )
+
+    list_filter = (
+        'is_relevant',
+        CategoryPathMayBeRelevant,
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_errors'
+                )
+            }
+        ),
+        (
+            'Path', {
+                'fields': (
+                    'id',
+                )
+            }
+        ),
+        (
+            'SEMA Root Category', {
+                'fields': (
+                    'sema_root_category_link',
+                    'sema_root_category'
+                )
+            }
+        ),
+        (
+            'SEMA Branch Category', {
+                'fields': (
+                    'sema_branch_category_link',
+                    'sema_branch_category'
+                )
+            }
+        ),
+        (
+            'SEMA Leaf Category', {
+                'fields': (
+                    'sema_leaf_category_link',
+                    'sema_leaf_category'
+                )
+            }
+        ),
+        (
+            'Shopify Collections', {
+                'fields': (
+                    'shopify_collections',
+                )
+            }
+        ),
+        (
+            'Notes', {
+                'fields': (
+                    'notes',
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'details_link',
+        'may_be_relevant_flag',
+        'relevancy_errors',
+        'id',
+        'sema_root_category_link',
+        'sema_branch_category_link',
+        'sema_leaf_category_link',
+        'shopify_collection_count'
+    )
+
+    autocomplete_fields = (
+        'sema_root_category',
+        'sema_branch_category',
+        'sema_leaf_category',
+        'shopify_collections'
+    )
+
+    def details_link(self, obj):
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def sema_root_category_link(self, obj):
+        if not obj.sema_root_category:
+            return '-----'
+        return get_change_view_link(
+            obj.sema_root_category, 'See full SEMA root category')
+    sema_root_category_link.short_description = ''
+
+    def sema_branch_category_link(self, obj):
+        if not obj.sema_branch_category:
+            return '-----'
+        return get_change_view_link(
+            obj.sema_branch_category, 'See full SEMA branch category')
+    sema_branch_category_link.short_description = ''
+
+    def sema_leaf_category_link(self, obj):
+        if not obj.sema_leaf_category:
+            return '-----'
+        return get_change_view_link(
+            obj.sema_leaf_category, 'See full SEMA leaf category')
+    sema_leaf_category_link.short_description = ''
 
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:

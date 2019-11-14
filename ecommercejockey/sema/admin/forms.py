@@ -27,14 +27,14 @@ class LimitedManyToManyCategoryInlineFormSet(BaseInlineFormSet):
 class LimitedManyToManyParentCategoryInlineFormSet(BaseInlineFormSet):
     def get_queryset(self):
         return super().get_queryset().order_by(
-            '-from_semacategory__is_relevant'
+            '-to_semacategory__is_relevant'
         ).distinct()[:INLINE_LIMIT]
 
 
 class LimitedManyToManyChildCategoryInlineFormSet(BaseInlineFormSet):
     def get_queryset(self):
         return super().get_queryset().order_by(
-            '-to_semacategory__is_relevant'
+            '-from_semacategory__is_relevant'
         ).distinct()[:INLINE_LIMIT]
 
 

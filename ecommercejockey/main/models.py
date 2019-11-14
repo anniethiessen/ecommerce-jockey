@@ -1,7 +1,9 @@
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import (
     Model,
     CharField,
     ForeignKey,
+    ManyToManyField,
     OneToOneField,
     CASCADE,
     SET_NULL
@@ -11,25 +13,18 @@ from core.models import (
     NotesBaseModel,
     RelevancyBaseModel
 )
-from premier.models import (
-    PremierManufacturer,
-    PremierProduct
-)
-from sema.models import (
-    SemaBrand,
-    SemaProduct
-)
-from shopify.models import (
-    ShopifyVendor,
-    ShopifyProduct
-)
 from .managers import (
     ItemManager,
+    CategoryPathManager,
     VendorManager
 )
 
 
 class Vendor(RelevancyBaseModel, NotesBaseModel):
+    from premier.models import PremierManufacturer
+    from sema.models import SemaBrand
+    from shopify.models import ShopifyVendor
+
     premier_manufacturer = OneToOneField(
         PremierManufacturer,
         on_delete=CASCADE,
@@ -92,12 +87,14 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
 
 
 class Item(RelevancyBaseModel, NotesBaseModel):
+    from premier.models import PremierProduct
+    from sema.models import SemaProduct
+    from shopify.models import ShopifyProduct
+
     premier_product = OneToOneField(
         PremierProduct,
-        blank=True,
-        null=True,
         related_name='item',
-        on_delete=SET_NULL
+        on_delete=CASCADE
     )
     sema_product = ForeignKey(
         SemaProduct,
@@ -118,42 +115,105 @@ class Item(RelevancyBaseModel, NotesBaseModel):
     @property
     def may_be_relevant(self):
         return bool(
-            self.premier_product and self.premier_product.is_relevant
-            and self.sema_product and self.sema_product.is_relevant
-            and self.shopify_product
-            and self.relevancy_errors == ''
+            self.premier_product.may_be_relevant
+            and self.sema_product
         )
 
     @property
     def relevancy_errors(self):
         msgs = []
-        if not self.premier_product:
-            msgs.append('Missing Premier product')
+        if self.is_relevant:
+            if self.premier_product:
+                if not self.premier_product.is_relevant:
+                    msgs.append('Premier product not relevant')
+                if self.premier_product.relevancy_errors:
+                    msgs.append(
+                        f"PREMIER: {self.premier_product.relevancy_errors}"
+                    )
+            else:
+                msgs.append('Missing Premier product')
 
-        if not self.sema_product:
-            msgs.append('Missing SEMA product')
-
-        if not self.shopify_product:
-            msgs.append('Missing Shopify product')
-
-        if self.premier_product and self.premier_product.relevancy_errors:
-            msgs.append(
-                f"PREMIER: {self.premier_product.relevancy_errors}"
-            )
-
-        if self.sema_product and self.sema_product.relevancy_errors:
-            msgs.append(f"SEMA: {self.sema_product.relevancy_errors}")
+            if self.sema_product:
+                if not self.sema_product.is_relevant:
+                    msgs.append('SEMA product not relevant')
+                if self.sema_product.relevancy_errors:
+                    msgs.append(f"SEMA: {self.sema_product.relevancy_errors}")
+            else:
+                msgs.append('Missing SEMA product')
+        else:
+            if self.premier_product.is_relevant:
+                msgs.append('Premier product relevant')
+            if self.sema_product and self.sema_product.is_relevant:
+                msgs.append('SEMA product relevant')
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
 
     objects = ItemManager()
 
     def __str__(self):
-        s = str(self.pk)
-        if self.premier_product:
-            s = ' :: '.join([s, str(self.premier_product)])
-        if self.sema_product:
-            s = ' :: '.join([s, str(self.sema_product)])
-        if self.shopify_product:
-            s = ' :: '.join([s, str(self.shopify_product)])
-        return s
+        return str(self.premier_product)
+
+
+class CategoryPath(RelevancyBaseModel, NotesBaseModel):
+    from sema.models import SemaCategory
+    from shopify.models import ShopifyCollection
+
+    sema_root_category = ForeignKey(
+        SemaCategory,
+        on_delete=CASCADE,
+        related_name='root_category_paths'
+    )
+    sema_branch_category = ForeignKey(
+        SemaCategory,
+        on_delete=CASCADE,
+        related_name='branch_category_paths'
+    )
+    sema_leaf_category = ForeignKey(
+        SemaCategory,
+        on_delete=CASCADE,
+        related_name='leaf_category_paths'
+    )
+    shopify_collections = ManyToManyField(
+        ShopifyCollection,
+        related_name='category_paths'
+    )
+
+    @property
+    def shopify_collection_count(self):
+        return self.shopify_collections.count()
+
+    @property
+    def may_be_relevant(self):
+        return bool(
+            self.sema_root_category.is_relevant
+            and self.sema_branch_category.is_relevant
+            and self.sema_leaf_category.is_relevant
+        )
+
+    @property
+    def relevancy_errors(self):
+        msgs = []
+        if self.is_relevant:
+            if not self.sema_root_category.is_relevant:
+                msgs.append('Root category not relevant')
+            if not self.sema_branch_category.is_relevant:
+                msgs.append('Branch category not relevant')
+            if not self.sema_leaf_category.is_relevant:
+                msgs.append('Leaf category not relevant')
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+
+    objects = CategoryPathManager()
+
+    class Meta:
+        unique_together = [
+            'sema_root_category',
+            'sema_branch_category',
+            'sema_leaf_category'
+        ]
+
+    def __str__(self):
+        return (
+            f'{self.sema_root_category} '
+            f':: {self.sema_branch_category} '
+            f':: {self.sema_leaf_category}')

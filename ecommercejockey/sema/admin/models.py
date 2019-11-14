@@ -1493,10 +1493,10 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     def get_inline_instances(self, request, obj=None):
         inlines = list(self.inlines) or []
-        if (not obj.parent_category_count
+        if ((not obj.parent_category_count)
                 and SemaCategoryParentCategoriesTabularInline in inlines):
             inlines.remove(SemaCategoryParentCategoriesTabularInline)
-        if (not obj.child_category_count
+        if ((not obj.child_category_count)
                 and SemaCategoryChildCategoriesTabularInline in inlines):
             inlines.remove(SemaCategoryChildCategoriesTabularInline)
         self.inlines = inlines

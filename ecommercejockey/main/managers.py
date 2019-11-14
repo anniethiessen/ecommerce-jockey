@@ -1,4 +1,4 @@
-from django.db.models import Manager, QuerySet
+from django.db.models import Manager, QuerySet, Q
 
 
 class VendorQuerySet(QuerySet):
@@ -7,7 +7,7 @@ class VendorQuerySet(QuerySet):
 
 class ItemQuerySet(QuerySet):
     def create_shopify_products(self):
-        from .models import ShopifyProduct
+        from shopify.models import ShopifyProduct
 
         msgs = []
         for item in self:
@@ -35,6 +35,202 @@ class ItemQuerySet(QuerySet):
                 msgs.append(shopify_product.get_create_success_msg())
             except Exception as err:
                 msgs.append(item.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+
+class CategoryPathQuerySet(QuerySet):
+    def create_shopify_collections(self):
+        from shopify.models import ShopifyCollection, ShopifyTag
+
+        msgs = []
+        for category_path in self:
+            root_collection_title = category_path.sema_root_category.name
+            root_collection_tag, _ = ShopifyTag.objects.get_or_create(
+                name=category_path.sema_root_category.tag_name
+            )
+            root_collection_tags = ShopifyTag.objects.filter(
+                pk=root_collection_tag.pk
+            )
+            try:
+                root_collection = category_path.shopify_collections.get(
+                    title=root_collection_title
+                )
+                if root_collection_tag not in root_collection.tags.all():
+                    root_collection.tags.add(root_collection_tag)
+                    root_collection.save()
+                    msgs.append(
+                        root_collection.get_update_success_msg(
+                            message=f'Tag {root_collection_tag} added'
+                        )
+                    )
+            except ShopifyCollection.DoesNotExist:
+                root_collection = None
+                existing_collections = ShopifyCollection.objects.filter(
+                    title=root_collection_title
+                )
+                for existing_collection in existing_collections:
+                    existing_tags = set(existing_collection.tags.all())
+                    root_tags = set(root_collection_tags)
+                    if ((not root_tags.difference(existing_tags))
+                            and (not existing_tags.difference(root_tags))):
+                        root_collection = existing_collection
+                        break
+                if not root_collection:
+                    root_collection = ShopifyCollection.objects.create(
+                        title=root_collection_title
+                    )
+                    for tag in root_collection_tags:
+                        root_collection.tags.add(tag)
+                    root_collection.save()
+                    msgs.append(root_collection.get_create_success_msg())
+
+                category_path.shopify_collections.add(root_collection)
+                category_path.save()
+                msgs.append(
+                    category_path.get_update_success_msg(
+                        message=f'Collection {root_collection} added'
+                    )
+                )
+            except Exception as err:
+                msgs.append(category_path.get_instance_error_msg(str(err)))
+
+            branch_collection_title = (
+                f'{root_collection_title} '
+                f'/ {category_path.sema_branch_category.name}'
+            )
+            # branch_collection_title = category_path.sema_branch_category.name
+            branch_collection_tag, _ = ShopifyTag.objects.get_or_create(
+                name=category_path.sema_branch_category.tag_name
+            )
+            branch_collection_tags = ShopifyTag.objects.filter(
+                Q(pk=root_collection_tag.pk)
+                | Q(pk=branch_collection_tag.pk)
+            )
+            try:
+                branch_collection = category_path.shopify_collections.get(
+                    title=branch_collection_title
+                )
+                if root_collection_tag not in branch_collection.tags.all():
+                    branch_collection.tags.add(root_collection_tag)
+                    branch_collection.save()
+                    msgs.append(
+                        branch_collection.get_update_success_msg(
+                            message=f'Tag {root_collection_tag} added'
+                        )
+                    )
+                if branch_collection_tag not in branch_collection.tags.all():
+                    branch_collection.tags.add(branch_collection_tag)
+                    branch_collection.save()
+                    msgs.append(
+                        branch_collection.get_update_success_msg(
+                            message=f'Tag {branch_collection_tag} added'
+                        )
+                    )
+            except ShopifyCollection.DoesNotExist:
+                branch_collection = None
+                existing_collections = ShopifyCollection.objects.filter(
+                    title=branch_collection_title
+                )
+                for existing_collection in existing_collections:
+                    existing_tags = set(existing_collection.tags.all())
+                    branch_tags = set(branch_collection_tags)
+                    if ((not branch_tags.difference(existing_tags))
+                            and (not existing_tags.difference(branch_tags))):
+                        branch_collection = existing_collection
+                        break
+                if not branch_collection:
+                    branch_collection = ShopifyCollection.objects.create(
+                        title=branch_collection_title
+                    )
+                    for tag in branch_collection_tags:
+                        branch_collection.tags.add(tag)
+                    branch_collection.save()
+                    msgs.append(branch_collection.get_create_success_msg())
+
+                category_path.shopify_collections.add(branch_collection)
+                category_path.save()
+                msgs.append(
+                    category_path.get_update_success_msg(
+                        message=f'Collection {branch_collection} added'
+                    )
+                )
+            except Exception as err:
+                msgs.append(category_path.get_instance_error_msg(str(err)))
+
+            leaf_collection_title = (
+                f'{branch_collection_title} '
+                f'/ {category_path.sema_leaf_category.name}'
+            )
+            # leaf_collection_title = category_path.sema_leaf_category.name
+            leaf_collection_tag, _ = ShopifyTag.objects.get_or_create(
+                name=category_path.sema_leaf_category.tag_name
+            )
+            leaf_collection_tags = ShopifyTag.objects.filter(
+                Q(pk=root_collection_tag.pk)
+                | Q(pk=branch_collection_tag.pk)
+                | Q(pk=leaf_collection_tag.pk)
+            )
+            try:
+                leaf_collection = category_path.shopify_collections.get(
+                    title=leaf_collection_title
+                )
+                if root_collection_tag not in leaf_collection.tags.all():
+                    leaf_collection.tags.add(root_collection_tag)
+                    leaf_collection.save()
+                    msgs.append(
+                        leaf_collection.get_update_success_msg(
+                            message=f'Tag {root_collection_tag} added'
+                        )
+                    )
+                if branch_collection_tag not in leaf_collection.tags.all():
+                    leaf_collection.tags.add(branch_collection_tag)
+                    leaf_collection.save()
+                    msgs.append(
+                        leaf_collection.get_update_success_msg(
+                            message=f'Tag {branch_collection_tag} added'
+                        )
+                    )
+                if leaf_collection_tag not in leaf_collection.tags.all():
+                    leaf_collection.tags.add(leaf_collection_tag)
+                    leaf_collection.save()
+                    msgs.append(
+                        leaf_collection.get_update_success_msg(
+                            message=f'Tag {leaf_collection_tag} added'
+                        )
+                    )
+            except ShopifyCollection.DoesNotExist:
+                leaf_collection = None
+                existing_collections = ShopifyCollection.objects.filter(
+                    title=leaf_collection_title
+                )
+                for existing_collection in existing_collections:
+                    existing_tags = set(existing_collection.tags.all())
+                    leaf_tags = set(leaf_collection_tags)
+                    if ((not leaf_tags.difference(existing_tags))
+                            and (not existing_tags.difference(leaf_tags))):
+                        leaf_collection = existing_collection
+                        break
+                if not leaf_collection:
+                    leaf_collection = ShopifyCollection.objects.create(
+                        title=leaf_collection_title
+                    )
+                    for tag in leaf_collection_tags:
+                        leaf_collection.tags.add(tag)
+                    leaf_collection.save()
+                    msgs.append(leaf_collection.get_create_success_msg())
+
+                category_path.shopify_collections.add(leaf_collection)
+                category_path.save()
+                msgs.append(
+                    category_path.get_update_success_msg(
+                        message=f'Collection {leaf_collection} added'
+                    )
+                )
+            except Exception as err:
+                msgs.append(category_path.get_instance_error_msg(str(err)))
 
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())
@@ -111,162 +307,44 @@ class VendorManager(Manager):
 
 
 class ItemManager(Manager):
-    def create_from_relevant(self):
+    def create_and_link(self):
         from premier.models import PremierProduct
         from sema.models import SemaProduct
+        from .models import Vendor
 
         msgs = []
-        premier_products = PremierProduct.objects.filter(
-            is_relevant=True,
-            item__isnull=True
-        )
-        sema_products = SemaProduct.objects.filter(
-            is_relevant=True,
-            items__isnull=True
-        )
 
-        for product in premier_products:
+        premier_products = PremierProduct.objects.filter(item__isnull=True)
+        for premier_product in premier_products:
             try:
-                item = self.model.objects.get(premier_product=product)
-                msgs.append(
-                    item.get_instance_up_to_date_msg(
-                        message='Already exists'
-                    )
-                )
-            except self.model.DoesNotExist:
-                try:
-                    item = self.model.objects.get(
-                        sema_product__dataset__brand__vendor__premier_manufacturer=product.manufacturer,
-                        sema_product__part_number=product.vendor_part_number
-                    )
-                    item.premier_product = product
-                    item.save()
-                    msgs.append(
-                        item.get_update_success_msg(
-                            message=f"{product} added"
-                        )
-                    )
-                except self.model.DoesNotExist:
-                    item = self.model.objects.create(
-                        premier_product=product
-                    )
-                    msgs.append(item.get_create_success_msg())
-                except Exception as err:
-                    msgs.append(self.model.get_class_error_msg(str(err)))
+                item = self.create(premier_product=premier_product)
+                msgs.append(item.get_create_success_msg())
             except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
+                msgs.append(premier_product.get_instance_error_msg(str(err)))
 
-        for product in sema_products:
+        incomplete_items = self.filter(sema_product__isnull=True)
+        for item in incomplete_items:
             try:
-                item = self.model.objects.get(sema_product=product)
-                msgs.append(
-                    item.get_instance_up_to_date_msg(
-                        message='Already exists'
-                    )
-                )
-            except self.model.DoesNotExist:
-                try:
-                    item = self.model.objects.get(
-                        premier_product__manufacturer__vendor__sema_brand=product.dataset.brand,
-                        premier_product__vendor_part_number=product.part_number
-                    )
-                    item.sema_product = product
-                    item.save()
-                    msgs.append(
-                        item.get_update_success_msg(
-                            message=f"{product} added"
-                        )
-                    )
-                except self.model.DoesNotExist:
-                    item = self.model.objects.create(
-                        sema_product=product
-                    )
-                    msgs.append(item.get_create_success_msg())
-                except Exception as err:
-                    msgs.append(self.model.get_class_error_msg(str(err)))
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
-
-        return msgs
-
-    def link_products(self):
-        from premier.models import PremierProduct
-        from .models import SemaProduct, Vendor
-
-        msgs = []
-        premier_products = self.model.objects.filter(
-            premier_product__isnull=False,
-            sema_product__isnull=True
-        )
-        sema_products = self.model.objects.filter(
-            sema_product__isnull=False,
-            premier_product__isnull=True
-        )
-
-        for product in premier_products:
-            try:
-                vendor = Vendor.objects.get(
-                    premier_manufacturer=product.premier_product.manufacturer
-                )
                 sema_product = SemaProduct.objects.get(
-                    dataset__brand=vendor.sema_brand,
-                    part_number=product.premier_product.vendor_part_number,
+                    dataset__brand__vendor=item.premier_product.manufacturer.vendor,
+                    part_number=item.premier_product.vendor_part_number
                 )
-                product.sema_product = sema_product
-                product.save()
+                item.sema_product = sema_product
+                item.save()
                 msgs.append(
-                    product.get_update_success_msg(
-                        message=f"{sema_product} added to {product}"
-                    )
-                )
-            except Vendor.DoesNotExist:
-                msgs.append(
-                    product.premier_product.get_instance_error_msg(
-                        "Vendor does not exist"
+                    item.get_update_success_msg(
+                        message=f"Sema product {sema_product} added"
                     )
                 )
             except SemaProduct.DoesNotExist:
                 msgs.append(
-                    product.premier_product.get_instance_error_msg(
-                        "SEMA product does not exist"
+                    item.get_instance_error_msg(
+                        error="Sema product does not exist"
                     )
                 )
             except Exception as err:
-                msgs.append(product.get_instance_error_msg(str(err)))
+                msgs.append(item.get_instance_error_msg(str(err)))
 
-        for product in sema_products:
-            try:
-                vendor = Vendor.objects.get(
-                    sema_brand=product.sema_product.dataset.brand
-                )
-                premier_product = PremierProduct.objects.get(
-                    manufacturer=vendor.premier_manufacturer,
-                    vendor_part_number=product.sema_product.part_number
-                )
-                product.premier_product = premier_product
-                product.save()
-                msgs.append(
-                    product.get_update_success_msg(
-                        message=f"{premier_product} added to {product}"
-                    )
-                )
-            except Vendor.DoesNotExist:
-                msgs.append(
-                    product.sema_product.dataset.brand.get_instance_error_msg(
-                        "Vendor does not exist"
-                    )
-                )
-            except PremierProduct.DoesNotExist:
-                msgs.append(
-                    product.sema_product.get_instance_error_msg(
-                        "Premier product does not exist"
-                    )
-                )
-            except Exception as err:
-                msgs.append(product.get_instance_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def create_shopify_products(self):
@@ -283,6 +361,125 @@ class ItemManager(Manager):
 
     def get_queryset(self):
         return ItemQuerySet(
+            self.model,
+            using=self._db
+        )
+
+
+class CategoryPathManager(Manager):
+    def create_and_link(self):
+        from sema.models import SemaCategory
+
+        msgs = []
+        categories = SemaCategory.objects.all()
+
+        for category in categories:
+            if category.level == '1':
+                root_category = category
+                for child_category in category.child_categories.all():
+                    branch_category = child_category
+                    for grandchild_category in child_category.child_categories.all():
+                        leaf_category = grandchild_category
+                        try:
+                            path = self.get(
+                                sema_root_category=root_category,
+                                sema_branch_category=branch_category,
+                                sema_leaf_category=leaf_category
+                            )
+                            msgs.append(
+                                path.get_instance_up_to_date_msg(
+                                    message='Already exists'
+                                )
+                            )
+                        except self.model.DoesNotExist:
+                            path = self.create(
+                                sema_root_category=root_category,
+                                sema_branch_category=branch_category,
+                                sema_leaf_category=leaf_category
+                            )
+                            msgs.append(path.get_create_success_msg())
+                        except Exception as err:
+                            msgs.append(
+                                self.model.get_class_error_msg(str(err))
+                            )
+            elif category.level == '2':
+                branch_category = category
+                for parent_category in category.parent_categories.all():
+                    root_category = parent_category
+                    for child_category in category.child_categories.all():
+                        leaf_category = child_category
+                        try:
+                            path = self.get(
+                                sema_root_category=root_category,
+                                sema_branch_category=branch_category,
+                                sema_leaf_category=leaf_category
+                            )
+                            msgs.append(
+                                path.get_instance_up_to_date_msg(
+                                    message='Already exists'
+                                )
+                            )
+                        except self.model.DoesNotExist:
+                            path = self.create(
+                                sema_root_category=root_category,
+                                sema_branch_category=branch_category,
+                                sema_leaf_category=leaf_category
+                            )
+                            msgs.append(path.get_create_success_msg())
+                        except Exception as err:
+                            msgs.append(
+                                self.model.get_class_error_msg(str(err))
+                            )
+            elif category.level == '3':
+                leaf_category = category
+                for parent_category in category.parent_categories.all():
+                    branch_category = parent_category
+                    for grandparent_category in parent_category.parent_categories.all():
+                        root_category = grandparent_category
+                        try:
+                            path = self.get(
+                                sema_root_category=root_category,
+                                sema_branch_category=branch_category,
+                                sema_leaf_category=leaf_category
+                            )
+                            msgs.append(
+                                path.get_instance_up_to_date_msg(
+                                    message='Already exists'
+                                )
+                            )
+                        except self.model.DoesNotExist:
+                            path = self.create(
+                                sema_root_category=root_category,
+                                sema_branch_category=branch_category,
+                                sema_leaf_category=leaf_category
+                            )
+                            msgs.append(path.get_create_success_msg())
+                        except Exception as err:
+                            msgs.append(
+                                self.model.get_class_error_msg(str(err))
+                            )
+            else:
+                msgs.append(category.get_instance_error_msg('Invalid level'))
+                continue
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def create_shopify_collections(self):
+        msgs = []
+
+        try:
+            msgs += self.get_queryset().create_shopify_collections()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def get_queryset(self):
+        return CategoryPathQuerySet(
             self.model,
             using=self._db
         )
