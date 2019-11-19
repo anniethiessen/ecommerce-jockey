@@ -163,9 +163,23 @@ class CategoryPath(RelevancyBaseModel, NotesBaseModel):
         on_delete=CASCADE,
         related_name='root_category_paths'
     )
+    shopify_root_collection = ForeignKey(
+        ShopifyCollection,
+        blank=True,
+        null=True,
+        on_delete=SET_NULL,
+        related_name='root_category_paths'
+    )
     sema_branch_category = ForeignKey(
         SemaCategory,
         on_delete=CASCADE,
+        related_name='branch_category_paths'
+    )
+    shopify_branch_collection = ForeignKey(
+        ShopifyCollection,
+        blank=True,
+        null=True,
+        on_delete=SET_NULL,
         related_name='branch_category_paths'
     )
     sema_leaf_category = ForeignKey(
@@ -173,14 +187,13 @@ class CategoryPath(RelevancyBaseModel, NotesBaseModel):
         on_delete=CASCADE,
         related_name='leaf_category_paths'
     )
-    shopify_collections = ManyToManyField(
+    shopify_leaf_collection = ForeignKey(
         ShopifyCollection,
-        related_name='category_paths'
+        blank=True,
+        null=True,
+        on_delete=SET_NULL,
+        related_name='leaf_category_paths'
     )
-
-    @property
-    def shopify_collection_count(self):
-        return self.shopify_collections.count()
 
     @property
     def may_be_relevant(self):
@@ -194,12 +207,12 @@ class CategoryPath(RelevancyBaseModel, NotesBaseModel):
     def relevancy_errors(self):
         msgs = []
         if self.is_relevant:
-            if not self.sema_root_category.is_relevant:
-                msgs.append('Root category not relevant')
-            if not self.sema_branch_category.is_relevant:
-                msgs.append('Branch category not relevant')
-            if not self.sema_leaf_category.is_relevant:
-                msgs.append('Leaf category not relevant')
+            if not self.shopify_root_collection:
+                msgs.append('Missing root collection')
+            if not self.shopify_branch_collection:
+                msgs.append('Missing branch collection')
+            if not self.shopify_leaf_collection:
+                msgs.append('Missing leaf collection')
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
 

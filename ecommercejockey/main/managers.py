@@ -1,4 +1,4 @@
-from django.db.models import Manager, QuerySet, Q
+from django.db.models import Manager, QuerySet
 
 
 class VendorQuerySet(QuerySet):
@@ -32,6 +32,8 @@ class ItemQuerySet(QuerySet):
                 shopify_product = ShopifyProduct.objects.create(vendor=vendor)
                 item.shopify_product = shopify_product
                 item.save()
+                shopify_product.perform_calculated_fields_update()
+                shopify_product.variants.first().perform_calculated_fields_update()
                 msgs.append(shopify_product.get_create_success_msg())
             except Exception as err:
                 msgs.append(item.get_instance_error_msg(str(err)))
@@ -43,195 +45,89 @@ class ItemQuerySet(QuerySet):
 
 class CategoryPathQuerySet(QuerySet):
     def create_shopify_collections(self):
-        from shopify.models import ShopifyCollection, ShopifyTag
+        from shopify.models import ShopifyCollection
 
         msgs = []
         for category_path in self:
-            root_collection_title = category_path.sema_root_category.name
-            root_collection_tag, _ = ShopifyTag.objects.get_or_create(
-                name=category_path.sema_root_category.tag_name
-            )
-            root_collection_tags = ShopifyTag.objects.filter(
-                pk=root_collection_tag.pk
-            )
-            try:
-                root_collection = category_path.shopify_collections.get(
-                    title=root_collection_title
-                )
-                if root_collection_tag not in root_collection.tags.all():
-                    root_collection.tags.add(root_collection_tag)
-                    root_collection.save()
-                    msgs.append(
-                        root_collection.get_update_success_msg(
-                            message=f'Tag {root_collection_tag} added'
-                        )
-                    )
-            except ShopifyCollection.DoesNotExist:
-                root_collection = None
-                existing_collections = ShopifyCollection.objects.filter(
-                    title=root_collection_title
-                )
-                for existing_collection in existing_collections:
-                    existing_tags = set(existing_collection.tags.all())
-                    root_tags = set(root_collection_tags)
-                    if ((not root_tags.difference(existing_tags))
-                            and (not existing_tags.difference(root_tags))):
-                        root_collection = existing_collection
-                        break
-                if not root_collection:
-                    root_collection = ShopifyCollection.objects.create(
-                        title=root_collection_title
-                    )
-                    for tag in root_collection_tags:
-                        root_collection.tags.add(tag)
-                    root_collection.save()
-                    msgs.append(root_collection.get_create_success_msg())
-
-                category_path.shopify_collections.add(root_collection)
-                category_path.save()
+            if (category_path.shopify_root_collection
+                    and category_path.shopify_branch_collection
+                    and category_path.shopify_leaf_collection):
                 msgs.append(
-                    category_path.get_update_success_msg(
-                        message=f'Collection {root_collection} added'
+                    category_path.get_instance_error_msg(
+                        error='Shopify collections already exists'
                     )
                 )
-            except Exception as err:
-                msgs.append(category_path.get_instance_error_msg(str(err)))
+                continue
 
-            branch_collection_title = (
-                f'{root_collection_title} '
-                f'/ {category_path.sema_branch_category.name}'
-            )
-            # branch_collection_title = category_path.sema_branch_category.name
-            branch_collection_tag, _ = ShopifyTag.objects.get_or_create(
-                name=category_path.sema_branch_category.tag_name
-            )
-            branch_collection_tags = ShopifyTag.objects.filter(
-                Q(pk=root_collection_tag.pk)
-                | Q(pk=branch_collection_tag.pk)
-            )
-            try:
-                branch_collection = category_path.shopify_collections.get(
-                    title=branch_collection_title
-                )
-                if root_collection_tag not in branch_collection.tags.all():
-                    branch_collection.tags.add(root_collection_tag)
-                    branch_collection.save()
+            if category_path.shopify_root_collection:
+                root_collection = category_path.shopify_root_collection
+            else:
+                try:
+                    title = category_path.sema_root_category.name
+                    root_collection, created = ShopifyCollection.objects.get_or_create(
+                        title=title,
+                        parent_collection=None
+                    )
+                    category_path.shopify_root_collection = root_collection
+                    category_path.save()
+                    if created:
+                        msgs.append(root_collection.get_create_success_msg())
                     msgs.append(
-                        branch_collection.get_update_success_msg(
-                            message=f'Tag {root_collection_tag} added'
+                        category_path.get_update_success_msg(
+                            message=f'{root_collection} added'
                         )
                     )
-                if branch_collection_tag not in branch_collection.tags.all():
-                    branch_collection.tags.add(branch_collection_tag)
-                    branch_collection.save()
+                except Exception as err:
+                    msgs.append(category_path.get_instance_error_msg(str(err)))
+                    continue
+
+            if category_path.shopify_branch_collection:
+                branch_collection = category_path.shopify_branch_collection
+            else:
+                try:
+                    title = (
+                        f'{category_path.sema_root_category.name} '
+                        f'// {category_path.sema_branch_category.name}'
+                    )
+                    branch_collection, created = ShopifyCollection.objects.get_or_create(
+                        title=title,
+                        parent_collection=root_collection
+                    )
+                    category_path.shopify_branch_collection = branch_collection
+                    category_path.save()
+                    if created:
+                        msgs.append(branch_collection.get_create_success_msg())
                     msgs.append(
-                        branch_collection.get_update_success_msg(
-                            message=f'Tag {branch_collection_tag} added'
+                        category_path.get_update_success_msg(
+                            message=f'{branch_collection} added'
                         )
                     )
-            except ShopifyCollection.DoesNotExist:
-                branch_collection = None
-                existing_collections = ShopifyCollection.objects.filter(
-                    title=branch_collection_title
-                )
-                for existing_collection in existing_collections:
-                    existing_tags = set(existing_collection.tags.all())
-                    branch_tags = set(branch_collection_tags)
-                    if ((not branch_tags.difference(existing_tags))
-                            and (not existing_tags.difference(branch_tags))):
-                        branch_collection = existing_collection
-                        break
-                if not branch_collection:
-                    branch_collection = ShopifyCollection.objects.create(
-                        title=branch_collection_title
-                    )
-                    for tag in branch_collection_tags:
-                        branch_collection.tags.add(tag)
-                    branch_collection.save()
-                    msgs.append(branch_collection.get_create_success_msg())
+                except Exception as err:
+                    msgs.append(category_path.get_instance_error_msg(str(err)))
+                    continue
 
-                category_path.shopify_collections.add(branch_collection)
-                category_path.save()
-                msgs.append(
-                    category_path.get_update_success_msg(
-                        message=f'Collection {branch_collection} added'
+            if not category_path.shopify_leaf_collection:
+                try:
+                    title = (
+                        f'{category_path.sema_root_category.name} '
+                        f'// {category_path.sema_branch_category.name} '
+                        f'// {category_path.sema_leaf_category.name}'
                     )
-                )
-            except Exception as err:
-                msgs.append(category_path.get_instance_error_msg(str(err)))
-
-            leaf_collection_title = (
-                f'{branch_collection_title} '
-                f'/ {category_path.sema_leaf_category.name}'
-            )
-            # leaf_collection_title = category_path.sema_leaf_category.name
-            leaf_collection_tag, _ = ShopifyTag.objects.get_or_create(
-                name=category_path.sema_leaf_category.tag_name
-            )
-            leaf_collection_tags = ShopifyTag.objects.filter(
-                Q(pk=root_collection_tag.pk)
-                | Q(pk=branch_collection_tag.pk)
-                | Q(pk=leaf_collection_tag.pk)
-            )
-            try:
-                leaf_collection = category_path.shopify_collections.get(
-                    title=leaf_collection_title
-                )
-                if root_collection_tag not in leaf_collection.tags.all():
-                    leaf_collection.tags.add(root_collection_tag)
-                    leaf_collection.save()
+                    leaf_collection, created = ShopifyCollection.objects.get_or_create(
+                        title=title,
+                        parent_collection=branch_collection
+                    )
+                    category_path.shopify_leaf_collection = leaf_collection
+                    category_path.save()
+                    if created:
+                        msgs.append(leaf_collection.get_create_success_msg())
                     msgs.append(
-                        leaf_collection.get_update_success_msg(
-                            message=f'Tag {root_collection_tag} added'
+                        category_path.get_update_success_msg(
+                            message=f'{leaf_collection} added'
                         )
                     )
-                if branch_collection_tag not in leaf_collection.tags.all():
-                    leaf_collection.tags.add(branch_collection_tag)
-                    leaf_collection.save()
-                    msgs.append(
-                        leaf_collection.get_update_success_msg(
-                            message=f'Tag {branch_collection_tag} added'
-                        )
-                    )
-                if leaf_collection_tag not in leaf_collection.tags.all():
-                    leaf_collection.tags.add(leaf_collection_tag)
-                    leaf_collection.save()
-                    msgs.append(
-                        leaf_collection.get_update_success_msg(
-                            message=f'Tag {leaf_collection_tag} added'
-                        )
-                    )
-            except ShopifyCollection.DoesNotExist:
-                leaf_collection = None
-                existing_collections = ShopifyCollection.objects.filter(
-                    title=leaf_collection_title
-                )
-                for existing_collection in existing_collections:
-                    existing_tags = set(existing_collection.tags.all())
-                    leaf_tags = set(leaf_collection_tags)
-                    if ((not leaf_tags.difference(existing_tags))
-                            and (not existing_tags.difference(leaf_tags))):
-                        leaf_collection = existing_collection
-                        break
-                if not leaf_collection:
-                    leaf_collection = ShopifyCollection.objects.create(
-                        title=leaf_collection_title
-                    )
-                    for tag in leaf_collection_tags:
-                        leaf_collection.tags.add(tag)
-                    leaf_collection.save()
-                    msgs.append(leaf_collection.get_create_success_msg())
-
-                category_path.shopify_collections.add(leaf_collection)
-                category_path.save()
-                msgs.append(
-                    category_path.get_update_success_msg(
-                        message=f'Collection {leaf_collection} added'
-                    )
-                )
-            except Exception as err:
-                msgs.append(category_path.get_instance_error_msg(str(err)))
-
+                except Exception as err:
+                    msgs.append(category_path.get_instance_error_msg(str(err)))
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs

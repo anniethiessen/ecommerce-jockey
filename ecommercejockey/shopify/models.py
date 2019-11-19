@@ -1,5 +1,11 @@
+import json
 from decimal import Decimal
 
+from django.contrib.contenttypes.fields import (
+    GenericForeignKey,
+    GenericRelation
+)
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import (
     Model,
     BigIntegerField,
@@ -10,9 +16,12 @@ from django.db.models import (
     ManyToManyField,
     OneToOneField,
     IntegerField,
+    PositiveIntegerField,
+    SlugField,
     TextField,
     URLField,
     CASCADE,
+    SET_NULL,
     Q
 )
 
@@ -65,6 +74,313 @@ class ShopifyCollectionRule(Model):
         return f'{self.column} :: {self.relation} :: {self.condition}'
 
 
+class ShopifyMetafield(Model, MessagesMixin):
+    PRODUCT_OWNER_RESOURCE = 'product'
+    COLLECTION_OWNER_RESOURCE = 'smart_collection'
+    OWNER_RESOURCE_CHOICES = [
+        (PRODUCT_OWNER_RESOURCE, PRODUCT_OWNER_RESOURCE),
+        (COLLECTION_OWNER_RESOURCE, 'collection')
+    ]
+
+    STRING_VALUE_TYPE = 'string'
+    INTEGER_VALUE_TYPE = 'integer'
+    JSON_VALUE_TYPE = 'json_string'
+    VALUE_TYPE_CHOICES = [
+        (STRING_VALUE_TYPE, STRING_VALUE_TYPE),
+        (INTEGER_VALUE_TYPE, INTEGER_VALUE_TYPE),
+        (JSON_VALUE_TYPE, 'json')
+    ]
+
+    content_type = ForeignKey(
+        ContentType,
+        limit_choices_to=(
+            Q(app_label='shopify', model='shopifyproduct')
+            | Q(app_label='shopify', model='shopifycollection')
+        ),
+        on_delete=CASCADE
+    )
+    object_id = PositiveIntegerField()
+    content_object = GenericForeignKey()
+    metafield_id = BigIntegerField(
+        blank=True,
+        help_text='Populated by Shopify',
+        null=True,
+        unique=True
+    )
+    owner_resource = CharField(
+        choices=OWNER_RESOURCE_CHOICES,
+        max_length=20
+    )
+    namespace = CharField(
+        max_length=20
+    )
+    value_type = CharField(
+        choices=VALUE_TYPE_CHOICES,
+        default=STRING_VALUE_TYPE,
+        max_length=15
+    )
+    key = CharField(
+        max_length=30
+    )
+    value = TextField(
+        max_length=100
+    )
+
+    # <editor-fold desc="format properties ...">
+    @property
+    def api_formatted_data(self):
+        data = {
+            'id': self.metafield_id,
+            'owner_resource': self.owner_resource,
+            'namespace': self.namespace,
+            'value_type': self.value_type,
+            'key': self.key,
+            'value': self.value
+        }
+        return dict((k, v) for k, v in data.items() if v)
+    # </editor-fold>
+
+    # <editor-fold desc="update properties ...">
+    @property
+    def state(self):
+        return {
+            'metafield_id': str(self.metafield_id),
+            'namespace': self.namespace,
+            'value_type': self.value_type,
+            'key': self.key,
+            'value': self.value
+        }
+
+    def update_metafield_id_from_api_data(self, value):
+        try:
+            if not self.metafield_id == value:
+                self.metafield_id = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_namespace_from_api_data(self, value):
+        try:
+            if not self.namespace == value:
+                self.namespace = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_value_type_from_api_data(self, value):
+        try:
+            if not self.value_type == value:
+                self.value_type = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_key_from_api_data(self, value):
+        try:
+            if not self.key == value:
+                self.key = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_value_from_api_data(self, value):
+        try:
+            if not self.value == value:
+                self.value = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_from_api_data(self, data, *fields):
+        field_map = {
+            'metafield_id': {
+                'data': 'id',
+                'function': 'update_metafield_id_from_api_data'
+            },
+            'namespace': {
+                'data': 'namespace',
+                'function': 'update_namespace_from_api_data'
+            },
+            'value_type': {
+                'data': 'value_type',
+                'function': 'update_value_type_from_api_data'
+            },
+            'key': {
+                'data': 'key',
+                'function': 'update_key_from_api_data'
+            },
+            'value': {
+                'data': 'value',
+                'function': 'update_value_from_api_data'
+            }
+        }
+
+        if fields:
+            for field in fields:
+                if field not in field_map.keys():
+                    raise Exception('Invalid update field')
+        else:
+            fields = field_map.keys()
+
+        msgs = []
+        prev = self.state
+        for field in fields:
+            try:
+                extra_msgs = getattr(
+                    self,
+                    field_map[field]['function']
+                )(data[field_map[field]['data']])
+
+                if extra_msgs:
+                    msgs += extra_msgs
+            except Exception as err:
+                msgs.append(
+                    self.get_instance_error_msg(
+                        error=f'{field} update error: {err}')
+                )
+                continue
+
+        self.refresh_from_db()
+        new = self.state
+        msgs.append(
+            self.get_update_success_msg(
+                previous_data=prev,
+                new_data=new
+            )
+        )
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_create_to_api(self):
+        msgs = []
+        if self.metafield_id:
+            msgs.append(
+                self.get_instance_error_msg(
+                    error="Already exists in Shopify")
+            )
+            return msgs
+
+        try:
+            if self.content_type == ContentType.objects.get_for_model(
+                    ShopifyProduct):
+                client_method = 'create_product_metafield'
+                id_field = 'product_id'
+            elif self.content_type == ContentType.objects.get_for_model(
+                    ShopifyCollection):
+                client_method = 'create_collection_metafield'
+                id_field = 'collection_id'
+            else:
+                raise Exception('Invalid content type')
+
+            data = getattr(shopify_client, client_method)(
+                getattr(self.content_object, id_field),
+                metafield_data=self.api_formatted_data
+            )
+            msgs.append(
+                self.get_create_success_msg(message="Created in Shopify")
+            )
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        if not self.metafield_id:
+            msgs.append(
+                self.get_instance_error_msg(
+                    error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            if self.content_type == ContentType.objects.get_for_model(
+                    ShopifyProduct):
+                client_method = 'update_product_metafield'
+                id_field = 'product_id'
+            elif self.content_type == ContentType.objects.get_for_model(
+                    ShopifyCollection):
+                client_method = 'update_collection_metafield'
+                id_field = 'collection_id'
+            else:
+                raise Exception('Invalid content type')
+
+            getattr(shopify_client, client_method)(
+                getattr(self.content_object, id_field),
+                metafield_data=self.api_formatted_data
+            )
+
+            msgs.append(
+                self.get_update_success_msg(message="Updated in Shopify")
+            )
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        if not self.metafield_id:
+            msgs.append(
+                self.get_instance_error_msg(
+                    error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            if self.content_type == ContentType.objects.get_for_model(
+                    ShopifyProduct):
+                client_method = 'retrieve_product_metafield'
+                id_field = 'product_id'
+            elif self.content_type == ContentType.objects.get_for_model(
+                    ShopifyCollection):
+                client_method = 'retrieve_collection_metafield'
+                id_field = 'collection_id'
+            else:
+                raise Exception('Invalid content type')
+
+            data = getattr(shopify_client, client_method)(
+                getattr(self.content_object, id_field),
+                metafield_id=self.metafield_id
+            )
+
+            msgs += self.update_from_api_data(data)
+
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    class Meta:
+        unique_together = [
+            'content_type',
+            'object_id',
+            'owner_resource',
+            'namespace',
+            'key'
+        ]
+
+    def __str__(self):
+        return f'{self.content_object} :: {self.namespace} :: {self.key}'
+
+
 class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
     WEB_SCOPE = 'web'
     GLOBAL_SCOPE = 'global'
@@ -95,6 +411,11 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         help_text='Populated by Shopify',
         null=True,
         unique=True
+    )
+    handle = SlugField(
+        blank=True,
+        help_text='Populated by Shopify',
+        max_length=150
     )
     title = CharField(
         max_length=150
@@ -136,6 +457,30 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         default=BEST_SELLING_ORDER,
         max_length=15
     )
+    parent_collection = ForeignKey(
+        'self',
+        blank=True,
+        null=True,
+        on_delete=SET_NULL,
+        related_name='child_collections'
+    )
+    metafields = GenericRelation(
+        ShopifyMetafield,
+        related_query_name='collection'
+    )
+
+    @property
+    def level(self):
+        if self.parent_collection:
+            if self.child_collections.count():
+                return '2'
+            else:
+                return '3'
+        else:
+            if self.child_collections.count():
+                return '1'
+            else:
+                return ''
 
     # <editor-fold desc="count properties ...">
     @property
@@ -244,6 +589,13 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
                 }
             )
         return rules
+
+    @property
+    def api_formatted_metafields(self):
+        metafields_data = []
+        for metafield in self.metafields.all():
+            metafields_data.append(metafield.api_formatted_data)
+        return metafields_data
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
@@ -252,6 +604,7 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         return {
             'collection_id': str(self.collection_id),
             'title': self.title,
+            'handle': self.handle,
             'body_html': self.body_html,
             'image_src': self.image_src,
             'image_alt': self.image_alt,
@@ -276,6 +629,15 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         try:
             if not self.title == value:
                 self.title = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_handle_from_api_data(self, value):
+        try:
+            if not self.handle == value:
+                self.handle = value
                 self.save()
             return
         except Exception:
@@ -417,6 +779,10 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
                 'data': 'title',
                 'function': 'update_title_from_api_data'
             },
+            'handle': {
+                'data': 'handle',
+                'function': 'update_handle_from_api_data'
+            },
             'body_html': {
                 'data': 'body_html',
                 'function': 'update_body_html_from_api_data'
@@ -491,6 +857,29 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
     # </editor-fold>
 
     # <editor-fold desc="perform properties ...">
+    def perform_calculated_fields_update(self):
+        try:
+            if self.calculator.title_:
+                self.title = self.calculator.title_
+            for tag_name in self.calculator.tags_:
+                tag, _ = ShopifyTag.objects.get_or_create(name=tag_name)
+                self.tags.add(tag)
+            self.save()
+            for metafield_data in self.calculator.metafields_:
+                defaults = {
+                    'value': metafield_data.pop('value'),
+                    'value_type': metafield_data.pop('value_type')
+                }
+                metafield, _ = ShopifyMetafield.objects.update_or_create(
+                    object_id=self.pk,
+                    content_type=ContentType.objects.get_for_model(self),
+                    **metafield_data,
+                    defaults=defaults
+                )
+            return self.get_update_success_msg()
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+
     def perform_create_to_api(self):
         msgs = []
         if self.collection_id:
@@ -507,6 +896,12 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
                 self.get_create_success_msg(message="Created in Shopify")
             )
             msgs += self.update_from_api_data(data)
+
+            for metafield in self.metafields.all():
+                if metafield.metafield_id:
+                    msgs += metafield.perform_update_to_api()
+                else:
+                    msgs += metafield.perform_create_to_api()
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
 
@@ -523,13 +918,18 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
             return msgs
 
         try:
-            data = shopify_client.update_collection(
-                collection_data=self.api_formatted_data
-            )
+            formatted_data = self.api_formatted_data
+            shopify_client.update_collection(
+                collection_data=formatted_data)
             msgs.append(
                 self.get_update_success_msg(message="Updated in Shopify")
             )
-            msgs += self.update_from_api_data(data)
+
+            for metafield in self.metafields.all():
+                if metafield.metafield_id:
+                    msgs += metafield.perform_update_to_api()
+                else:
+                    msgs += metafield.perform_create_to_api()
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
 
@@ -547,8 +947,12 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
 
         try:
             data = shopify_client.retrieve_collection(
-                collection_id=self.collection_id)
+                collection_id=self.collection_id
+            )
             msgs += self.update_from_api_data(data)
+
+            for metafield in self.metafields.filter(metafield_id__isnull=False):
+                msgs += metafield.perform_update_from_api()
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
 
@@ -623,6 +1027,10 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
     )
     seo_description = TextField(
         blank=True
+    )
+    metafields = GenericRelation(
+        ShopifyMetafield,
+        related_query_name='product'
     )
 
     # <editor-fold desc="relevancy properties ...">
@@ -1032,11 +1440,10 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
             formatted_data = self.api_formatted_data
             formatted_data.pop('metafields', [])
             formatted_data.pop('images', [])
-            data = shopify_client.update_product(product_data=formatted_data)
+            shopify_client.update_product(product_data=formatted_data)
             msgs.append(
                 self.get_update_success_msg(message="Updated in Shopify")
             )
-            msgs += self.update_from_api_data(data)
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
 
@@ -1077,16 +1484,16 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
                     product=self,
                     src=image_src
                 )
-            if self.calculator.metafield_sema_html_:
+            for metafield_data in self.calculator.metafields_:
+                defaults = {
+                    'value': metafield_data.pop('value'),
+                    'value_type': metafield_data.pop('value_type')
+                }
                 metafield, _ = ShopifyMetafield.objects.update_or_create(
-                    product=self,
-                    owner_resource=ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
-                    namespace='sema',
-                    key='html',
-                    defaults={
-                        'value_type': ShopifyMetafield.STRING_VALUE_TYPE,
-                        'value': self.calculator.metafield_sema_html_
-                    }
+                    object_id=self.pk,
+                    content_type=ContentType.objects.get_for_model(self),
+                    **metafield_data,
+                    defaults=defaults
                 )
             return self.get_update_success_msg()
         except Exception as err:
@@ -1666,79 +2073,7 @@ class ShopifyVariant(Model, MessagesMixin):
         return s
 
 
-class ShopifyMetafield(Model):
-    PRODUCT_OWNER_RESOURCE = 'product'
-    OWNER_RESOURCE_CHOICES = [
-        (PRODUCT_OWNER_RESOURCE, PRODUCT_OWNER_RESOURCE)
-    ]
-
-    STRING_VALUE_TYPE = 'string'
-    INTEGER_VALUE_TYPE = 'integer'
-    JSON_VALUE_TYPE = 'json'
-    VALUE_TYPE_CHOICES = [
-        (STRING_VALUE_TYPE, STRING_VALUE_TYPE),
-        (INTEGER_VALUE_TYPE, INTEGER_VALUE_TYPE),
-        (JSON_VALUE_TYPE, JSON_VALUE_TYPE)
-    ]
-
-    product = ForeignKey(
-        ShopifyProduct,
-        related_name='metafields',
-        on_delete=CASCADE
-    )
-    metafield_id = BigIntegerField(
-        blank=True,
-        help_text='Populated by Shopify',
-        null=True,
-        unique=True
-    )
-    owner_resource = CharField(
-        choices=OWNER_RESOURCE_CHOICES,
-        default=PRODUCT_OWNER_RESOURCE,
-        max_length=10
-    )
-    namespace = CharField(
-        max_length=20
-    )
-    value_type = CharField(
-        choices=VALUE_TYPE_CHOICES,
-        default=STRING_VALUE_TYPE,
-        max_length=10
-    )
-    key = CharField(
-        max_length=30
-    )
-    value = TextField(
-        max_length=100
-    )
-
-    # <editor-fold desc="format properties ...">
-    @property
-    def api_formatted_data(self):
-        data = {
-            'id': self.metafield_id,
-            'owner_resource': self.owner_resource,
-            'namespace': self.namespace,
-            'value_type': self.value_type,
-            'key': self.key,
-            'value': self.value
-        }
-        return dict((k, v) for k, v in data.items() if v)
-    # </editor-fold>
-
-    class Meta:
-        unique_together = [
-            'product',
-            'owner_resource',
-            'namespace',
-            'key'
-        ]
-
-    def __str__(self):
-        return f'{self.product} :: {self.namespace} :: {self.key}'
-
-
-class ShopifyCalculator(Model):
+class ShopifyProductCalculator(Model):
     product = OneToOneField(
         ShopifyProduct,
         related_name='calculator',
@@ -1789,11 +2124,20 @@ class ShopifyCalculator(Model):
     body_html_.fget.short_description = ''
 
     @property
-    def metafield_sema_html_(self):
+    def metafields_(self):
+        metafields = []
         if self.__has_sema_product and self.sema_product.html:
-            return self.sema_product.html
-        return ''
-    metafield_sema_html_.fget.short_description = ''
+            metafields.append(
+                {
+                    'namespace': 'sema',
+                    'key': 'html',
+                    'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
+                    'value': self.sema_product.html,
+                    'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+                }
+            )
+        return metafields
+    metafields_.fget.short_description = ''
 
     @property
     def vendor_tags_(self):
@@ -1912,3 +2256,116 @@ class ShopifyCalculator(Model):
 
     def __str__(self):
         return str(self.product)
+
+
+class ShopifyCollectionCalculator(Model):
+    collection = OneToOneField(
+        ShopifyCollection,
+        related_name='calculator',
+        on_delete=CASCADE
+    )
+
+    # <editor-fold desc="update logic properties ...">
+    @property
+    def category_paths(self):
+        if self.collection.level == '1':
+            return self.collection.root_category_paths.all()
+        elif self.collection.level == '2':
+            return self.collection.branch_category_paths.filter(
+                shopify_root_collection=self.collection.parent_collection
+            )
+        elif self.collection.level == '3':
+            return self.collection.leaf_category_paths.filter(
+                shopify_branch_collection=self.collection.parent_collection,
+                shopify_root_collection=self.collection.parent_collection.parent_collection,
+            )
+
+    @property
+    def sema_category(self):
+        if self.collection.level == '1':
+            return self.category_paths.first().sema_root_category
+        elif self.collection.level == '2':
+            return self.category_paths.first().sema_branch_category
+        elif self.collection.level == '3':
+            return self.category_paths.first().sema_leaf_category
+
+    @property
+    def title_(self):
+        title = self.sema_category.name
+
+        if self.collection.level == '2':
+            title = (
+                f'{self.category_paths.first().sema_root_category.name} '
+                f'// {title}'
+            )
+
+        if self.collection.level == '3':
+            title = (
+                f'{self.category_paths.first().sema_root_category.name} '
+                f'// {self.category_paths.first().sema_branch_category.name} '
+                f'// {title}'
+            )
+        return title
+    title_.fget.short_description = ''
+
+    @property
+    def tags_(self):
+        tags = [self.sema_category.tag_name]
+
+        if int(self.collection.level) > 1:
+            tags.append(
+                self.category_paths.first().sema_root_category.tag_name
+            )
+
+        if int(self.collection.level) > 2:
+            tags.append(
+                self.category_paths.first().sema_branch_category.tag_name
+            )
+
+        return tags
+    tags_.fget.short_description = ''
+
+    @property
+    def metafields_(self):
+        metafields = []
+
+        if int(self.collection.level) > 1:
+            metafields.append(
+                {
+                    'namespace': 'title',
+                    'key': 'display_name',
+                    'owner_resource':
+                        ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
+                    'value': self.sema_category.name,
+                    'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+                }
+            )
+
+        if int(self.collection.level) < 3:
+            subcollections = []
+            for child_collection in self.collection.child_collections.all():
+                if child_collection.collection_id and child_collection.handle:
+                    subcollections.append(
+                        {
+                            'id': child_collection.collection_id,
+                            'handle': child_collection.handle
+                        }
+                    )
+            if subcollections:
+                metafields.append(
+                    {
+                        'namespace': 'category',
+                        'key': 'subcollections',
+                        'owner_resource':
+                            ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
+                        'value': json.dumps(subcollections),
+                        'value_type': ShopifyMetafield.JSON_VALUE_TYPE
+                    }
+                )
+
+        return metafields
+    metafields_.fget.short_description = ''
+    # </editor-fold>
+
+    def __str__(self):
+        return str(self.collection)

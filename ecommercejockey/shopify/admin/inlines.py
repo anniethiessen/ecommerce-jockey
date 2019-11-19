@@ -2,6 +2,7 @@ from django.contrib.admin import (
     StackedInline,
     TabularInline
 )
+from django.contrib.contenttypes.admin import GenericTabularInline
 
 from core.admin.forms import LimitedInlineFormSet
 from core.admin.utils import (
@@ -17,6 +18,60 @@ from ..models import (
     ShopifyProduct,
     ShopifyVariant
 )
+
+
+class ShopifyMetafieldBaseTabularInline(GenericTabularInline):  # TODO
+    model = ShopifyMetafield
+    verbose_name_plural = 'metafields'
+    extra = 0
+    classes = (
+        'collapse',
+    )
+
+    fields = (
+        'all_link',
+        'details_link',
+        'id',
+        'metafield_id',
+        'owner_resource',
+        'namespace',
+        'value_type',
+        'key'
+    )
+
+    readonly_fields = (
+        'id',
+        'details_link',
+        'all_link'
+    )
+
+    def all_link(self, obj):
+        query = (
+            f'object_id__exact={obj.object_id}'
+            f'&content_type_id__exact={obj.content_type.pk}'
+        )
+        return get_changelist_view_link(obj, 'See All', query)
+    all_link.short_description = ''
+
+    def details_link(self, obj):
+        if not obj.pk:
+            return None
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, **kwargs)
+        if db_field.name == 'content_type':
+            formfield.choices = formfield.choices
+        return formfield
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += (
+                'metafield_id',
+            )
+        return readonly_fields
 
 
 class ShopifyVendorProductsTabularInline(TabularInline):
@@ -323,11 +378,31 @@ class ShopifyProductVariantsStackedInline(StackedInline):
         return readonly_fields
 
 
-class ShopifyProductMetafieldsTabularInline(TabularInline):
-    model = ShopifyMetafield
-    fk_name = 'product'
-    verbose_name_plural = 'metafields'
-    all_link_query = 'product__id__exact'
+class ShopifyProductMetafieldsTabularInline(ShopifyMetafieldBaseTabularInline):
+    pass
+
+
+class ShopifyTagProductsManyToManyTabularInline(TabularInline):
+    model = ShopifyProduct.tags.through
+    fk_name = 'shopifytag'
+    extra = 0
+
+
+class ShopifyProductTagsManyToManyTabularInline(TabularInline):
+    verbose_name_plural = 'Tags'
+    model = ShopifyProduct.tags.through
+    fk_name = 'shopifyproduct'
+    extra = 0
+    classes = (
+        'collapse',
+    )
+
+
+class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
+    model = ShopifyCollection
+    fk_name = 'parent_collection'
+    verbose_name_plural = 'child collections'
+    all_link_query = 'parent_collection__id__exact'
     extra = 0
     classes = (
         'collapse',
@@ -337,12 +412,10 @@ class ShopifyProductMetafieldsTabularInline(TabularInline):
         'all_link',
         'details_link',
         'id',
-        'metafield_id',
-        'product',
-        'owner_resource',
-        'namespace',
-        'value_type',
-        'key'
+        'collection_id',
+        'title',
+        'body_html',
+        'handle'
     )
 
     readonly_fields = (
@@ -365,35 +438,14 @@ class ShopifyProductMetafieldsTabularInline(TabularInline):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
-    def formfield_for_dbfield(self, db_field, **kwargs):
-        formfield = super().formfield_for_dbfield(db_field, **kwargs)
-        if db_field.name == 'product':
-            formfield.choices = formfield.choices
-        return formfield
-
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
         if not request.user.is_superuser:
             readonly_fields += (
-                'metafield_id',
+                'collection_id',
+                'handle'
             )
         return readonly_fields
-
-
-class ShopifyTagProductsManyToManyTabularInline(TabularInline):
-    model = ShopifyProduct.tags.through
-    fk_name = 'shopifytag'
-    extra = 0
-
-
-class ShopifyProductTagsManyToManyTabularInline(TabularInline):
-    verbose_name_plural = 'Tags'
-    model = ShopifyProduct.tags.through
-    fk_name = 'shopifyproduct'
-    extra = 0
-    classes = (
-        'collapse',
-    )
 
 
 class ShopifyCollectionTagsManyToManyTabularInline(TabularInline):
@@ -406,6 +458,10 @@ class ShopifyCollectionRulesManyToManyTabularInline(TabularInline):
     model = ShopifyCollection.rules.through
     fk_name = 'shopifycollection'
     extra = 0
+
+
+class ShopifyCollectionMetafieldsTabularInline(ShopifyMetafieldBaseTabularInline):
+    pass
 
 
 class ShopifyTagCollectionsManyToManyTabularInline(TabularInline):

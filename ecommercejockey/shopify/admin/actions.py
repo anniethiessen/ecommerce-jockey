@@ -16,6 +16,30 @@ class ShopifyCollectionRuleActions(BaseActions):
 
 
 class ShopifyCollectionActions(RelevancyActions):
+    def update_calculated_fields_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_calculated_fields_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_calculated_fields_queryset_action.allowed_permissions = ('view',)
+    update_calculated_fields_queryset_action.short_description = (
+        'Update calculated fields for selected %(verbose_name_plural)s'
+    )
+
+    def update_calculated_fields_object_action(self, request, obj):
+        try:
+            msg = obj.perform_calculated_fields_update()
+            self.display_message(request, msg)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_calculated_fields_object_action.allowed_permissions = ('view',)
+    update_calculated_fields_object_action.label = "Update Calculated Fields"
+    update_calculated_fields_object_action.short_description = (
+        'Updates calculated fields. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
     def export_to_api_queryset_action(self, request, queryset):
         msgs = []
         try:
@@ -45,6 +69,30 @@ class ShopifyCollectionActions(RelevancyActions):
     export_to_api_object_action.label = "Create/Update in Shopify"
     export_to_api_object_action.short_description = (
         'Creates or updates in Shopify. '
+        'WARNING: Related objects must be up-to-date.'
+    )
+
+    def import_from_api_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_update_from_api()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_from_api_queryset_action.allowed_permissions = ('view',)
+    import_from_api_queryset_action.short_description = (
+        'Update selected %(verbose_name_plural)s from Shopify'
+    )
+
+    def import_from_api_object_action(self, request, obj):
+        try:
+            msgs = obj.perform_update_from_api()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    import_from_api_object_action.allowed_permissions = ('view',)
+    import_from_api_object_action.label = "Update from Shopify"
+    import_from_api_object_action.short_description = (
+        'Updates object from Shopify data. '
         'WARNING: Related objects must be up-to-date.'
     )
 

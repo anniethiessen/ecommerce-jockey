@@ -353,8 +353,11 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
 
     list_select_related = (
         'sema_root_category',
+        'shopify_root_collection',
         'sema_branch_category',
-        'sema_leaf_category'
+        'shopify_branch_collection',
+        'sema_leaf_category',
+        'shopify_leaf_collection'
     )
 
     ordering = (
@@ -365,6 +368,21 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
 
     search_fields = (
         'id',
+        'sema_root_category__category_id',
+        'sema_root_category__name',
+        'sema_branch_category__category_id',
+        'sema_branch_category__name',
+        'sema_leaf_category__category_id',
+        'sema_leaf_category__name',
+        'shopify_root_collection__id',
+        'shopify_root_collection__collection_id',
+        'shopify_root_collection__title',
+        'shopify_branch_collection__id',
+        'shopify_branch_collection__collection_id',
+        'shopify_branch_collection__title',
+        'shopify_leaf_collection__id',
+        'shopify_leaf_collection__collection_id',
+        'shopify_leaf_collection__title'
     )
 
     list_display = (
@@ -373,7 +391,6 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
         'sema_root_category',
         'sema_branch_category',
         'sema_leaf_category',
-        'shopify_collection_count',
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_errors',
@@ -411,33 +428,32 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
             }
         ),
         (
-            'SEMA Root Category', {
+            'Root', {
                 'fields': (
                     'sema_root_category_link',
-                    'sema_root_category'
+                    'sema_root_category',
+                    'shopify_root_collection_link',
+                    'shopify_root_collection'
                 )
             }
         ),
         (
-            'SEMA Branch Category', {
+            'Branch', {
                 'fields': (
                     'sema_branch_category_link',
-                    'sema_branch_category'
+                    'sema_branch_category',
+                    'shopify_branch_collection_link',
+                    'shopify_branch_collection'
                 )
             }
         ),
         (
-            'SEMA Leaf Category', {
+            'Leaf', {
                 'fields': (
                     'sema_leaf_category_link',
-                    'sema_leaf_category'
-                )
-            }
-        ),
-        (
-            'Shopify Collections', {
-                'fields': (
-                    'shopify_collections',
+                    'sema_leaf_category',
+                    'shopify_leaf_collection_link',
+                    'shopify_leaf_collection'
                 )
             }
         ),
@@ -458,14 +474,18 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
         'sema_root_category_link',
         'sema_branch_category_link',
         'sema_leaf_category_link',
-        'shopify_collection_count'
+        'shopify_root_collection_link',
+        'shopify_branch_collection_link',
+        'shopify_leaf_collection_link'
     )
 
     autocomplete_fields = (
         'sema_root_category',
+        'shopify_root_collection',
         'sema_branch_category',
+        'shopify_branch_collection',
         'sema_leaf_category',
-        'shopify_collections'
+        'shopify_leaf_collection'
     )
 
     def details_link(self, obj):
@@ -492,6 +512,27 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
         return get_change_view_link(
             obj.sema_leaf_category, 'See full SEMA leaf category')
     sema_leaf_category_link.short_description = ''
+
+    def shopify_root_collection_link(self, obj):
+        if not obj.shopify_root_collection:
+            return '-----'
+        return get_change_view_link(
+            obj.shopify_root_collection, 'See full Shopify root collection')
+    shopify_root_collection_link.short_description = ''
+
+    def shopify_branch_collection_link(self, obj):
+        if not obj.shopify_branch_collection:
+            return '-----'
+        return get_change_view_link(
+            obj.shopify_branch_collection, 'See full Shopify branch collection')
+    shopify_branch_collection_link.short_description = ''
+
+    def shopify_leaf_collection_link(self, obj):
+        if not obj.shopify_leaf_collection:
+            return '-----'
+        return get_change_view_link(
+            obj.shopify_leaf_collection, 'See full Shopify leaf collection')
+    shopify_leaf_collection_link.short_description = ''
 
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:

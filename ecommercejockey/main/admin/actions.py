@@ -199,7 +199,7 @@ class CategoryPathActions(CreateAndLinkActions):
         except Exception as err:
             messages.error(request, str(err))
     create_shopify_collections_object_action.allowed_permissions = ('view',)
-    create_shopify_collections_object_action.label = 'Create Shopify Collection'
+    create_shopify_collections_object_action.label = 'Create Shopify Collections'
     create_shopify_collections_object_action.short_description = (
         'Create Shopify collection for item'
     )

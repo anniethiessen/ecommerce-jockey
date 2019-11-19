@@ -7,4 +7,7 @@ class ShopifyAppConfig(AppConfig):
 
     def ready(self):
         # noinspection PyUnresolvedReferences
-        from .signals import create_shopify_full_product
+        from .signals import (
+            create_full_shopify_collection,
+            create_full_shopify_product
+        )

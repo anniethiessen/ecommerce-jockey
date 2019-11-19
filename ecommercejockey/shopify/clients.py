@@ -266,6 +266,132 @@ class ShopifyApiClient(object):
             raise
 
     @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_product(self, product_id):
+        """
+        Updates product by Shopify API.
+
+        :param product_id: product ID
+        :type product_id: int
+
+        :return: product data
+        :rtype: dict
+
+        :raises Exception: on general exception
+
+        .. Topic:: **-Retries-**
+
+            Retries on `ApiRateLimitExceeded` exception
+
+            (up to 2 times in 2 second delays)
+
+        **-Return Format-**
+        ::
+            ret = {
+                "admin_graphql_api_id": <str>,
+                "id": <int>,
+                "created_at": <datetime>,
+                "updated_at": <datetime>,
+                "published_at": <datetime> or None,
+                "published_scope": <str>,
+                "template_suffix": <str> or None,
+                "handle": <str>,
+                "title": <str>,
+                "body_html": <str> or None,
+                "product_type": <str>,
+                "vendor": <str>,
+                "tags": <str>,
+                "variants": [
+                    {
+                        "admin_graphql_api_id": '<str>,
+                        "id": <int>,
+                        "created_at": <datetime>,
+                        "updated_at": <datetime>,
+                        "product_id": <int>,
+                        "image_id": <int> or None,
+                        "inventory_item_id": <int>,
+                        "title": <str>,
+                        "position": <int>,
+                        "option1": <str>,
+                        "option2": <str> or None,
+                        "option3": <str> or None,
+                        "sku": <str>,
+                        "barcode": <str> or None,
+                        "price": <decimal>,
+                        "compare_at_price": <decimal> or None,
+                        "grams": <int>,
+                        "weight": <decimal>,
+                        "weight_unit": <str>,
+                        "fulfillment_service": <str>,
+                        "inventory_management": <str> or None,
+                        "inventory_policy": <str>,
+                        "inventory_quantity": <int>,
+                        "old_inventory_quantity": <int>,
+                        "requires_shipping": <bool>,
+                        "taxable": <bool>
+                    },
+                    {...}
+                ],
+                "options": [
+                    {
+                        "id": <int>,
+                        "name": <str>,
+                        "position": <int>,
+                        "product_id": <int>,
+                        "values": [
+                            <str>,
+                            ...
+                        ]
+                    },
+                    {...}
+                ],
+                "image": {
+                    "admin_graphql_api_id": <str>,
+                    "id": <int>,
+                    "product_id": <int>,
+                    "position": <int>,
+                    "created_at": <datetime>,
+                    "updated_at": <datetime>,
+                    "alt": <str> or None,
+                    "width": <int>,
+                    "height": <int>,
+                    "src": <url>,
+                    "variant_ids": [
+                        <int>,
+                        ...
+                    ] or []
+                } or None,
+                images: [
+                    {
+                        "admin_graphql_api_id": <str>,
+                        "id": <int>,
+                        "product_id": <int>,
+                        "position": <int>,
+                        "created_at": <datetime>,
+                        "updated_at": <datetime>,
+                        "alt": <str> or None,
+                        "width": <int>,
+                        "height": <int>,
+                        "src": <url>,
+                        "variant_ids": [
+                            <int>,
+                            ...
+                        ]
+                    },
+                    {...}
+                ] or []
+            }
+
+        """
+
+        url = f'{self.base_url}/products/{product_id}.json'
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['product']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
     def update_product(self, product_data):
         """
         Updates product by Shopify API.
@@ -480,132 +606,6 @@ class ShopifyApiClient(object):
             raise
 
     @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
-    def retrieve_product(self, product_id):
-        """
-        Updates product by Shopify API.
-
-        :param product_id: product ID
-        :type product_id: int
-
-        :return: product data
-        :rtype: dict
-
-        :raises Exception: on general exception
-
-        .. Topic:: **-Retries-**
-
-            Retries on `ApiRateLimitExceeded` exception
-
-            (up to 2 times in 2 second delays)
-
-        **-Return Format-**
-        ::
-            ret = {
-                "admin_graphql_api_id": <str>,
-                "id": <int>,
-                "created_at": <datetime>,
-                "updated_at": <datetime>,
-                "published_at": <datetime> or None,
-                "published_scope": <str>,
-                "template_suffix": <str> or None,
-                "handle": <str>,
-                "title": <str>,
-                "body_html": <str> or None,
-                "product_type": <str>,
-                "vendor": <str>,
-                "tags": <str>,
-                "variants": [
-                    {
-                        "admin_graphql_api_id": '<str>,
-                        "id": <int>,
-                        "created_at": <datetime>,
-                        "updated_at": <datetime>,
-                        "product_id": <int>,
-                        "image_id": <int> or None,
-                        "inventory_item_id": <int>,
-                        "title": <str>,
-                        "position": <int>,
-                        "option1": <str>,
-                        "option2": <str> or None,
-                        "option3": <str> or None,
-                        "sku": <str>,
-                        "barcode": <str> or None,
-                        "price": <decimal>,
-                        "compare_at_price": <decimal> or None,
-                        "grams": <int>,
-                        "weight": <decimal>,
-                        "weight_unit": <str>,
-                        "fulfillment_service": <str>,
-                        "inventory_management": <str> or None,
-                        "inventory_policy": <str>,
-                        "inventory_quantity": <int>,
-                        "old_inventory_quantity": <int>,
-                        "requires_shipping": <bool>,
-                        "taxable": <bool>
-                    },
-                    {...}
-                ],
-                "options": [
-                    {
-                        "id": <int>,
-                        "name": <str>,
-                        "position": <int>,
-                        "product_id": <int>,
-                        "values": [
-                            <str>,
-                            ...
-                        ]
-                    },
-                    {...}
-                ],
-                "image": {
-                    "admin_graphql_api_id": <str>,
-                    "id": <int>,
-                    "product_id": <int>,
-                    "position": <int>,
-                    "created_at": <datetime>,
-                    "updated_at": <datetime>,
-                    "alt": <str> or None,
-                    "width": <int>,
-                    "height": <int>,
-                    "src": <url>,
-                    "variant_ids": [
-                        <int>,
-                        ...
-                    ] or []
-                } or None,
-                images: [
-                    {
-                        "admin_graphql_api_id": <str>,
-                        "id": <int>,
-                        "product_id": <int>,
-                        "position": <int>,
-                        "created_at": <datetime>,
-                        "updated_at": <datetime>,
-                        "alt": <str> or None,
-                        "width": <int>,
-                        "height": <int>,
-                        "src": <url>,
-                        "variant_ids": [
-                            <int>,
-                            ...
-                        ]
-                    },
-                    {...}
-                ] or []
-            }
-
-        """
-
-        url = f'{self.base_url}/products/{product_id}.json'
-
-        try:
-            response = requests.get(url=url)
-            return self.get_json_body(response)['product']
-        except Exception:
-            raise
-
-    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
     def create_collection(self, collection_data):
         url = f'{self.base_url}/smart_collections.json'
         body = {
@@ -616,6 +616,16 @@ class ShopifyApiClient(object):
             response = requests.post(url=url, json=body)
             return self.get_json_body(response)['smart_collection']
         except Exception as err:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_collection(self, collection_id):
+        url = f'{self.base_url}/smart_collections/{collection_id}.json'
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['smart_collection']
+        except Exception:
             raise
 
     @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
@@ -637,12 +647,64 @@ class ShopifyApiClient(object):
             raise
 
     @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
-    def retrieve_collection(self, collection_id):
-        url = f'{self.base_url}/smart_collection/{collection_id}.json'
+    def create_collection_metafield(self, collection_id, metafield_data):
+        url = (
+            f'{self.base_url}/smart_collections/'
+            f'{collection_id}/metafields.json'
+        )
+
+        body = {
+            'metafield': metafield_data
+        }
+
+        try:
+            response = requests.post(url=url, json=body)
+            return self.get_json_body(response)['metafield']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_collection_metafields(self, collection_id):
+        url = f'{self.base_url}/smart_collections/{collection_id}/metafields.json'
 
         try:
             response = requests.get(url=url)
-            return self.get_json_body(response)['smart_collection']
+            return self.get_json_body(response)['metafields']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_collection_metafield(self, collection_id, metafield_id):
+        url = (
+            f'{self.base_url}/smart_collections/'
+            f'{collection_id}/metafields/{metafield_id}.json'
+        )
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['metafield']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def update_collection_metafield(self, collection_id, metafield_data):
+        try:
+            metafield_id = metafield_data.pop('id')
+        except Exception:
+            raise
+
+        url = (
+            f'{self.base_url}/smart_collections/'
+            f'{collection_id}/metafields/{metafield_id}.json'
+        )
+
+        body = {
+            'metafield': metafield_data
+        }
+
+        try:
+            response = requests.put(url=url, json=body)
+            return self.get_json_body(response)['metafield']
         except Exception:
             raise
 

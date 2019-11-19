@@ -30,7 +30,9 @@ from .actions import (
     ShopifyVariantActions,
     ShopifyVendorActions
 )
+from .filters import ByCollectionLevel
 from .inlines import (
+    ShopifyCollectionMetafieldsTabularInline,
     ShopifyCollectionRulesManyToManyTabularInline,
     ShopifyCollectionTagsManyToManyTabularInline,
     ShopifyProductImagesTabularInline,
@@ -97,19 +99,24 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
 class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
                                   ShopifyCollectionActions):
     actions = (
+        'update_calculated_fields_queryset_action',
+        'import_from_api_queryset_action',
         'export_to_api_queryset_action',
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
     )
 
     change_actions = (
+        'update_calculated_fields_object_action',
         'export_to_api_object_action',
+        'import_from_api_object_action'
     )
 
     search_fields = (
         'id',
         'collection_id',
         'title',
+        'handle',
         'body_html'
     )
 
@@ -118,12 +125,14 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'collection_id',
         'title',
+        'handle',
         'tag_count',
         'is_published',
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_errors',
-        'notes'
+        'notes',
+        'all_match__'
     )
 
     list_display_links = (
@@ -138,6 +147,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     list_filter = (
         'is_relevant',
         'is_published',
+        ByCollectionLevel,
         'published_scope',
         'disjunctive',
         'sort_order',
@@ -158,7 +168,8 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
                 'fields': (
                     'id',
                     'collection_id',
-                    'title',
+                    ('title', 'title_match__', 'title__'),
+                    'handle',
                     'is_published',
                     'published_scope',
                     'disjunctive',
@@ -168,10 +179,28 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
             }
         ),
         (
+            'Parent Collection', {
+                'fields': (
+                    'parent_collection',
+                )
+            }
+        ),
+        (
             'Image', {
                 'fields': (
                     'image_src',
                     'image_alt'
+                )
+            }
+        ),
+        (
+            'Other Calculated', {
+                'fields': (
+                    ('tags__', 'tags_match__'),
+                    ('metafields__', 'metafields_match__')
+                ),
+                'classes': (
+                    'collapse',
                 )
             }
         ),
@@ -189,12 +218,23 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'tag_count',
         'may_be_relevant_flag',
         'relevancy_errors',
+        'title__',
+        'title_match__',
+        'tags__',
+        'tags_match__',
+        'metafields__',
+        'metafields_match__',
         'details_link'
+    )
+
+    autocomplete_fields = (
+        'parent_collection',
     )
 
     inlines = (
         ShopifyCollectionRulesManyToManyTabularInline,
-        ShopifyCollectionTagsManyToManyTabularInline
+        ShopifyCollectionTagsManyToManyTabularInline,
+        ShopifyCollectionMetafieldsTabularInline
     )
 
     def details_link(self, obj):
@@ -210,11 +250,94 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
             return ''
     may_be_relevant_flag.short_description = ''
 
+    def title_match__(self, obj):
+        return bool(obj.title == obj.calculator.title_)
+    title_match__.boolean = True
+    title_match__.short_description = ''
+
+    def title__(self, obj):
+        if self.title_match__(obj):
+            return ''
+        return obj.calculator.title_
+    title__.short_description = ''
+
+    def tags_match__(self, obj):
+        existing_tags = list(obj.tags.values_list('name', flat=True))
+        existing_tags.sort()
+        calculated_tags = obj.calculator.tags_
+        calculated_tags.sort()
+        return bool(existing_tags == calculated_tags)
+    tags_match__.boolean = True
+    tags_match__.short_description = ''
+
+    def tags__(self, obj):
+        if self.tags_match__(obj):
+            return ''
+        return f'{obj.tags.count()} / {len(obj.calculator.tags_)}'
+    tags__.short_description = 'tags'
+
+    def metafields_match__(self, obj):
+        from ..models import ShopifyMetafield
+
+        for metafield in obj.metafields.all():
+            metafield_data = {
+                'namespace': metafield.namespace,
+                'key': metafield.key,
+                'owner_resource': metafield.owner_resource,
+                'value': metafield.value,
+                'value_type': metafield.value_type
+            }
+            if metafield_data not in obj.calculator.metafields_:
+                return False
+
+        for metafield in obj.calculator.metafields_:
+            try:
+                obj.metafields.get(
+                    namespace=metafield['namespace'],
+                    key=metafield['key'],
+                    owner_resource=metafield['owner_resource'],
+                    value=metafield['value'],
+                    value_type=metafield['value_type']
+                )
+            except ShopifyMetafield.DoesNotExist:
+                return False
+        return True
+    metafields_match__.boolean = True
+    metafields_match__.short_description = ''
+
+    def metafields__(self, obj):
+        if self.metafields_match__(obj):
+            return ''
+        # metafield_data = []
+        # for metafield in obj.metafields.all():
+        #     metafield_data.append(
+        #         {
+        #             'namespace': metafield.namespace,
+        #             'key': metafield.key,
+        #             'owner_resource': metafield.owner_resource,
+        #             'value': metafield.value,
+        #             'value_type': metafield.value_type
+        #         }
+        #     )
+        # return f'{metafield_data}\n\n{obj.calculator.metafields_}'
+        return f'{obj.metafields.count()} / {len(obj.calculator.metafields_)}'
+    metafields__.short_description = 'metafields'
+
+    def all_match__(self, obj):
+        return bool(
+            self.title_match__(obj)
+            and self.tags_match__(obj)
+            and self.metafields_match__(obj)
+        )
+    all_match__.boolean = True
+    all_match__.short_description = 'calculated'
+
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
         if not request.user.is_superuser:
             readonly_fields += (
                 'collection_id',
+                'handle'
             )
         return readonly_fields
 
@@ -448,6 +571,9 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
                     ('tags__', 'tags_match__'),
                     ('images__', 'images_match__'),
                     ('metafields__', 'metafields_match__')
+                ),
+                'classes': (
+                    'collapse',
                 )
             }
         ),
@@ -560,52 +686,67 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
     body_html__.short_description = ''
 
     def tags_match__(self, obj):
-        return bool(
-            list(obj.tags.values_list('name', flat=True)).sort()
-            == obj.calculator.tags_.sort()
-        )
+        existing_tags = list(obj.tags.values_list('name', flat=True))
+        existing_tags.sort()
+        calculated_tags = obj.calculator.tags_
+        calculated_tags.sort()
+        return bool(existing_tags == calculated_tags)
     tags_match__.boolean = True
     tags_match__.short_description = ''
 
     def tags__(self, obj):
         if self.tags_match__(obj):
             return ''
-        return str(obj.calculator.tags_)
+        return f'{obj.tags.count()} / {len(obj.calculator.tags_)}'
     tags__.short_description = 'tags'
 
     def images_match__(self, obj):
-        return bool(
-            list(obj.images.values_list('src', flat=True)).sort()
-            == obj.calculator.images_.sort()
-        )
+        existing_images = list(obj.images.values_list('src', flat=True))
+        existing_images.sort()
+        calculated_images = obj.calculator.images_
+        calculated_images.sort()
+        return bool(existing_images == calculated_images)
     images_match__.boolean = True
     images_match__.short_description = ''
 
     def images__(self, obj):
         if self.images_match__(obj):
             return ''
-        return str(obj.calculator.images_)
+        return f'{obj.images.count()} / {len(obj.calculator.images_)}'
     images__.short_description = 'images'
 
     def metafields_match__(self, obj):
         from ..models import ShopifyMetafield
-        try:
-            sema_html_metafield = obj.metafields.get(
-                owner_resource=ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
-                namespace='sema',
-                key='html',
-                value_type=ShopifyMetafield.STRING_VALUE_TYPE
-            ).value
-        except ShopifyMetafield.DoesNotExist:
-            sema_html_metafield = ''
-        return bool(sema_html_metafield == obj.calculator.metafield_sema_html_)
+        for metafield in obj.metafields.all():
+            metafield_data = {
+                'namespace': metafield.namespace,
+                'key': metafield.key,
+                'owner_resource': metafield.owner_resource,
+                'value': metafield.value,
+                'value_type': metafield.value_type
+            }
+            if metafield_data not in obj.calculator.metafields_:
+                return False
+
+        for metafield in obj.calculator.metafields_:
+            try:
+                obj.metafields.get(
+                    namespace=metafield['namespace'],
+                    key=metafield['key'],
+                    owner_resource=metafield['owner_resource'],
+                    value=metafield['value'],
+                    value_type=metafield['value_type']
+                )
+            except ShopifyMetafield.DoesNotExist:
+                return False
+        return True
     metafields_match__.boolean = True
     metafields_match__.short_description = ''
 
     def metafields__(self, obj):
         if self.metafields_match__(obj):
             return ''
-        return str(obj.calculator.metafield_sema_html_[:10])
+        return f'{obj.metafields.count()} / {len(obj.calculator.metafields_)}'
     metafields__.short_description = 'metafields'
 
     def all_match__(self, obj):
@@ -924,17 +1065,21 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
 class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
                                  ShopifyMetafieldActions):
     list_select_related = (
-        'product',
+        'content_type',
     )
 
     search_fields = (
         'product__id',
         'product__product_id',
         'product__title',
-        'product__product_html',
+        'product__body_html',
         'product__vendor__name',
         'product__seo_title',
         'product__seo_description',
+        'collection__id',
+        'collection__collection_id',
+        'collection__title',
+        'collection__body_html',
         'id',
         'metafield_id',
         'value'
@@ -944,7 +1089,7 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
         'details_link',
         'id',
         'metafield_id',
-        'product',
+        'content_object',
         'namespace',
         'key',
         'value_type'
@@ -976,10 +1121,12 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
             }
         ),
         (
-            'Product', {
+            'Related Object', {
                 'fields': (
-                    'product_link',
-                    'product'
+                    'content_object_link',
+                    'content_object_a',
+                    'content_type',
+                    'object_id'
                 )
             }
         )
@@ -988,11 +1135,8 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
     readonly_fields = (
         'id',
         'details_link',
-        'product_link'
-    )
-
-    autocomplete_fields = (
-        'product',
+        'content_object_link',
+        'content_object_a'
     )
 
     def details_link(self, obj):
@@ -1001,11 +1145,17 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
-    def product_link(self, obj):
-        if not obj.product:
+    def content_object_a(self, obj):
+        if not obj.content_object:
+            return '----'
+        return str(obj.content_object)
+    content_object_a.short_description = ''
+
+    def content_object_link(self, obj):
+        if not obj.content_object:
             return None
-        return get_change_view_link(obj.product, 'See full product')
-    product_link.short_description = ''
+        return get_change_view_link(obj.content_object, 'See full object')
+    content_object_link.short_description = ''
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
