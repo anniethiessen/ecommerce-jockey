@@ -4,6 +4,7 @@ This module defines all models for the SEMA app.
 """
 
 
+from bs4 import BeautifulSoup
 from slugify import slugify
 
 from django.db.models import (
@@ -6037,6 +6038,43 @@ class SemaProduct(SemaBaseModel):
         blank=True,
         related_name='products'
     )
+
+    @property
+    def clean_html(self):
+        all_image_classes = [
+            'main-product-img',
+            'brand-logo'
+        ]
+
+        def remove_head(html_):
+            prefix = '<html>\n' if '<html>' in html_ else ''
+            if '<head>' in html_:
+                html_ = f"{prefix}{html_.split('</head>', 1)[1]}"
+            return html_
+
+        def shrink_images(html_, image_classes_=None):
+            if not image_classes_:
+                image_classes_ = all_image_classes
+            image_width = '100px'
+            for image_class in image_classes_:
+                if f'class="{image_class}"' in html_:
+                    i = html_.index(f'class="{image_class}"')
+                    html_ = f'{html_[:i]}width="{image_width}" {html_[i:]}'
+            return html_
+
+        def remove_images(html_, image_classes_=None):
+            if not image_classes_:
+                image_classes_ = all_image_classes
+            soup = BeautifulSoup(html_)
+            for image_class in image_classes_:
+                for tag in soup.find_all('img', {'class': image_class}):
+                    tag.decompose()
+            html_ = str(soup)
+            return html_
+
+        if not self.html:
+            return '<html></html>'
+        return remove_head(remove_images(self.html))
 
     # <editor-fold desc="count properties ...">
     @property

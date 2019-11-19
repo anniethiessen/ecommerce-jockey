@@ -606,6 +606,68 @@ class ShopifyApiClient(object):
             raise
 
     @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def create_product_metafield(self, product_id, metafield_data):
+        url = (
+            f'{self.base_url}/products/'
+            f'{product_id}/metafields.json'
+        )
+
+        body = {
+            'metafield': metafield_data
+        }
+
+        try:
+            response = requests.post(url=url, json=body)
+            return self.get_json_body(response)['metafield']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_product_metafields(self, product_id):
+        url = f'{self.base_url}/products/{product_id}/metafields.json'
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['metafields']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_product_metafield(self, product_id, metafield_id):
+        url = (
+            f'{self.base_url}/products/'
+            f'{product_id}/metafields/{metafield_id}.json'
+        )
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['metafield']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def update_product_metafield(self, product_id, metafield_data):
+        try:
+            metafield_id = metafield_data.pop('id')
+        except Exception:
+            raise
+
+        url = (
+            f'{self.base_url}/products/'
+            f'{product_id}/metafields/{metafield_id}.json'
+        )
+
+        body = {
+            'metafield': metafield_data
+        }
+
+        try:
+            response = requests.put(url=url, json=body)
+            return self.get_json_body(response)['metafield']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
     def create_collection(self, collection_data):
         url = f'{self.base_url}/smart_collections.json'
         body = {

@@ -1752,21 +1752,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     vehicle_count_a.short_description = 'vehicle count'
 
     def html_preview(self, obj):
-        if not obj.html:
-            return '-----'
-        try:
-            html = f"<html>\n{obj.html.split('</head>', 1)[1]}"
-            image_classes = [
-                'main-product-img',
-                'brand-logo'
-            ]
-            image_width = '300px'
-            for image_class in image_classes:
-                index = html.index(f'class="{image_class}"')
-                html = f'{html[:index]}width="{image_width}" {html[index:]}'
-            return mark_safe(html)
-        except Exception as err:
-            return str(err)
+        return mark_safe(obj.clean_html)
 
     def may_be_relevant_flag(self, obj):
         if obj.is_relevant != obj.may_be_relevant:

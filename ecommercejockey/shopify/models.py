@@ -589,13 +589,6 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
                 }
             )
         return rules
-
-    @property
-    def api_formatted_metafields(self):
-        metafields_data = []
-        for metafield in self.metafields.all():
-            metafields_data.append(metafield.api_formatted_data)
-        return metafields_data
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
@@ -951,7 +944,8 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
             )
             msgs += self.update_from_api_data(data)
 
-            for metafield in self.metafields.filter(metafield_id__isnull=False):
+            for metafield in self.metafields.filter(
+                    metafield_id__isnull=False):
                 msgs += metafield.perform_update_from_api()
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
@@ -1117,8 +1111,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
             'tags': self.api_formatted_tags,
             'variants': self.api_formatted_variants,
             'options': self.api_formatted_options,
-            'images': self.api_formatted_images,
-            'metafields': self.api_formatted_metafields
+            'images': self.api_formatted_images
         }
         return dict((k, v) for k, v in data.items() if v)
 
@@ -1156,13 +1149,6 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
         for image in self.images.all():
             images_data.append(image.api_formatted_data)
         return images_data
-
-    @property
-    def api_formatted_metafields(self):
-        metafields_data = []
-        for metafield in self.metafields.all():
-            metafields_data.append(metafield.api_formatted_data)
-        return metafields_data
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
@@ -1405,70 +1391,6 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
     # </editor-fold>
 
     # <editor-fold desc="perform properties ...">
-    def perform_create_to_api(self):
-        msgs = []
-        if self.product_id:
-            msgs.append(
-                self.get_instance_error_msg(error="Already exists in Shopify")
-            )
-            return msgs
-
-        try:
-            data = shopify_client.create_product(
-                product_data=self.api_formatted_data
-            )
-            msgs.append(
-                self.get_create_success_msg(message="Created in Shopify")
-            )
-            msgs += self.update_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.get_instance_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.get_instance_up_to_date_msg())
-        return msgs
-
-    def perform_update_to_api(self):
-        msgs = []
-        if not self.product_id:
-            msgs.append(
-                self.get_instance_error_msg(error="Doesn't exists in Shopify")
-            )
-            return msgs
-
-        try:
-            formatted_data = self.api_formatted_data
-            formatted_data.pop('metafields', [])
-            formatted_data.pop('images', [])
-            shopify_client.update_product(product_data=formatted_data)
-            msgs.append(
-                self.get_update_success_msg(message="Updated in Shopify")
-            )
-        except Exception as err:
-            msgs.append(self.get_instance_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.get_instance_up_to_date_msg())
-        return msgs
-
-    def perform_update_from_api(self):
-        msgs = []
-        if not self.product_id:
-            msgs.append(
-                self.get_instance_error_msg(error="Doesn't exists in Shopify")
-            )
-            return msgs
-
-        try:
-            data = shopify_client.retrieve_product(product_id=self.product_id)
-            msgs += self.update_from_api_data(data)
-        except Exception as err:
-            msgs.append(self.get_instance_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.get_instance_up_to_date_msg())
-        return msgs
-
     def perform_calculated_fields_update(self):
         try:
             if self.calculator.title_:
@@ -1498,6 +1420,85 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
             return self.get_update_success_msg()
         except Exception as err:
             return self.get_instance_error_msg(str(err))
+
+    def perform_create_to_api(self):
+        msgs = []
+        if self.product_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Already exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.create_product(
+                product_data=self.api_formatted_data
+            )
+            msgs.append(
+                self.get_create_success_msg(message="Created in Shopify")
+            )
+            msgs += self.update_from_api_data(data)
+
+            for metafield in self.metafields.all():
+                if metafield.metafield_id:
+                    msgs += metafield.perform_update_to_api()
+                else:
+                    msgs += metafield.perform_create_to_api()
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        if not self.product_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            formatted_data = self.api_formatted_data
+            formatted_data.pop('images', [])
+            shopify_client.update_product(product_data=formatted_data)
+            msgs.append(
+                self.get_update_success_msg(message="Updated in Shopify")
+            )
+
+            for metafield in self.metafields.all():
+                if metafield.metafield_id:
+                    msgs += metafield.perform_update_to_api()
+                else:
+                    msgs += metafield.perform_create_to_api()
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        if not self.product_id:
+            msgs.append(
+                self.get_instance_error_msg(error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.retrieve_product(product_id=self.product_id)
+            msgs += self.update_from_api_data(data)
+
+            for metafield in self.metafields.filter(
+                    metafield_id__isnull=False):
+                msgs += metafield.perform_update_from_api()
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
     # </editor-fold>
 
     objects = ShopifyProductManager()
@@ -2132,7 +2133,7 @@ class ShopifyProductCalculator(Model):
                     'namespace': 'sema',
                     'key': 'html',
                     'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
-                    'value': self.sema_product.html,
+                    'value': self.sema_product.clean_html,
                     'value_type': ShopifyMetafield.STRING_VALUE_TYPE
                 }
             )
