@@ -1,6 +1,7 @@
 import json
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.contenttypes.fields import (
     GenericForeignKey,
     GenericRelation
@@ -2233,7 +2234,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         if not primary_image:
             return None
 
-        return [primary_image.url]
+        return [settings.COMPANY_HOST + primary_image.url]
 
     @property
     def sema_description_def_value(self):

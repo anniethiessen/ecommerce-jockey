@@ -440,13 +440,17 @@ class PremierProduct(PremierProductInventoryBaseModel,
                     self.vendor_part_number
                 ) + '.jpg'
             )
+            save_path = premier_product_image_path(
+                self,
+                self.vendor_part_number + '.jpg'
+            )
             if os.path.exists(bucket_path):
                 move(bucket_path, image_path)
-                self.primary_image = image_path
+                self.primary_image = save_path
                 self.save()
                 msg = self.get_update_success_msg('Image updated from bucket')
             elif os.path.exists(image_path):
-                self.primary_image = image_path
+                self.primary_image = save_path
                 self.save()
                 msg = self.get_update_success_msg('Image updated')
             else:

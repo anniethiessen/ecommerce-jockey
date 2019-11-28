@@ -4,6 +4,7 @@ import os
 COMPANY_NAME = os.environ['COMPANY_NAME']
 COMPANY_NICKNAME = os.environ.get('COMPANY_NICKNAME', COMPANY_NAME)
 COMPANY_SITE = os.environ.get('COMPANY_SITE')
+COMPANY_HOST = os.environ['COMPANY_HOST']
 
 GOOGLE_DRIVE_API_KEY = os.environ['GOOGLE_DRIVE_API_KEY']
 
@@ -139,9 +140,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ROOT_URLCONF = 'ecommercejockey.urls'
 WSGI_APPLICATION = 'ecommercejockey.wsgi.application'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
 
 
