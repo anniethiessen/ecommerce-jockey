@@ -606,6 +606,16 @@ class ShopifyApiClient(object):
             raise
 
     @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def delete_product(self, product_id):
+        url = f'{self.base_url}/products/{product_id}.json'
+
+        try:
+            response = requests.delete(url=url)
+            return self.get_json_body(response)
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
     def create_product_metafield(self, product_id, metafield_data):
         url = (
             f'{self.base_url}/products/'
@@ -668,6 +678,112 @@ class ShopifyApiClient(object):
             raise
 
     @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def delete_product_metafield(self, product_id, metafield_id):
+        url = (
+            f'{self.base_url}/products/{product_id}'
+            f'/metafields/{metafield_id}.json'
+        )
+
+        try:
+            response = requests.delete(url=url)
+            return self.get_json_body(response)
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def create_product_image(self, product_id, image_data):
+        url = (
+            f'{self.base_url}/products/'
+            f'{product_id}/images.json'
+        )
+
+        try:
+            if 'attachment' in image_data:
+                attachment = image_data['attachment']
+                file = {'attachment': open(attachment, 'rb')}
+                response = requests.post(url=url, files=file)
+            elif 'src' in image_data:
+                body = {
+                    'image': image_data
+                }
+                response = requests.post(url=url, json=body)
+            else:
+                raise Exception()
+
+            return self.get_json_body(response)['image']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_product_images(self, product_id):
+        url = f'{self.base_url}/products/{product_id}/images.json'
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['images']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def retrieve_product_image(self, product_id, image_id):
+        url = (
+            f'{self.base_url}/products/'
+            f'{product_id}/images/{image_id}.json'
+        )
+
+        try:
+            response = requests.get(url=url)
+            return self.get_json_body(response)['image']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def update_product_image(self, product_id, image_data):
+        try:
+            image_id = image_data.pop('id')
+        except Exception:
+            raise
+
+        url = (
+            f'{self.base_url}/products/'
+            f'{product_id}/images/{image_id}.json'
+        )
+
+        try:
+            if 'attachment' in image_data:
+                attachment = image_data['attachment']
+                file = {
+                    'image': {
+                        'attachment': open(attachment, 'rb')
+                    }
+                }
+                response = requests.put(url=url, files=file)
+            elif 'src' in image_data:
+                body = {
+                    'image': image_data
+                }
+                response = requests.put(url=url, json=body)
+            else:
+                raise Exception()
+
+            return self.get_json_body(response)['image']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def delete_product_image(self, product_id, image_id):
+        url = (
+            f'{self.base_url}/products/{product_id}'
+            f'/images/{image_id}.json'
+        )
+
+        try:
+            response = requests.delete(url=url)
+            return self.get_json_body(response)
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
     def create_collection(self, collection_data):
         url = f'{self.base_url}/smart_collections.json'
         body = {
@@ -705,6 +821,18 @@ class ShopifyApiClient(object):
         try:
             response = requests.put(url=url, json=body)
             return self.get_json_body(response)['smart_collection']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def delete_collection(self, collection_id):
+        url = (
+            f'{self.base_url}/smart_collections/{collection_id}.json'
+        )
+
+        try:
+            response = requests.delete(url=url)
+            return self.get_json_body(response)
         except Exception:
             raise
 
@@ -767,6 +895,19 @@ class ShopifyApiClient(object):
         try:
             response = requests.put(url=url, json=body)
             return self.get_json_body(response)['metafield']
+        except Exception:
+            raise
+
+    @retry(exceptions=ApiRateLimitExceeded, tries=2, delay=2)
+    def delete_collection_metafield(self, collection_id, metafield_id):
+        url = (
+            f'{self.base_url}/smart_collections/{collection_id}/'
+            f'metafields/{metafield_id}.json'
+        )
+
+        try:
+            response = requests.delete(url=url)
+            return self.get_json_body(response)
         except Exception:
             raise
 

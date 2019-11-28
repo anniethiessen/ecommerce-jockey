@@ -36,7 +36,9 @@ from core.admin.utils import get_images_preview
 from .clients import shopify_client
 from .managers import (
     ShopifyCollectionManager,
+    ShopifyImageManager,
     ShopifyOptionManager,
+    ShopifyMetafieldManager,
     ShopifyProductManager,
     ShopifyVariantManager
 )
@@ -371,6 +373,8 @@ class ShopifyMetafield(Model, MessagesMixin):
         return msgs
     # </editor-fold>
 
+    objects = ShopifyMetafieldManager()
+
     class Meta:
         unique_together = [
             'content_type',
@@ -379,6 +383,29 @@ class ShopifyMetafield(Model, MessagesMixin):
             'namespace',
             'key'
         ]
+
+    def delete(self, using=None, keep_parents=False):
+        if self.metafield_id:
+            try:
+                if self.content_type == ContentType.objects.get_for_model(
+                        ShopifyProduct):
+                    client_method = 'delete_product_metafield'
+                    id_field = 'product_id'
+                elif self.content_type == ContentType.objects.get_for_model(
+                        ShopifyCollection):
+                    client_method = 'delete_collection_metafield'
+                    id_field = 'collection_id'
+                else:
+                    raise Exception('Invalid content type')
+
+                getattr(shopify_client, client_method)(
+                    getattr(self.content_object, id_field),
+                    metafield_id=self.metafield_id
+                )
+            except Exception as err:
+                raise
+
+        super().delete(using=using, keep_parents=keep_parents)
 
     def __str__(self):
         return f'{self.content_object} :: {self.namespace} :: {self.key}'
@@ -901,6 +928,17 @@ class ShopifyCollection(Model, MessagesMixin):
 
     objects = ShopifyCollectionManager()
 
+    def delete(self, using=None, keep_parents=False):
+        if self.collection_id:
+            try:
+                shopify_client.delete_collection(
+                    collection_id=self.collection_id
+                )
+            except Exception as err:
+                raise
+
+        super().delete(using=using, keep_parents=keep_parents)
+
     def __str__(self):
         return self.title
 
@@ -992,7 +1030,7 @@ class ShopifyProduct(Model, MessagesMixin):
         if not self.vendor:
             error = "missing vendor"
             msgs.append(error)
-        if not self.tags.all().count() >= 5:
+        if not self.tags.all().count() >= 4:
             error = "missing tags"
             msgs.append(error)
         if not self.images.all().count() >= 1:
@@ -1036,8 +1074,7 @@ class ShopifyProduct(Model, MessagesMixin):
             'published_scope': self.published_scope,
             'tags': self.api_formatted_tags,
             'variants': self.api_formatted_variants,
-            'options': self.api_formatted_options,
-            'images': self.api_formatted_images
+            'options': self.api_formatted_options
         }
         return dict((k, v) for k, v in data.items() if v)
 
@@ -1068,13 +1105,6 @@ class ShopifyProduct(Model, MessagesMixin):
         for option in self.options.all():
             options_data.append(option.api_formatted_data)
         return options_data
-
-    @property
-    def api_formatted_images(self):
-        images_data = []
-        for image in self.images.all():
-            images_data.append(image.api_formatted_data)
-        return images_data
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
@@ -1342,6 +1372,12 @@ class ShopifyProduct(Model, MessagesMixin):
                     msgs += metafield.perform_update_to_api()
                 else:
                     msgs += metafield.perform_create_to_api()
+
+            for image in self.images.all():
+                if image.image_id:
+                    msgs += image.perform_update_to_api()
+                else:
+                    msgs += image.perform_create_to_api()
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
 
@@ -1370,6 +1406,12 @@ class ShopifyProduct(Model, MessagesMixin):
                     msgs += metafield.perform_update_to_api()
                 else:
                     msgs += metafield.perform_create_to_api()
+
+            for image in self.images.all():
+                if image.image_id:
+                    msgs += image.perform_update_to_api()
+                else:
+                    msgs += image.perform_create_to_api()
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
 
@@ -1392,6 +1434,9 @@ class ShopifyProduct(Model, MessagesMixin):
             for metafield in self.metafields.filter(
                     metafield_id__isnull=False):
                 msgs += metafield.perform_update_from_api()
+
+            for image in self.images.filter(image_id__isnull=False):
+                msgs += image.perform_update_from_api()
         except Exception as err:
             msgs.append(self.get_instance_error_msg(str(err)))
 
@@ -1401,6 +1446,17 @@ class ShopifyProduct(Model, MessagesMixin):
     # </editor-fold>
 
     objects = ShopifyProductManager()
+
+    def delete(self, using=None, keep_parents=False):
+        if self.product_id:
+            try:
+                shopify_client.delete_product(
+                    product_id=self.product_id
+                )
+            except Exception as err:
+                raise
+
+        super().delete(using=using, keep_parents=keep_parents)
 
     def __str__(self):
         s = []
@@ -1414,12 +1470,23 @@ class ShopifyProduct(Model, MessagesMixin):
 
 
 class ShopifyImage(Model, MessagesMixin):
+    image_id = BigIntegerField(
+        blank=True,
+        help_text='Populated by Shopify',
+        null=True,
+        unique=True
+    )
     product = ForeignKey(
         ShopifyProduct,
         related_name='images',
         on_delete=CASCADE
     )
+    link = URLField(
+        max_length=250
+    )
     src = URLField(
+        blank=True,
+        help_text='Populated by Shopify',
         max_length=250
     )
 
@@ -1427,10 +1494,178 @@ class ShopifyImage(Model, MessagesMixin):
     @property
     def api_formatted_data(self):
         data = {
-            'src': self.src,
+            'id': self.image_id,
+            'src': self.src if self.src else self.link
         }
         return dict((k, v) for k, v in data.items() if v)
     # </editor-fold>
+
+    # <editor-fold desc="update properties ...">
+    @property
+    def state(self):
+        return {
+            'image_id': str(self.image_id)
+        }
+
+    def update_image_id_from_api_data(self, value):
+        try:
+            if not self.image_id == value:
+                self.image_id = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_src_from_api_data(self, value):
+        try:
+            if not self.src == value:
+                self.src = value
+                self.save()
+            return
+        except Exception:
+            raise
+
+    def update_from_api_data(self, data, *fields):
+        field_map = {
+            'image_id': {
+                'data': 'id',
+                'function': 'update_image_id_from_api_data'
+            },
+            'src': {
+                'data': 'src',
+                'function': 'update_src_from_api_data'
+            }
+        }
+
+        if fields:
+            for field in fields:
+                if field not in field_map.keys():
+                    raise Exception('Invalid update field')
+        else:
+            fields = field_map.keys()
+
+        msgs = []
+        prev = self.state
+        for field in fields:
+            try:
+                extra_msgs = getattr(
+                    self,
+                    field_map[field]['function']
+                )(data[field_map[field]['data']])
+
+                if extra_msgs:
+                    msgs += extra_msgs
+            except Exception as err:
+                msgs.append(
+                    self.get_instance_error_msg(
+                        error=f'{field} update error: {err}')
+                )
+                continue
+
+        self.refresh_from_db()
+        new = self.state
+        msgs.append(
+            self.get_update_success_msg(
+                previous_data=prev,
+                new_data=new
+            )
+        )
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_create_to_api(self):
+        msgs = []
+        if self.image_id:
+            msgs.append(
+                self.get_instance_error_msg(
+                    error="Already exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.create_product_image(
+                product_id=self.product.product_id,
+                image_data=self.api_formatted_data
+            )
+
+            msgs.append(
+                self.get_create_success_msg(message="Created in Shopify")
+            )
+            msgs += self.update_from_api_data(data)
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        if not self.image_id:
+            msgs.append(
+                self.get_instance_error_msg(
+                    error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.update_product_image(
+                product_id=self.product.product_id,
+                image_data=self.api_formatted_data
+            )
+
+            msgs.append(
+                self.get_update_success_msg(message="Updated in Shopify")
+            )
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        if not self.image_id:
+            msgs.append(
+                self.get_instance_error_msg(
+                    error="Doesn't exists in Shopify")
+            )
+            return msgs
+
+        try:
+            data = shopify_client.retrieve_product_image(
+                product_id=self.product.product_id,
+                image_id=self.image_id
+            )
+
+            msgs += self.update_from_api_data(data)
+
+        except Exception as err:
+            msgs.append(self.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.get_instance_up_to_date_msg())
+        return msgs
+    # </editor-fold>
+
+    objects = ShopifyImageManager()
+
+    def delete(self, using=None, keep_parents=False):
+        if self.image_id:
+            try:
+                shopify_client.delete_product_image(
+                    product_id=self.product.product_id,
+                    image_id=self.image_id
+                )
+            except Exception as err:
+                raise
+
+        super().delete(using=using, keep_parents=keep_parents)
 
     def __str__(self):
         return str(self.product)
@@ -2080,7 +2315,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
             ('sema_brand_tags_value', 'SEMA Brand'),
             (CUSTOM_VALUE, 'Custom')
         ),
-        default='sema_brand_tag_value',
+        default='sema_brand_tags_value',
         max_length=50
     )
     tags_categories_option = CharField(
@@ -2384,7 +2619,12 @@ class ShopifyProductCalculator(Model, MessagesMixin):
 
         vehicles = self.sema_product.vehicles.filter(
             is_relevant=True
-        ).order_by('make', 'model', 'submodel', 'year')
+        ).order_by(
+            'base_vehicle__make_year__make__name',
+            'base_vehicle__model__name',
+            'submodel__name',
+            'base_vehicle__make_year__year__year'
+        )
 
         if not vehicles:
             return None
@@ -2441,6 +2681,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         images.sort()
         return images
 
+    @property
     def all_images_value(self):
         images = []
         if self.premier_images_value:
@@ -2533,11 +2774,17 @@ class ShopifyProductCalculator(Model, MessagesMixin):
 
     @property
     def sema_html_packaging_preview(self):
+        if not self.sema_html_packaging_value:
+            return None
+
         return self.sema_html_packaging_value[:10] + ' ...'
     sema_html_packaging_preview.fget.short_description = 'SEMA HTML'
 
     @property
     def sema_vehicle_fitments_preview(self):
+        if not self.sema_vehicle_fitments_value:
+            return None
+
         return len(self.sema_vehicle_fitments_value)
     sema_vehicle_fitments_preview.fget.short_description = 'SEMA Vehicles'
 
@@ -2660,7 +2907,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         if self.metafields_fitments_result:
             metafields.append(self.metafields_fitments_result)
 
-        metafields = sorted(metafields, key=lambda k: k['key'])
+        metafields = sorted(metafields, key=lambda k: k['value'])
         return metafields
     metafields_result.fget.short_description = ''
 
@@ -2711,10 +2958,10 @@ class ShopifyProductCalculator(Model, MessagesMixin):
             return None
 
         images = [
-            {'src': image_url}
+            {'link': image_url}
             for image_url in image_urls
         ]
-        images = sorted(images, key=lambda k: k['src'])
+        images = sorted(images, key=lambda k: k['link'])
         return images
     images_result.fget.short_description = ''
     # </editor-fold>
@@ -2801,7 +3048,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
             }
             for metafield in self.shopify_product.metafields.all()
         ]
-        metafields = sorted(metafields, key=lambda k: k['key'])
+        metafields = sorted(metafields, key=lambda k: k['value'])
         return bool(metafields == self.metafields_result)
     metafields_match.boolean = True
     metafields_match.short_description = 'Metafields Match'
@@ -2824,27 +3071,27 @@ class ShopifyProductCalculator(Model, MessagesMixin):
             return None
 
         images = [
-            {'src': image.scr}
+            {'link': image.link}
             for image in self.shopify_product.images.all()
         ]
-        images = sorted(images, key=lambda k: k['src'])
+        images = sorted(images, key=lambda k: k['link'])
         return bool(images == self.images_result)
     images_match.boolean = True
     images_match.short_description = 'Images Match'
 
     def full_match(self):
-        return ~bool(
-            self.title_match is False
-            or self.body_html_match is False
-            or self.variant_weight_match is False
-            or self.variant_weight_unit_match is False
-            or self.variant_cost_match is False
-            or self.variant_price_match is False
-            or self.variant_sku_match is False
-            or self.variant_barcode_match is False
-            or self.metafields_match is False
-            or self.tags_match is False
-            or self.images_match is False
+        return bool(
+            self.title_match() is not False
+            and self.body_html_match() is not False
+            and self.variant_weight_match() is not False
+            and self.variant_weight_unit_match() is not False
+            and self.variant_cost_match() is not False
+            and self.variant_price_match() is not False
+            and self.variant_sku_match() is not False
+            and self.variant_barcode_match() is not False
+            and self.metafields_match() is not False
+            and self.tags_match() is not False
+            and self.images_match() is not False
         )
     full_match.boolean = True
     full_match.short_description = 'Calculator Match'
@@ -2853,98 +3100,101 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     # <editor-fold desc="difference properties ...">
     @property
     def title_difference(self):
-        if self.title_match is not False:
+        if self.title_match() is not False:
             return ''
 
-        return f'{self.shopify_product.title} -> {self.title_result}'
+        return f'{self.shopify_product.title} <- {self.title_result}'
     title_difference.fget.short_description = ''
 
     @property
     def body_html_difference(self):
-        if self.body_html_match is not False:
+        if self.body_html_match() is not False:
             return ''
 
-        return f'{self.shopify_product.body_html} -> {self.body_html_result}'
+        return f'{self.shopify_product.body_html} <- {self.body_html_result}'
     body_html_difference.fget.short_description = ''
 
     @property
     def variant_weight_difference(self):
-        if self.variant_weight_match is not False:
+        if self.variant_weight_match() is not False:
             return ''
 
-        return f'{self.shopify_variant.weight} -> {self.variant_weight_result}'
+        return f'{self.shopify_variant.weight} <- {self.variant_weight_result}'
     variant_weight_difference.fget.short_description = ''
 
     @property
     def variant_weight_unit_difference(self):
-        if self.variant_weight_unit_match is not False:
+        if self.variant_weight_unit_match() is not False:
             return ''
 
-        return f'{self.shopify_variant.weight_unit} -> {self.variant_weight_unit_result}'
+        return (
+            f'{self.shopify_variant.weight_unit} '
+            f'<- {self.variant_weight_unit_result}'
+        )
     variant_weight_unit_difference.fget.short_description = ''
 
     @property
     def variant_cost_difference(self):
-        if self.variant_cost_match is not False:
+        if self.variant_cost_match() is not False:
             return ''
 
-        return f'{self.shopify_variant.cost} -> {self.variant_cost_result}'
+        return f'{self.shopify_variant.cost} <- {self.variant_cost_result}'
     variant_cost_difference.fget.short_description = ''
 
     @property
     def variant_price_difference(self):
-        if self.variant_price_match is not False:
+        if self.variant_price_match() is not False:
             return ''
 
-        return f'{self.shopify_variant.price} -> {self.variant_price_result}'
+        return f'{self.shopify_variant.price} <- {self.variant_price_result}'
     variant_price_difference.fget.short_description = ''
 
     @property
     def variant_sku_difference(self):
-        if self.variant_sku_match is not False:
+        if self.variant_sku_match() is not False:
             return ''
 
-        return f'{self.shopify_variant.sku} -> {self.variant_sku_result}'
+        return f'{self.shopify_variant.sku} <- {self.variant_sku_result}'
     variant_sku_difference.fget.short_description = ''
 
     @property
     def variant_barcode_difference(self):
-        if self.variant_barcode_match is not False:
+        if self.variant_barcode_match() is not False:
             return ''
 
-        return f'{self.shopify_variant.barcode} -> {self.variant_barcode_result}'
+        return f'{self.shopify_variant.barcode} <- {self.variant_barcode_result}'
     variant_barcode_difference.fget.short_description = ''
 
     @property
     def metafields_difference(self):
-        if self.metafields_match is not False:
+        if self.metafields_match() is not False:
             return ''
 
         return (
             f'{self.shopify_product.metafields.count()} '
-            f'-> {len(self.metafields_result)}'
+            f'<- {len(self.metafields_result)}'
         )
     metafields_difference.fget.short_description = ''
 
     @property
     def tags_difference(self):
-        if self.tags_match is not False:
+        if self.tags_match() is not False:
             return ''
 
         return (
             f'{self.shopify_product.tags.count()} '
-            f'-> {len(self.tags_result)}'
+            f'<- {len(self.tags_result)}'
         )
     tags_difference.fget.short_description = ''
 
     @property
     def images_difference(self):
-        if self.images_match is not False:
+        if self.images_match() is not False:
             return ''
 
         return (
             f'{self.shopify_product.images.count()} '
-            f'-> {len(self.images_result)}'
+            f'<- {len(self.images_result)}'
         )
     images_difference.fget.short_description = ''
     # </editor-fold>
@@ -3259,7 +3509,7 @@ class ShopifyCollectionCalculator(Model, MessagesMixin):
             metafields.append(self.metafields_display_name_result)
         if self.metafields_subcollections_result:
             metafields.append(self.metafields_subcollections_result)
-        metafields = sorted(metafields, key=lambda k: k['key'])
+        metafields = sorted(metafields, key=lambda k: k['value'])
         return metafields
     metafields_result.fget.short_description = ''
 
@@ -3310,7 +3560,7 @@ class ShopifyCollectionCalculator(Model, MessagesMixin):
             }
             for metafield in self.shopify_collection.metafields.all()
         ]
-        metafields = sorted(metafields, key=lambda k: k['key'])
+        metafields = sorted(metafields, key=lambda k: k['value'])
         return bool(metafields == self.metafields_result)
     metafields_match.boolean = True
     metafields_match.short_description = 'Metafields Match'
@@ -3329,10 +3579,10 @@ class ShopifyCollectionCalculator(Model, MessagesMixin):
     tags_match.short_description = 'Tags Match'
 
     def full_match(self):
-        return ~bool(
-            self.title_match is False
-            or self.metafields_match is False
-            or self.tags_match is False
+        return bool(
+            self.title_match() is not False
+            and self.metafields_match() is not False
+            and self.tags_match() is not False
         )
     full_match.boolean = True
     full_match.short_description = 'Calculator Match'
@@ -3341,31 +3591,31 @@ class ShopifyCollectionCalculator(Model, MessagesMixin):
     # <editor-fold desc="difference properties ...">
     @property
     def title_difference(self):
-        if self.title_match is not False:
+        if self.title_match() is not False:
             return ''
 
-        return f'{self.shopify_collection.title} -> {self.title_result}'
+        return f'{self.shopify_collection.title} <- {self.title_result}'
     title_difference.fget.short_description = ''
 
     @property
     def metafields_difference(self):
-        if self.metafields_match is not False:
+        if self.metafields_match() is not False:
             return ''
 
         return (
             f'{self.shopify_collection.metafields.count()} '
-            f'-> {len(self.metafields_result)}'
+            f'<- {len(self.metafields_result)}'
         )
     metafields_difference.fget.short_description = ''
 
     @property
     def tags_difference(self):
-        if self.tags_match is not False:
+        if self.tags_match() is not False:
             return ''
 
         return (
             f'{self.shopify_collection.tags.count()} '
-            f'-> {len(self.tags_result)}'
+            f'<- {len(self.tags_result)}'
         )
     tags_difference.fget.short_description = ''
     # </editor-fold>

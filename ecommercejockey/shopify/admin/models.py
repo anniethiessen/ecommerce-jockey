@@ -533,6 +533,16 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
 
 @admin.register(ShopifyImage)
 class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
+    actions = (
+        'export_to_api_queryset_action',
+        'import_from_api_queryset_action'
+    )
+
+    change_actions = (
+        'export_to_api_object_action',
+        'import_from_api_object_action'
+    )
+
     list_select_related = (
         'product',
     )
@@ -546,13 +556,17 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
         'product__seo_title',
         'product__seo_description',
         'id',
+        'link',
         'src'
     )
 
     list_display = (
         'details_link',
         'id',
-        'product'
+        'image_id',
+        'product',
+        'link',
+        'src'
     )
 
     list_display_links = (
@@ -564,6 +578,8 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
             'Image', {
                 'fields': (
                     'id',
+                    'image_id',
+                    'link',
                     'src'
                 )
             }
@@ -599,6 +615,15 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
             return None
         return get_change_view_link(obj.product, 'See full product')
     product_link.short_description = ''
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += [
+                'image_id',
+                'src'
+            ]
+        return readonly_fields
 
 
 @admin.register(ShopifyOption)
@@ -940,13 +965,35 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
 
     list_display = (
         'details_link',
-        'id',
         'product',
-        'full_match'
+        'full_match',
+        'sema_description_def_preview',
+        'sema_description_des_preview',
+        'sema_description_inv_preview',
+        'sema_description_ext_preview',
+        'sema_description_tle_preview',
+        'sema_description_sho_preview',
+        'sema_description_asc_preview',
+        'sema_description_mkt_preview',
+        'premier_description_preview',
+        'title_option',
+        'body_html_option',
+        'premier_cost_cad_preview',
+        'variant_price_markup_option',
+        'sema_images_preview',
+        'premier_images_preview',
+        'images_option'
     )
 
     list_display_links = (
         'details_link',
+    )
+
+    list_editable = (
+        'title_option',
+        'body_html_option',
+        'variant_price_markup_option',
+        'images_option'
     )
 
     fieldsets = (

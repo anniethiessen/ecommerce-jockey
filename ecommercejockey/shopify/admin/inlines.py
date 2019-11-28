@@ -151,7 +151,9 @@ class ShopifyProductImagesTabularInline(TabularInline):
         'all_link',
         'details_link',
         'id',
+        'image_id',
         'product',
+        'link',
         'src'
     )
 
@@ -180,6 +182,15 @@ class ShopifyProductImagesTabularInline(TabularInline):
         if db_field.name == 'product':
             formfield.choices = formfield.choices
         return formfield
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+        if not request.user.is_superuser:
+            readonly_fields += [
+                'image_id',
+                'src'
+            ]
+        return readonly_fields
 
 
 class ShopifyProductOptionsTabularInline(TabularInline):

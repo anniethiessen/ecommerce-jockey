@@ -85,6 +85,83 @@ class ShopifyOptionQuerySet(QuerySet):
     pass
 
 
+class ShopifyMetafieldQuerySet(QuerySet):
+    def perform_create_to_api(self):
+        msgs = []
+        for metafield in self:
+            try:
+                msgs += metafield.perform_create_to_api()
+            except Exception as err:
+                msgs.append(metafield.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        for metafield in self:
+            try:
+                msgs += metafield.perform_update_to_api()
+            except Exception as err:
+                msgs.append(metafield.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        for metafield in self:
+            try:
+                msgs += metafield.perform_update_from_api()
+            except Exception as err:
+                msgs.append(metafield.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+
+class ShopifyImageQuerySet(QuerySet):
+
+    def perform_create_to_api(self):
+        msgs = []
+        for image in self:
+            try:
+                msgs += image.perform_create_to_api()
+            except Exception as err:
+                msgs.append(image.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        for image in self:
+            try:
+                msgs += image.perform_update_to_api()
+            except Exception as err:
+                msgs.append(image.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        for image in self:
+            try:
+                msgs += image.perform_update_from_api()
+            except Exception as err:
+                msgs.append(image.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+
 class ShopifyCollectionManager(Manager):
     def get_queryset(self):
         return ShopifyCollectionQuerySet(
@@ -197,3 +274,85 @@ class ShopifyOptionManager(Manager):
             return option.get_create_success_msg()
         except Exception as err:
             return self.model.get_class_error_msg(str(err))
+
+
+class ShopifyMetafieldManager(Manager):
+    def get_queryset(self):
+        return ShopifyMetafieldQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def perform_create_to_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_create_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_from_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+
+class ShopifyImageManager(Manager):
+    def get_queryset(self):
+        return ShopifyImageQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def perform_create_to_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_create_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_to_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_to_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
+    def perform_update_from_api(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_update_from_api()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
