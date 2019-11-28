@@ -1069,10 +1069,7 @@ class SemaApiClient(object):
         url += f'?contenttoken={self.content_token}'
         params = {
             'productid': product_id,
-            'stripHeaderFooter': (
-                str(~include_header_footer).lower()
-                if not include_header_footer else None
-            )
+            'stripHeaderFooter': ~include_header_footer
         }
 
         try:

@@ -20,7 +20,7 @@ def perform_premier_api_update(tasks=None):
                 products = PremierProduct.objects.filter(
                     manufacturer__is_relevant=True
                 )
-                msgs += products.update_inventory_from_api()
+                msgs += products.perform_inventory_update_from_api()
                 print('--- complete')
             except Exception as err:
                 msgs.append(f'Internal Error: {err}')
@@ -29,7 +29,7 @@ def perform_premier_api_update(tasks=None):
             print(f'{index}. Updating product pricing...')
             try:
                 products = PremierProduct.objects.filter(is_relevant=True)
-                msgs += products.update_pricing_from_api()
+                msgs += products.perform_pricing_update_from_api()
                 print('--- complete')
             except Exception as err:
                 msgs.append(f'Internal Error: {err}')
@@ -44,7 +44,7 @@ def perform_premier_api_update(tasks=None):
                         | Q(primary_image__exact='')
                     )
                 )
-                msgs += products.update_primary_image_from_media_root()
+                msgs += products.perform_primary_image_update_from_media_root()
                 print('--- complete')
             except Exception as err:
                 msgs.append(f'Internal Error: {err}')

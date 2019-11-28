@@ -46,7 +46,7 @@ from .managers import (
 )
 
 
-class SemaBaseModel(RelevancyBaseModel, NotesBaseModel):
+class SemaBaseModel(RelevancyBaseModel):
     """
     This abstract model class defines base attributes for SEMA models.
 
@@ -59,11 +59,11 @@ class SemaBaseModel(RelevancyBaseModel, NotesBaseModel):
 
     # <editor-fold desc="relevancy properties ...">
     @property
-    def relevancy_errors(self):
+    def relevancy_warnings(self):
         """
-        Returns a concatenation of errors based on relevancy.
+        Returns a concatenation of warnings based on relevancy.
 
-        :return: errors based on relevancy
+        :return: warnings based on relevancy
         :rtype: str
 
         """
@@ -71,10 +71,10 @@ class SemaBaseModel(RelevancyBaseModel, NotesBaseModel):
         msgs = []
         if self.is_relevant:
             if not self.is_authorized:
-                error = "not authorized"
-                msgs.append(error)
+                warning = "not authorized"
+                msgs.append(warning)
         return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
+    relevancy_warnings.fget.short_description = 'Warnings'
     # </editor-fold>
 
     # <editor-fold desc="update properties ...">
@@ -168,6 +168,43 @@ class SemaYear(SemaBaseModel):
         unique=True
     )
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. has relevant vehicles
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return bool(self.vehicle_relevant_count)
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.vehicle_relevant_count:
+                error = "no relevant vehicles"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def make_year_count(self):
@@ -180,7 +217,6 @@ class SemaYear(SemaBaseModel):
         """
 
         return self.make_years.distinct().count()
-    make_year_count.fget.short_description = 'Make Year Count'
 
     @property
     def make_year_relevant_count(self):
@@ -196,6 +232,23 @@ class SemaYear(SemaBaseModel):
     make_year_relevant_count.fget.short_description = (
         'Relevant Make Year Count'
     )
+
+    @property
+    def vehicle_relevant_count(self):
+        """
+        Returns relevant vehicle count.
+
+        :return: relevant vehicle count
+        :rtype: int
+
+        """
+
+        relevant_vehicle_count = 0
+        for make_year in self.make_years.all():
+            for base_vehicle in make_year.base_vehicles.all():
+                relevant_vehicle_count += base_vehicle.vehicle_relevant_count
+        return relevant_vehicle_count
+    vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -583,7 +636,6 @@ class SemaMake(SemaBaseModel):
         """
 
         return self.make_years.distinct().count()
-    make_year_count.fget.short_description = 'Make Year Count'
 
     @property
     def make_year_relevant_count(self):
@@ -925,6 +977,43 @@ class SemaModel(SemaBaseModel):
         max_length=50,
     )
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. has relevant vehicles
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return bool(self.vehicle_relevant_count)
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.vehicle_relevant_count:
+                error = "no relevant vehicles"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def base_vehicle_count(self):
@@ -937,7 +1026,6 @@ class SemaModel(SemaBaseModel):
         """
 
         return self.base_vehicles.distinct().count()
-    base_vehicle_count.fget.short_description = 'Base Vehicle Count'
 
     @property
     def base_vehicle_relevant_count(self):
@@ -953,6 +1041,22 @@ class SemaModel(SemaBaseModel):
     base_vehicle_relevant_count.fget.short_description = (
         'Relevant Base Vehicle Count'
     )
+
+    @property
+    def vehicle_relevant_count(self):
+        """
+        Returns relevant vehicle count.
+
+        :return: relevant vehicle count
+        :rtype: int
+
+        """
+
+        relevant_vehicle_count = 0
+        for base_vehicle in self.base_vehicles.all():
+            relevant_vehicle_count += base_vehicle.vehicle_relevant_count
+        return relevant_vehicle_count
+    vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -1201,6 +1305,43 @@ class SemaSubmodel(SemaBaseModel):
         max_length=50,
     )
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. has relevant vehicles
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return bool(self.vehicle_relevant_count)
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.vehicle_relevant_count:
+                error = "no relevant vehicles"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def vehicle_count(self):
@@ -1213,7 +1354,6 @@ class SemaSubmodel(SemaBaseModel):
         """
 
         return self.vehicles.distinct().count()
-    vehicle_count.fget.short_description = 'Vehicle Count'
 
     @property
     def vehicle_relevant_count(self):
@@ -1276,6 +1416,43 @@ class SemaMakeYear(SemaBaseModel):
         related_name='make_years'
     )
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. has relevant vehicles
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return bool(self.vehicle_relevant_count)
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.vehicle_relevant_count:
+                error = "no relevant vehicles"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def base_vehicle_count(self):
@@ -1288,7 +1465,6 @@ class SemaMakeYear(SemaBaseModel):
         """
 
         return self.base_vehicles.distinct().count()
-    base_vehicle_count.fget.short_description = 'Base Vehicle Count'
 
     @property
     def base_vehicle_relevant_count(self):
@@ -1304,50 +1480,22 @@ class SemaMakeYear(SemaBaseModel):
     base_vehicle_relevant_count.fget.short_description = (
         'Relevant Base Vehicle Count'
     )
-    # </editor-fold>
-
-    # <editor-fold desc="relevancy properties ...">
-    @property
-    def may_be_relevant(self):
-        """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
-
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1. year is relevant, and
-            2. make is relevant
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-
-        return self.year.is_relevant and self.make.is_relevant
 
     @property
-    def relevancy_errors(self):
+    def vehicle_relevant_count(self):
         """
-        Returns a concatenation of errors based on relevancy.
+        Returns relevant vehicle count.
 
-        :return: errors based on relevancy
-        :rtype: str
+        :return: relevant vehicle count
+        :rtype: int
 
         """
 
-        msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
-        if self.is_relevant:
-            if not self.year.is_relevant:
-                error = "year not relevant"
-                msgs.append(error)
-            if not self.make.is_relevant:
-                error = "make not relevant"
-                msgs.append(error)
-        return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
+        relevant_vehicle_count = 0
+        for base_vehicle in self.base_vehicles.all():
+            relevant_vehicle_count += base_vehicle.vehicle_relevant_count
+        return relevant_vehicle_count
+    vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -1678,6 +1826,43 @@ class SemaBaseVehicle(SemaBaseModel):
         related_name='base_vehicles'
     )
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. has relevant vehicles
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return bool(self.vehicle_relevant_count)
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.vehicle_relevant_count:
+                error = "no relevant vehicles"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def vehicle_count(self):
@@ -1690,7 +1875,6 @@ class SemaBaseVehicle(SemaBaseModel):
         """
 
         return self.vehicles.distinct().count()
-    vehicle_count.fget.short_description = 'Vehicle Count'
 
     @property
     def vehicle_relevant_count(self):
@@ -1704,50 +1888,6 @@ class SemaBaseVehicle(SemaBaseModel):
 
         return self.vehicles.filter(is_relevant=True).distinct().count()
     vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
-    # </editor-fold>
-
-    # <editor-fold desc="relevancy properties ...">
-    @property
-    def may_be_relevant(self):
-        """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
-
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1. make year is relevant, and
-            2. model is relevant
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-
-        return self.make_year.is_relevant and self.model.is_relevant
-
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
-        :rtype: str
-
-        """
-
-        msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
-        if self.is_relevant:
-            if not self.make_year.is_relevant:
-                error = "make year not relevant"
-                msgs.append(error)
-            if not self.model.is_relevant:
-                error = "model not relevant"
-                msgs.append(error)
-        return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -2520,6 +2660,44 @@ class SemaVehicle(SemaBaseModel):
         related_name='vehicles'
     )
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. base vehicle is relevant, and
+            2. submodel is relevant
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return bool(self.engine_relevant_count)
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.engine_relevant_count:
+                error = "no relevant engines"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def dataset_count(self):
@@ -2532,7 +2710,6 @@ class SemaVehicle(SemaBaseModel):
         """
 
         return self.datasets.distinct().count()
-    dataset_count.fget.short_description = 'Dataset Count'
 
     @property
     def dataset_relevant_count(self):
@@ -2558,7 +2735,6 @@ class SemaVehicle(SemaBaseModel):
         """
 
         return self.engines.distinct().count()
-    engine_count.fget.short_description = 'Engine Count'
 
     @property
     def engine_relevant_count(self):
@@ -2584,7 +2760,6 @@ class SemaVehicle(SemaBaseModel):
         """
 
         return self.products.distinct().count()
-    product_count.fget.short_description = 'Product Count'
 
     @property
     def product_relevant_count(self):
@@ -2598,53 +2773,6 @@ class SemaVehicle(SemaBaseModel):
 
         return self.products.filter(is_relevant=True).distinct().count()
     product_relevant_count.fget.short_description = 'Relevant Product Count'
-    # </editor-fold>
-
-    # <editor-fold desc="relevancy properties ...">
-    @property
-    def may_be_relevant(self):
-        """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
-
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1. base vehicle is relevant, and
-            2. submodel is relevant
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-
-        return self.base_vehicle.is_relevant and self.submodel.is_relevant
-
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
-        :rtype: str
-
-        """
-
-        msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
-        if self.is_relevant:
-            if not self.base_vehicle.is_relevant:
-                error = "base vehicle not relevant"
-                msgs.append(error)
-            if not self.submodel.is_relevant:
-                error = "submodel not relevant"
-                msgs.append(error)
-            if not self.dataset_relevant_count:
-                error = "no relevant dataset"
-                msgs.append(error)
-        return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -3303,7 +3431,7 @@ class SemaEngine(SemaBaseModel):
 
         .. Topic:: **-May Be Relevant Conditions-**
 
-            1. vehicle is relevant, and
+            1. vehicle make is relevant, and
             2. fuel type is diesel
 
         :return: whether or not object may be relevant
@@ -3311,7 +3439,10 @@ class SemaEngine(SemaBaseModel):
 
         """
 
-        return self.vehicle.is_relevant and self.fuel_type == 'DIESEL'
+        return bool(
+            self.vehicle.base_vehicle.make_year.make.is_relevant
+            and self.fuel_type == 'DIESEL'
+        )
 
     @property
     def relevancy_errors(self):
@@ -3324,12 +3455,9 @@ class SemaEngine(SemaBaseModel):
         """
 
         msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
         if self.is_relevant:
-            if not self.vehicle.is_relevant:
-                error = "vehicle not relevant"
+            if not self.vehicle.base_vehicle.make_year.make.is_relevant:
+                error = "make not relevant"
                 msgs.append(error)
             if not self.fuel_type == 'DIESEL':
                 error = "not diesel"
@@ -3422,6 +3550,43 @@ class SemaCategory(SemaBaseModel):
             else:
                 return ''
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. always relevant
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return True
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.level:
+                error = "invalid level"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def dataset_count(self):
@@ -3434,7 +3599,6 @@ class SemaCategory(SemaBaseModel):
         """
 
         return self.datasets.distinct().count()
-    dataset_count.fget.short_description = 'Dataset Count'
 
     @property
     def dataset_relevant_count(self):
@@ -3460,7 +3624,6 @@ class SemaCategory(SemaBaseModel):
         """
 
         return self.products.distinct().count()
-    product_count.fget.short_description = 'Product Count'
 
     @property
     def product_relevant_count(self):
@@ -3532,52 +3695,6 @@ class SemaCategory(SemaBaseModel):
     child_category_relevant_count.fget.short_description = (
         'Relevant Child Count'
     )
-    # </editor-fold>
-
-    # <editor-fold desc="relevancy properties ...">
-    @property
-    def may_be_relevant(self):
-        """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
-
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1. has relevant products
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-
-        return self.product_relevant_count > 0
-
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
-        :rtype: str
-
-        """
-
-        msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
-        if self.is_relevant:
-            if not self.dataset_relevant_count:
-                error = "no relevant dataset"
-                msgs.append(error)
-            if not self.product_relevant_count:
-                error = "no relevant products"
-                msgs.append(error)
-            if not self.level:
-                error = "invalid level"
-                msgs.append(error)
-        return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -3844,6 +3961,50 @@ class SemaBrand(SemaBaseModel):
         blank=True
     )
 
+    @property
+    def tag_name(self):
+        return f'brand:{slugify(self.name)}'
+
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. has relevant datasets
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return bool(self.dataset_relevant_count)
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.dataset_relevant_count:
+                error = "no relevant datasets"
+                msgs.append(error)
+            if not self.primary_image_url or self.primary_image_url == '':
+                error = "missing image"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def dataset_count(self):
@@ -3856,7 +4017,6 @@ class SemaBrand(SemaBaseModel):
         """
 
         return self.datasets.distinct().count()
-    dataset_count.fget.short_description = 'Dataset Count'
 
     @property
     def dataset_relevant_count(self):
@@ -3870,29 +4030,6 @@ class SemaBrand(SemaBaseModel):
 
         return self.datasets.filter(is_relevant=True).distinct().count()
     dataset_relevant_count.fget.short_description = 'Relevant Dataset Count'
-    # </editor-fold>
-
-    # <editor-fold desc="relevancy properties ...">
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
-        :rtype: str
-
-        """
-
-        msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
-        if self.is_relevant:
-            if not self.primary_image_url or self.primary_image_url == '':
-                error = "missing image"
-                msgs.append(error)
-        return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -4865,7 +5002,6 @@ class SemaDataset(SemaBaseModel):
         """
 
         return self.categories.distinct().count()
-    category_count.fget.short_description = 'Category Count'
 
     @property
     def category_relevant_count(self):
@@ -4891,7 +5027,6 @@ class SemaDataset(SemaBaseModel):
         """
 
         return self.vehicles.distinct().count()
-    vehicle_count.fget.short_description = 'Vehicle Count'
 
     @property
     def vehicle_relevant_count(self):
@@ -4917,7 +5052,6 @@ class SemaDataset(SemaBaseModel):
         """
 
         return self.products.distinct().count()
-    product_count.fget.short_description = 'Product Count'
 
     @property
     def product_relevant_count(self):
@@ -4930,52 +5064,6 @@ class SemaDataset(SemaBaseModel):
         """
         return self.products.filter(is_relevant=True).distinct().count()
     product_relevant_count.fget.short_description = 'Relevant Product Count'
-    # </editor-fold>
-
-    # <editor-fold desc="relevancy properties ...">
-    @property
-    def may_be_relevant(self):
-        """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
-
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1. brand is relevant
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-
-        return self.brand.is_relevant
-
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
-        :rtype: str
-
-        """
-
-        msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
-        if self.is_relevant:
-            if not self.brand.is_relevant:
-                error = "brand not relevant"
-                msgs.append(error)
-            if not self.vehicle_relevant_count:
-                error = "no relevant vehicles"
-                msgs.append(error)
-            if not self.category_relevant_count:
-                error = "no relevant categories"
-                msgs.append(error)
-        return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -5918,7 +6006,7 @@ class SemaDataset(SemaBaseModel):
         return state
     # </editor-fold>
 
-    # <editor-fold desc="update properties ...">
+    # <editor-fold desc="perform properties ...">
     def perform_dataset_categories_update_from_api(self, **filters):
         msgs = []
         try:
@@ -6076,6 +6164,68 @@ class SemaProduct(SemaBaseModel):
             return '<html></html>'
         return remove_head(remove_images(self.html))
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. dataset is relevant, and
+            2. has relevant vehicles (inherits dataset vehicles if none)
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        if self.vehicle_count:
+            relevant_vehicle_count = self.vehicle_relevant_count
+        else:
+            relevant_vehicle_count = self.dataset.vehicle_relevant_count
+        return self.dataset.is_relevant and relevant_vehicle_count > 0
+
+    @property
+    def relevancy_errors(self):
+        """
+        Returns a concatenation of errors based on relevancy.
+
+        :return: errors based on relevancy
+        :rtype: str
+
+        """
+
+        msgs = []
+        if self.is_relevant:
+            if not self.dataset.is_relevant:
+                error = "dataset not relevant"
+                msgs.append(error)
+            if not self.vehicle_count:
+                if not self.dataset.vehicle_relevant_count:
+                    error = "no relevant vehicles"
+                    msgs.append(error)
+            else:
+                if not self.vehicle_relevant_count:
+                    error = "no relevant vehicles"
+                    msgs.append(error)
+            if not self.html or self.html == '':
+                error = "no html"
+                msgs.append(error)
+            if not self.category_relevant_count == 3:
+                error = f"{self.category_relevant_count} categories"
+                msgs.append(error)
+            if not self.description_pies_attribute_count:
+                error = "missing description PIES"
+                msgs.append(error)
+            if not self.digital_assets_pies_attribute_count:
+                error = "missing digital assets PIES"
+                msgs.append(error)
+        return ', '.join(msgs)
+    relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def description_pies_attribute_count(self):
@@ -6118,7 +6268,6 @@ class SemaProduct(SemaBaseModel):
         """
 
         return self.categories.distinct().count()
-    category_count.fget.short_description = 'Category Count'
 
     @property
     def category_relevant_count(self):
@@ -6144,7 +6293,6 @@ class SemaProduct(SemaBaseModel):
         """
 
         return self.vehicles.distinct().count()
-    vehicle_count.fget.short_description = 'Vehicle Count'
 
     @property
     def vehicle_relevant_count(self):
@@ -6158,70 +6306,6 @@ class SemaProduct(SemaBaseModel):
 
         return self.vehicles.filter(is_relevant=True).distinct().count()
     vehicle_relevant_count.fget.short_description = 'Relevant Vehicle Count'
-    # </editor-fold>
-
-    # <editor-fold desc="relevancy properties ...">
-    @property
-    def may_be_relevant(self):
-        """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
-
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1. dataset is relevant, and
-            2. has relevant vehicles (inherits dataset vehicles if none)
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-        if self.vehicle_count:
-            relevant_vehicle_count = self.vehicle_relevant_count
-        else:
-            relevant_vehicle_count = self.dataset.vehicle_relevant_count
-        return self.dataset.is_relevant and relevant_vehicle_count > 0
-
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
-        :rtype: str
-
-        """
-
-        msgs = []
-        if super().relevancy_errors:
-            msgs.append(super().relevancy_errors)
-
-        if self.is_relevant:
-            if not self.dataset.is_relevant:
-                error = "dataset not relevant"
-                msgs.append(error)
-            if not self.vehicle_count:
-                if not self.dataset.vehicle_relevant_count:
-                    error = "no relevant vehicles"
-                    msgs.append(error)
-            else:
-                if not self.vehicle_relevant_count:
-                    error = "no relevant vehicles"
-                    msgs.append(error)
-            if not self.html or self.html == '':
-                error = "no html"
-                msgs.append(error)
-            if not self.category_relevant_count == 3:
-                error = f"{self.category_relevant_count} categories"
-                msgs.append(error)
-            if not self.description_pies_attribute_count:
-                error = "missing description PIES"
-                msgs.append(error)
-            if not self.digital_assets_pies_attribute_count:
-                error = "missing digital assets PIES"
-                msgs.append(error)
-        return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="retrieve properties ...">
@@ -6707,6 +6791,52 @@ class SemaBasePiesAttributeModel(Model, MessagesMixin):
         max_length=500
     )
 
+    # <editor-fold desc="update properties ...">
+    @property
+    def state(self):
+        """
+        Returns a dictionary of fields and values relevant to updates.
+
+        :return: current values of fields relevant to updates
+        :rtype: dict
+
+        """
+
+        return {
+            'Value': self.value
+        }
+
+    def update_from_api_data(self, **update_fields):
+        """
+        Marks object as authorized and updates any necessary fields.
+
+        :param update_fields: field/value kwargs to be updated.
+        :type update_fields: dict
+
+        :return: info, success or error message
+        :rtype: str
+
+        """
+
+        try:
+            prev = self.state
+            for attr, value in update_fields.items():
+                if isinstance(
+                        self._meta.model._meta.get_field(attr),
+                        ManyToManyField):
+                    getattr(self, attr).add(value)
+                    self.save()
+                elif not getattr(self, attr) == value:
+                    setattr(self, attr, value)
+                    self.save()
+            self.refresh_from_db()
+            new = self.state
+            msg = self.get_update_success_msg(previous_data=prev, new_data=new)
+        except Exception as err:
+            msg = self.get_instance_error_msg(f"{update_fields}, {err}")
+        return msg
+    # </editor-fold>
+
     objects = SemaBasePiesAttributeManager()
 
     class Meta:
@@ -6734,22 +6864,6 @@ class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
 
     objects = SemaDescriptionPiesAttributeManager()
 
-    # <editor-fold desc="update properties ...">
-    @property
-    def state(self):
-        """
-        Returns a dictionary of fields and values relevant to updates.
-
-        :return: current values of fields relevant to updates
-        :rtype: dict
-
-        """
-
-        return {
-            'Value': self.value
-        }
-    # </editor-fold>
-
     class Meta:
         verbose_name = 'SEMA description PIES'
         verbose_name_plural = 'SEMA description PIES'
@@ -6771,22 +6885,6 @@ class SemaDigitalAssetsPiesAttribute(SemaBasePiesAttributeModel):
     )
 
     objects = SemaDigitalAssetsPiesAttributeManager()
-
-    # <editor-fold desc="update properties ...">
-    @property
-    def state(self):
-        """
-        Returns a dictionary of fields and values relevant to updates.
-
-        :return: current values of fields relevant to updates
-        :rtype: dict
-
-        """
-
-        return {
-            'Value': self.value
-        }
-    # </editor-fold>
 
     class Meta:
         verbose_name = 'SEMA digital assets PIES'

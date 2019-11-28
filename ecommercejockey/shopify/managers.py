@@ -2,18 +2,6 @@ from django.db.models import QuerySet, Manager
 
 
 class ShopifyCollectionQuerySet(QuerySet):
-    def perform_calculated_fields_update(self):
-        msgs = []
-        for collection in self:
-            try:
-                msgs.append(collection.perform_calculated_fields_update())
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
     def perform_create_to_api(self):
         msgs = []
         for collection in self:
@@ -52,18 +40,6 @@ class ShopifyCollectionQuerySet(QuerySet):
 
 
 class ShopifyProductQuerySet(QuerySet):
-    def perform_calculated_fields_update(self):
-        msgs = []
-        for product in self:
-            try:
-                msgs.append(product.perform_calculated_fields_update())
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
     def perform_create_to_api(self):
         msgs = []
         for product in self:
@@ -102,17 +78,7 @@ class ShopifyProductQuerySet(QuerySet):
 
 
 class ShopifyVariantQuerySet(QuerySet):
-    def perform_calculated_fields_update(self):
-        msgs = []
-        for variant in self:
-            try:
-                msgs.append(variant.perform_calculated_fields_update())
-            except Exception as err:
-                msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
+    pass
 
 
 class ShopifyOptionQuerySet(QuerySet):
@@ -125,17 +91,6 @@ class ShopifyCollectionManager(Manager):
             self.model,
             using=self._db
         )
-
-    def perform_calculated_fields_update(self):
-        msgs = []
-        try:
-            return self.get_queryset().perform_calculated_fields_update()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
 
     def perform_create_to_api(self):
         msgs = []
@@ -178,17 +133,6 @@ class ShopifyProductManager(Manager):
             using=self._db
         )
 
-    def perform_calculated_fields_update(self):
-        msgs = []
-        try:
-            return self.get_queryset().perform_calculated_fields_update()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
-
     def perform_create_to_api(self):
         msgs = []
         try:
@@ -229,17 +173,6 @@ class ShopifyVariantManager(Manager):
             self.model,
             using=self._db
         )
-
-    def perform_calculated_fields_update(self):
-        msgs = []
-        try:
-            return self.get_queryset().perform_calculated_fields_update()
-        except Exception as err:
-            msgs.append(self.model.get_class_error_msg(str(err)))
-
-        if not msgs:
-            msgs.append(self.model.get_class_up_to_date_msg())
-        return msgs
 
     def create_from_api_data(self, product, data):
         try:

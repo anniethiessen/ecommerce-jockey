@@ -49,13 +49,16 @@ from .filters import (
     HasVehicle,
     SemaBaseVehicleByDecade,
     SemaBaseVehicleMayBeRelevant,
-    # SemaCategoryMayBeRelevant,
-    SemaDatasetMayBeRelevant,
+    SemaCategoryMayBeRelevant,
+    SemaBrandMayBeRelevant,
     SemaEngineByDecade,
     SemaEngineMayBeRelevant,
     SemaMakeYearByDecade,
     SemaMakeYearMayBeRelevant,
-    # SemaProductMayBeRelevant,
+    SemaModelMayBeRelevant,
+    SemaProductMayBeRelevant,
+    SemaSubmodelMayBeRelevant,
+    SemaYearMayBeRelevant,
     SemaVehicleByDecade,
     SemaVehicleMayBeRelevant
 )
@@ -110,9 +113,10 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         'dataset_count_a',
         'primary_image_preview',
         'is_authorized',
+        'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -126,6 +130,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
+        SemaBrandMayBeRelevant,
         HasPrimaryImage
     )
 
@@ -134,7 +139,9 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -153,13 +160,6 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
                     ('primary_image_url', 'primary_image_preview'),
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
@@ -169,6 +169,8 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
     readonly_fields = (
         'primary_image_preview',
+        'may_be_relevant_flag',
+        'relevancy_warnings',
         'relevancy_errors',
         'dataset_count_a'
     )
@@ -187,6 +189,13 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
             return ''
         return get_image_preview(obj.primary_image_url, width="100")
     primary_image_preview.short_description = 'primary image'
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -233,10 +242,9 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
         'vehicle_count_a',
         'product_count_a',
         'is_authorized',
-        'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -250,7 +258,6 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
-        SemaDatasetMayBeRelevant,
         'brand'
     )
 
@@ -259,8 +266,8 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
             None, {
                 'fields': (
                     'is_authorized',
-                    'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -280,13 +287,6 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
                     'brand'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
@@ -295,8 +295,8 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
-        'may_be_relevant_flag',
         'category_count_a',
         'vehicle_count_a',
         'product_count_a',
@@ -336,13 +336,6 @@ class SemaDatasetModelAdmin(ObjectActions, ModelAdmin, SemaDatasetActions):
     # product_count_a.admin_order_field = '_product_relevant_count'
     product_count_a.short_description = 'product count'
 
-    def may_be_relevant_flag(self, obj):
-        if obj.is_relevant != obj.may_be_relevant:
-            return '~'
-        else:
-            return ''
-    may_be_relevant_flag.short_description = ''
-
     # def get_queryset(self, request):  # FIXME
     #     return super().get_queryset(request).with_admin_data()
 
@@ -370,9 +363,10 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         'year',
         'make_year_count_a',
         'is_authorized',
+        'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -386,6 +380,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
+        SemaYearMayBeRelevant,
         SemaYearByDecade
     )
 
@@ -394,7 +389,9 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -405,18 +402,13 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
                     'year',
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
+        'may_be_relevant_flag',
         'make_year_count_a',
         'details_link'
     )
@@ -433,6 +425,13 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         return f'{obj._make_year_relevant_count}/{obj._make_year_count}'
     make_year_count_a.admin_order_field = '_make_year_relevant_count'
     make_year_count_a.short_description = 'make year count'
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -464,8 +463,8 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
         'make_year_count_a',
         'is_authorized',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -487,6 +486,7 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
                 'fields': (
                     'is_authorized',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -498,17 +498,11 @@ class SemaMakeModelAdmin(ObjectActions, ModelAdmin, SemaMakeActions):
                     'name'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'make_year_count_a',
         'details_link'
@@ -556,9 +550,10 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'name',
         'base_vehicle_count_a',
         'is_authorized',
+        'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -571,7 +566,8 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
 
     list_filter = (
         'is_authorized',
-        'is_relevant'
+        'is_relevant',
+        SemaModelMayBeRelevant
     )
 
     fieldsets = (
@@ -579,7 +575,9 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
             None, {
                 'fields': (
                     'is_authorized',
+                    'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -591,18 +589,13 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
                     'name'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
+        'may_be_relevant_flag',
         'base_vehicle_count_a',
         'details_link',
     )
@@ -619,6 +612,13 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         return f'{obj._base_vehicle_relevant_count}/{obj._base_vehicle_count}'
     base_vehicle_count_a.admin_order_field = '_base_vehicle_relevant_count'
     base_vehicle_count_a.short_description = 'base vehicle count'
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -649,9 +649,10 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'name',
         'vehicle_count_a',
         'is_authorized',
+        'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -664,7 +665,8 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
 
     list_filter = (
         'is_authorized',
-        'is_relevant'
+        'is_relevant',
+        SemaSubmodelMayBeRelevant
     )
 
     fieldsets = (
@@ -672,7 +674,10 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
             None, {
                 'fields': (
                     'is_authorized',
-                    'is_relevant'
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_warnings',
+                    'relevancy_errors'
                 )
             }
         ),
@@ -683,20 +688,15 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
                     'name'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'vehicle_count_a',
         'details_link',
+        'may_be_relevant_flag'
     )
 
     inlines = (
@@ -711,6 +711,13 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         return f'{obj._vehicle_relevant_count}/{obj._vehicle_count}'
     vehicle_count_a.admin_order_field = '_vehicle_relevant_count'
     vehicle_count_a.short_description = 'vehicle count'
+
+    def may_be_relevant_flag(self, obj):
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -750,8 +757,8 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -777,6 +784,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
                     'is_authorized',
                     'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -803,18 +811,12 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
                     'make'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
         'id',
+        'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
         'base_vehicle_count_a',
@@ -902,8 +904,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -930,6 +932,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
                     'is_authorized',
                     'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -956,17 +959,11 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
                     'model'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
         'vehicle_count_a',
@@ -1058,8 +1055,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -1087,6 +1084,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
                     'is_authorized',
                     'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -1113,17 +1111,11 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
                     'submodel'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',
@@ -1233,8 +1225,8 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -1270,6 +1262,7 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
                     'is_authorized',
                     'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -1306,18 +1299,12 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
                     'vehicle'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
         'id',
+        'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',
@@ -1385,8 +1372,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -1400,7 +1387,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
-        # SemaCategoryMayBeRelevant,
+        SemaCategoryMayBeRelevant,
         ByCategoryLevel
     )
 
@@ -1411,6 +1398,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
                     'is_authorized',
                     'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -1423,17 +1411,11 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
                     'level'
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'level',
         'may_be_relevant_flag',
@@ -1557,8 +1539,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'is_authorized',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -1572,7 +1554,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     list_filter = (
         'is_authorized',
         'is_relevant',
-        # SemaProductMayBeRelevant,
+        SemaProductMayBeRelevant,
         HasItem,
         ('dataset__brand', RelatedOnlyFieldListFilter),
         HasCategory,
@@ -1587,6 +1569,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                     'is_authorized',
                     'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -1594,7 +1577,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         (
             'Product', {
                 'fields': (
-                    'items_link',
+                    'item_link',
                     # 'premier_products_link',
                     # 'shopify_products_link',
                     'product_id',
@@ -1626,13 +1609,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                     'html_preview',
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
@@ -1643,6 +1619,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
         'description_pies_attribute_count_a',
@@ -1650,7 +1627,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'category_count_a',
         'vehicle_count_a',
         'details_link',
-        'items_link',
+        'item_link',
         # 'premier_products_link',
         # 'shopify_products_link',
         'dataset_link',
@@ -1670,15 +1647,11 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
-    def items_link(self, obj):
-        if not hasattr(obj, 'items'):
+    def item_link(self, obj):
+        if obj.item:
             return '-----'
-        return get_changelist_view_link(
-            obj.items.first(),
-            'See Items',
-            query=f'sema_product__product_id__exact={obj.product_id}'
-        )
-    items_link.short_description = ''
+        return get_change_view_link(obj.item, 'See Full Item')
+    item_link.short_description = ''
 
     # def premier_products_link(self, obj):  # FIXME
     #     if (not hasattr(obj, 'items')

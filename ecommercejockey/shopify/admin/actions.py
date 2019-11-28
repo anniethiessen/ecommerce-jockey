@@ -1,24 +1,72 @@
 from django.contrib import messages
 
-from core.admin.actions import BaseActions, RelevancyActions
+from core.admin.actions import BaseActions
 
 
-class ShopifyVendorActions(BaseActions):
-    pass
+class PublishedActions(BaseActions):
+    def mark_as_published_queryset_action(self, request, queryset):
+        msgs = []
+        for obj in queryset:
+            try:
+                if obj.is_published:
+                    msgs.append(
+                        obj.get_instance_up_to_date_msg(
+                            message="Already published"
+                        )
+                    )
+                else:
+                    obj.is_published = True
+                    obj.save()
+                    msgs.append(
+                        obj.get_update_success_msg(
+                            message="Updated to published"
+                        )
+                    )
+            except Exception as err:
+                msgs.append(
+                    obj.get_instance_error_msg(str(err))
+                )
+        self.display_messages(request, msgs, include_info=False)
+    mark_as_published_queryset_action.allowed_permissions = ('view',)
+    mark_as_published_queryset_action.short_description = (
+        'Mark selected %(verbose_name_plural)s as published'
+    )
+
+    def mark_as_unpublished_queryset_action(self, request, queryset):
+        msgs = []
+        for obj in queryset:
+            try:
+                if not obj.is_published:
+                    msgs.append(
+                        obj.get_instance_up_to_date_msg(
+                            message="Already NOT published"
+                        )
+                    )
+                else:
+                    obj.is_published = False
+                    obj.save()
+                    msgs.append(
+                        obj.get_update_success_msg(
+                            message="Updated to NOT published"
+                        )
+                    )
+            except Exception as err:
+                msgs.append(
+                    obj.get_instance_error_msg(str(err))
+                )
+        self.display_messages(request, msgs, include_info=False)
+    mark_as_unpublished_queryset_action.allowed_permissions = ('view',)
+    mark_as_unpublished_queryset_action.short_description = (
+        'Mark selected %(verbose_name_plural)s as NOT published'
+    )
 
 
-class ShopifyTagActions(BaseActions):
-    pass
-
-
-class ShopifyCollectionRuleActions(BaseActions):
-    pass
-
-
-class ShopifyCollectionActions(RelevancyActions):
+class CalculateActions(BaseActions):
     def update_calculated_fields_queryset_action(self, request, queryset):
+        msgs = []
         try:
-            msgs = queryset.perform_calculated_fields_update()
+            for obj in queryset:
+                msgs.append(obj.perform_calculated_fields_update())
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -40,6 +88,20 @@ class ShopifyCollectionActions(RelevancyActions):
         'WARNING: Related objects must be up-to-date.'
     )
 
+
+class ShopifyVendorActions(BaseActions):
+    pass
+
+
+class ShopifyTagActions(BaseActions):
+    pass
+
+
+class ShopifyCollectionRuleActions(BaseActions):
+    pass
+
+
+class ShopifyCollectionActions(PublishedActions, CalculateActions):
     def export_to_api_queryset_action(self, request, queryset):
         msgs = []
         try:
@@ -97,38 +159,7 @@ class ShopifyCollectionActions(RelevancyActions):
     )
 
 
-class ShopifyProductActions(RelevancyActions):
-    def update_calculated_fields_queryset_action(self, request, queryset):
-        msgs = []
-        try:
-            msgs += queryset.perform_calculated_fields_update()
-            for obj in queryset:
-                for variant in obj.variants.all():
-                    msgs.append(variant.perform_calculated_fields_update())
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_calculated_fields_queryset_action.allowed_permissions = ('view',)
-    update_calculated_fields_queryset_action.short_description = (
-        'Update calculated fields for selected %(verbose_name_plural)s'
-    )
-
-    def update_calculated_fields_object_action(self, request, obj):
-        msgs = []
-        try:
-            msgs.append(obj.perform_calculated_fields_update())
-            for variant in obj.variants.all():
-                msgs.append(variant.perform_calculated_fields_update())
-            self.display_messages(request, msgs, include_info=False)
-        except Exception as err:
-            messages.error(request, str(err))
-    update_calculated_fields_object_action.allowed_permissions = ('view',)
-    update_calculated_fields_object_action.label = "Update Calculated Fields"
-    update_calculated_fields_object_action.short_description = (
-        'Updates calculated fields. '
-        'WARNING: Related objects must be up-to-date.'
-    )
-
+class ShopifyProductActions(PublishedActions, CalculateActions):
     def export_to_api_queryset_action(self, request, queryset):
         msgs = []
         try:
@@ -199,4 +230,12 @@ class ShopifyVariantActions(BaseActions):
 
 
 class ShopifyMetafieldActions(BaseActions):
+    pass
+
+
+class ShopifyProductCalculatorActions(CalculateActions):
+    pass
+
+
+class ShopifyCollectionCalculatorActions(CalculateActions):
     pass

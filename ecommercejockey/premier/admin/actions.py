@@ -10,7 +10,7 @@ class PremierManufacturerActions(RelevancyActions):
 class PremierProductActions(RelevancyActions):
     def update_inventory_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.update_inventory_from_api()
+            msgs = queryset.perform_inventory_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -21,7 +21,7 @@ class PremierProductActions(RelevancyActions):
 
     def update_inventory_object_action(self, request, obj):
         try:
-            msg = obj.update_inventory_from_api()
+            msg = obj.perform_inventory_update_from_api()
             self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
@@ -33,7 +33,7 @@ class PremierProductActions(RelevancyActions):
 
     def update_pricing_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.update_pricing_from_api()
+            msgs = queryset.perform_pricing_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -44,7 +44,7 @@ class PremierProductActions(RelevancyActions):
 
     def update_pricing_object_action(self, request, obj):
         try:
-            msg = obj.update_pricing_from_api()
+            msg = obj.perform_pricing_update_from_api()
             self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))
@@ -56,7 +56,7 @@ class PremierProductActions(RelevancyActions):
 
     def update_primary_image_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.update_primary_image_from_media_root()
+            msgs = queryset.perform_primary_image_update_from_media_root()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -67,7 +67,7 @@ class PremierProductActions(RelevancyActions):
 
     def update_primary_image_object_action(self, request, obj):
         try:
-            msg = obj.update_primary_image_from_media_root()
+            msg = obj.perform_primary_image_update_from_media_root()
             self.display_message(request, msg)
         except Exception as err:
             messages.error(request, str(err))

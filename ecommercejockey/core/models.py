@@ -1,6 +1,7 @@
 from django.db.models import (
     Model,
     BooleanField,
+    CharField,
     TextField
 )
 
@@ -17,8 +18,13 @@ class RelevancyBaseModel(Model, MessagesMixin):
         raise Exception("May be relevant must be defined")
 
     @property
+    def relevancy_warnings(self):
+        return ''
+    relevancy_warnings.fget.short_description = 'Warnings'
+
+    @property
     def relevancy_errors(self):
-        raise Exception("Relevancy errors must be defined")
+        return ''
     relevancy_errors.fget.short_description = 'Errors'
 
     class Meta:

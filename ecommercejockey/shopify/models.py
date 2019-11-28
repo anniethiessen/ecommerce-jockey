@@ -6,6 +6,7 @@ from django.contrib.contenttypes.fields import (
     GenericRelation
 )
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import (
     Model,
     BigIntegerField,
@@ -30,6 +31,7 @@ from core.models import (
     NotesBaseModel,
     RelevancyBaseModel
 )
+from core.admin.utils import get_images_preview
 from .clients import shopify_client
 from .managers import (
     ShopifyCollectionManager,
@@ -59,7 +61,7 @@ class ShopifyTag(Model, MessagesMixin):
         return self.name
 
 
-class ShopifyCollectionRule(Model):
+class ShopifyCollectionRule(Model, MessagesMixin):
     column = CharField(
         max_length=25
     )
@@ -381,7 +383,7 @@ class ShopifyMetafield(Model, MessagesMixin):
         return f'{self.content_object} :: {self.namespace} :: {self.key}'
 
 
-class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
+class ShopifyCollection(Model, MessagesMixin):
     WEB_SCOPE = 'web'
     GLOBAL_SCOPE = 'global'
     PUBLISHED_SCOPE_CHOICES = [
@@ -488,58 +490,19 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         return self.tags.count()
     # </editor-fold>
 
-    # <editor-fold desc="relevancy properties ...">
+    # <editor-fold desc="error properties ...">
     @property
-    def may_be_relevant(self):
+    def errors(self):
         """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
+        Returns a concatenation of errors.
 
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1.
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-
-        return True
-
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
+        :return: errors
         :rtype: str
 
         """
 
         msgs = []
-
-        if self.is_relevant:
-            # if not self.dataset.is_relevant:
-            #     error = "dataset not relevant"
-            #     msgs.append(error)
-            # if not self.vehicle_relevant_count:
-            #     error = "no relevant vehicles"
-            #     msgs.append(error)
-            # if not self.html or self.html == '':
-            #     error = "no html"
-            #     msgs.append(error)
-            # if not self.category_relevant_count == 3:
-            #     error = f"{self.category_relevant_count} categories"
-            #     msgs.append(error)
-            # if not self.description_pies_attribute_count:
-            #     error = "missing description PIES"
-            #     msgs.append(error)
-            # if not self.digital_assets_pies_attribute_count:
-            #     error = "missing digital assets PIES"
-            #     msgs.append(error)
-            pass
         return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="format properties ...">
@@ -851,27 +814,7 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
 
     # <editor-fold desc="perform properties ...">
     def perform_calculated_fields_update(self):
-        try:
-            if self.calculator.title_:
-                self.title = self.calculator.title_
-            for tag_name in self.calculator.tags_:
-                tag, _ = ShopifyTag.objects.get_or_create(name=tag_name)
-                self.tags.add(tag)
-            self.save()
-            for metafield_data in self.calculator.metafields_:
-                defaults = {
-                    'value': metafield_data.pop('value'),
-                    'value_type': metafield_data.pop('value_type')
-                }
-                metafield, _ = ShopifyMetafield.objects.update_or_create(
-                    object_id=self.pk,
-                    content_type=ContentType.objects.get_for_model(self),
-                    **metafield_data,
-                    defaults=defaults
-                )
-            return self.get_update_success_msg()
-        except Exception as err:
-            return self.get_instance_error_msg(str(err))
+        return self.calculator.perform_calculated_fields_update()
 
     def perform_create_to_api(self):
         msgs = []
@@ -961,7 +904,7 @@ class ShopifyCollection(RelevancyBaseModel, NotesBaseModel):
         return self.title
 
 
-class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
+class ShopifyProduct(Model, MessagesMixin):
     APPAREL_TYPE = 'Apparel'
     AUTOMOTIVE_TYPE = 'Automotive Parts'
     PRODUCT_TYPE_CHOICES = [
@@ -1027,30 +970,13 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
         related_query_name='product'
     )
 
-    # <editor-fold desc="relevancy properties ...">
+    # <editor-fold desc="error properties ...">
     @property
-    def may_be_relevant(self):
+    def errors(self):
         """
-        Returns whether or not object may be relevant based on
-        attributes and related attributes.
+        Returns a concatenation of errors.
 
-        .. Topic:: **-May Be Relevant Conditions-**
-
-            1. No relevancy errors
-
-        :return: whether or not object may be relevant
-        :rtype: bool
-
-        """
-
-        return bool(not self.relevancy_errors)
-
-    @property
-    def relevancy_errors(self):
-        """
-        Returns a concatenation of errors based on relevancy.
-
-        :return: errors based on relevancy
+        :return: errors
         :rtype: str
 
         """
@@ -1094,7 +1020,6 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
             error = "first variant missing barcode"
             msgs.append(error)
         return ', '.join(msgs)
-    relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
     # <editor-fold desc="format properties ...">
@@ -1392,34 +1317,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
 
     # <editor-fold desc="perform properties ...">
     def perform_calculated_fields_update(self):
-        try:
-            if self.calculator.title_:
-                self.title = self.calculator.title_
-            if self.calculator.body_html_:
-                self.body_html = self.calculator.body_html_
-            for tag_name in self.calculator.tags_:
-                tag, _ = ShopifyTag.objects.get_or_create(name=tag_name)
-                self.tags.add(tag)
-            self.save()
-            for image_src in self.calculator.images_:
-                image, _ = ShopifyImage.objects.get_or_create(
-                    product=self,
-                    src=image_src
-                )
-            for metafield_data in self.calculator.metafields_:
-                defaults = {
-                    'value': metafield_data.pop('value'),
-                    'value_type': metafield_data.pop('value_type')
-                }
-                metafield, _ = ShopifyMetafield.objects.update_or_create(
-                    object_id=self.pk,
-                    content_type=ContentType.objects.get_for_model(self),
-                    **metafield_data,
-                    defaults=defaults
-                )
-            return self.get_update_success_msg()
-        except Exception as err:
-            return self.get_instance_error_msg(str(err))
+        return self.calculator.perform_calculated_fields_update()
 
     def perform_create_to_api(self):
         msgs = []
@@ -1514,7 +1412,7 @@ class ShopifyProduct(RelevancyBaseModel, NotesBaseModel):
         return ' :: '.join(s)
 
 
-class ShopifyImage(Model):
+class ShopifyImage(Model, MessagesMixin):
     product = ForeignKey(
         ShopifyProduct,
         related_name='images',
@@ -2044,27 +1942,6 @@ class ShopifyVariant(Model, MessagesMixin):
         return msgs
     # </editor-fold>
 
-    # <editor-fold desc="perform properties ...">
-    def perform_calculated_fields_update(self):
-        try:
-            if self.product.calculator.weight_:
-                self.weight = self.product.calculator.weight_
-            if self.product.calculator.weight_unit_:
-                self.weight_unit = self.product.calculator.weight_unit_
-            if self.product.calculator.cost_:
-                self.cost = self.product.calculator.cost_
-            if self.product.calculator.price_:
-                self.price = self.product.calculator.price_
-            if self.product.calculator.sku_:
-                self.sku = self.product.calculator.sku_
-            if self.product.calculator.barcode_:
-                self.barcode = self.product.calculator.barcode_
-            self.save()
-            return self.get_update_success_msg()
-        except Exception as err:
-            return self.get_instance_error_msg(str(err))
-    # </editor-fold>
-
     objects = ShopifyVariantManager()
 
     def __str__(self):
@@ -2074,21 +1951,178 @@ class ShopifyVariant(Model, MessagesMixin):
         return s
 
 
-class ShopifyProductCalculator(Model):
+class ShopifyProductCalculator(Model, MessagesMixin):
+    CUSTOM_VALUE = 'custom_value'
+
     product = OneToOneField(
         ShopifyProduct,
         related_name='calculator',
         on_delete=CASCADE
     )
+    title_option = CharField(
+        choices=(
+            ('sema_description_def_value', 'SEMA Definition'),
+            ('sema_description_des_value', 'SEMA Description'),
+            ('sema_description_inv_value', 'SEMA Invoice'),
+            ('sema_description_ext_value', 'SEMA Extended'),
+            ('sema_description_tle_value', 'SEMA Title'),
+            ('sema_description_sho_value', 'SEMA Short'),
+            ('sema_description_asc_value', 'SEMA ASC'),
+            ('sema_description_mkt_value', 'SEMA Marketing'),
+            ('premier_description_value', 'Premier Description'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_description_sho_value',
+        max_length=50
+    )
+    body_html_option = CharField(
+        choices=(
+            ('sema_description_def_value', 'SEMA Definition'),
+            ('sema_description_des_value', 'SEMA Description'),
+            ('sema_description_inv_value', 'SEMA Invoice'),
+            ('sema_description_ext_value', 'SEMA Extended'),
+            ('sema_description_tle_value', 'SEMA Title'),
+            ('sema_description_sho_value', 'SEMA Short'),
+            ('sema_description_asc_value', 'SEMA ASC'),
+            ('sema_description_mkt_value', 'SEMA Marketing'),
+            ('premier_description_value', 'Premier Description'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_description_ext_value',
+        max_length=50
+    )
+    variant_weight_option = CharField(
+        choices=(
+            ('premier_weight_value', 'Premier Weight'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='premier_weight_value',
+        max_length=50
+    )
+    variant_weight_unit_option = CharField(
+        choices=(
+            (ShopifyVariant.G_UNIT, ShopifyVariant.G_UNIT),
+            (ShopifyVariant.KG_UNIT, ShopifyVariant.KG_UNIT),
+            (ShopifyVariant.OZ_UNIT, ShopifyVariant.OZ_UNIT),
+            (ShopifyVariant.LB_UNIT, ShopifyVariant.LB_UNIT)
+        ),
+        default=ShopifyVariant.LB_UNIT,
+        max_length=5
+    )
+    variant_cost_option = CharField(
+        choices=(
+            ('premier_cost_cad_value', 'Premier Cost CAD'),
+            ('premier_cost_usd_value', 'Premier Cost USD'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='premier_cost_cad_value',
+        max_length=50
+    )
+    variant_price_base_option = CharField(
+        choices=(
+            ('premier_cost_cad_value', 'Premier Cost CAD'),
+            ('premier_cost_usd_value', 'Premier Cost USD'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='premier_cost_cad_value',
+        max_length=50
+    )
+    variant_price_markup_option = CharField(
+        choices=(
+            ('0.00', '0%'),
+            ('0.05', '5%'),
+            ('0.10', '10%'),
+            ('0.15', '15%'),
+            ('0.20', '20%'),
+            ('0.25', '25%'),
+            ('0.30', '30%'),
+            ('0.35', '35%'),
+            ('0.40', '40%'),
+        ),
+        default='0.20',
+        max_length=5
+    )
+    variant_sku_option = CharField(
+        choices=(
+            ('premier_premier_part_number_value', 'Premier Part Number'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='premier_premier_part_number_value',
+        max_length=50
+    )
+    variant_barcode_option = CharField(
+        choices=(
+            ('premier_upc_value', 'Premier UPC'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='premier_upc_value',
+        max_length=50
+    )
+    metafields_packaging_option = CharField(
+        choices=(
+            ('sema_html_packaging_value', 'SEMA HTML'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_html_packaging_value',
+        max_length=50
+    )
+    metafields_fitments_option = CharField(
+        choices=(
+            ('sema_vehicle_fitments_value', 'SEMA Vehicles'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_vehicle_fitments_value',
+        max_length=50
+    )
+    tags_vendor_option = CharField(
+        choices=(
+            ('sema_brand_tags_value', 'SEMA Brand'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_brand_tag_value',
+        max_length=50
+    )
+    tags_categories_option = CharField(
+        choices=(
+            ('sema_category_tags_value', 'SEMA Categories'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_category_tags_value',
+        max_length=50
+    )
+    images_option = CharField(
+        choices=(
+            ('all_images_value', 'All Images'),
+            ('sema_images_value', 'SEMA Images'),
+            ('premier_images_value', 'Premier Images'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_images_value',
+        max_length=50
+    )
 
-    # <editor-fold desc="update logic properties ...">
+    # <editor-fold desc="internal properties ...">
     @property
-    def __has_sema_product(self):
-        return bool(self.product.item and self.product.item.sema_product)
+    def shopify_product(self):
+        return self.product
+
+    @property
+    def shopify_variant(self):
+        return self.product.variants.first()
 
     @property
     def __has_premier_product(self):
-        return bool(self.product.item and self.product.item.premier_product)
+        return bool(
+            self.product.item
+            and self.product.item.premier_product
+        )
+
+    @property
+    def __has_sema_product(self):
+        return bool(
+            self.product.item
+            and self.product.item.sema_product
+        )
 
     @property
     def sema_product(self):
@@ -2103,248 +2137,1039 @@ class ShopifyProductCalculator(Model):
             self.product.item.premier_product
             if self.__has_premier_product else None
         )
+    # </editor-fold>
+
+    # <editor-fold desc="value properties ...">
+    @property
+    def custom_value(self):
+        return None
 
     @property
-    def title_(self):
-        if (self.__has_sema_product
-                and self.sema_product.description_pies_attributes.filter(
-                    segment='C10_SHO_EN').exists()):
-            return self.sema_product.description_pies_attributes.get(
-                segment='C10_SHO_EN').value
-        return ''
-    title_.fget.short_description = ''
+    def premier_description_value(self):
+        attr = 'description'
+
+        if not self.premier_product:
+            return
+
+        description = getattr(self.premier_product, attr)
+        if not description:
+            return None
+
+        return description.strip()
 
     @property
-    def body_html_(self):
-        if (self.__has_sema_product
-                and self.sema_product.description_pies_attributes.filter(
-                    segment='C10_EXT_EN').exists()):
-            return self.sema_product.description_pies_attributes.get(
-                segment='C10_EXT_EN').value
-        return ''
-    body_html_.fget.short_description = ''
+    def premier_weight_value(self):
+        attr = 'weight'
+
+        if not self.premier_product:
+            return None
+
+        weight = getattr(self.premier_product, attr)
+        if not weight:
+            return None
+
+        return round(weight, 2)
 
     @property
-    def metafields_(self):
-        metafields = []
-        if self.__has_sema_product and self.sema_product.html:
-            metafields.append(
+    def premier_cost_cad_value(self):
+        attr = 'cost_cad'
+
+        if not self.premier_product:
+            return None
+
+        cost_cad = getattr(self.premier_product, attr)
+        if not cost_cad:
+            return None
+
+        return round(cost_cad, 2)
+
+    @property
+    def premier_cost_usd_value(self):
+        attr = 'cost_usd'
+
+        if not self.premier_product:
+            return None
+
+        cost_usd = getattr(self.premier_product, attr)
+        if not cost_usd:
+            return None
+
+        return round(cost_usd, 2)
+
+    @property
+    def premier_premier_part_number_value(self):
+        attr = 'premier_part_number'
+
+        if not self.premier_product:
+            return None
+
+        premier_part_number = getattr(self.premier_product, attr)
+        if not premier_part_number:
+            return None
+
+        return premier_part_number.strip()
+
+    @property
+    def premier_upc_value(self):
+        attr = 'upc'
+
+        if not self.premier_product:
+            return None
+
+        upc = getattr(self.premier_product, attr)
+        if not upc:
+            return None
+
+        return upc.strip()
+
+    @property
+    def premier_images_value(self):
+        attr = 'primary_image'
+
+        if not self.premier_product:
+            return None
+
+        primary_image = getattr(self.premier_product, attr)
+        if not primary_image:
+            return None
+
+        return [primary_image.url]
+
+    @property
+    def sema_description_def_value(self):
+        segment = 'C10_DEF_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_description_des_value(self):
+        segment = 'C10_DES_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_description_inv_value(self):
+        segment = 'C10_INV_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_description_ext_value(self):
+        segment = 'C10_EXT_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_description_tle_value(self):
+        segment = 'C10_TLE_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_description_sho_value(self):
+        segment = 'C10_SHO_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_description_asc_value(self):
+        segment = 'C10_ASC_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_description_mkt_value(self):
+        segment = 'C10_MKT_EN'
+
+        if not self.sema_product:
+            return None
+
+        try:
+            pies_attr = self.sema_product.description_pies_attributes.get(
+                segment=segment
+            )
+        except ObjectDoesNotExist:
+            return None
+
+        return pies_attr.value.strip()
+
+    @property
+    def sema_html_packaging_value(self):
+        attr = 'clean_html'
+
+        if not self.sema_product:
+            return None
+
+        html = getattr(self.sema_product, attr)
+        if not html:
+            return None
+
+        return html.strip()
+
+    @property
+    def sema_vehicle_fitments_value(self):
+        if not self.sema_product:
+            return None
+
+        vehicles = self.sema_product.vehicles.filter(
+            is_relevant=True
+        ).order_by('make', 'model', 'submodel', 'year')
+
+        if not vehicles:
+            return None
+
+        fitments = []
+        for vehicle in vehicles:
+            fitments.append(
                 {
-                    'namespace': 'sema',
-                    'key': 'html',
-                    'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
-                    'value': self.sema_product.clean_html,
-                    'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+                    'year': vehicle.base_vehicle.make_year.year.year,
+                    'make': vehicle.base_vehicle.make_year.make.name,
+                    'model': vehicle.base_vehicle.model.name,
+                    'submodel': vehicle.submodel.name
                 }
             )
-        return metafields
-    metafields_.fget.short_description = ''
+        return fitments
 
     @property
-    def vendor_tags_(self):
-        tags = []
-        if self.product.vendor:
-            tags.append(f'vendor:{self.product.vendor.vendor.slug}')
+    def sema_brand_tags_value(self):
+        if not self.sema_product:
+            return None
+
+        brand = self.sema_product.dataset.brand
+        if not brand.is_relevant:
+            return None
+
+        return [brand.tag_name]
+
+    @property
+    def sema_category_tags_value(self):
+        if not self.sema_product:
+            return None
+
+        categories = self.sema_product.categories.filter(is_relevant=True)
+        if not categories:
+            return None
+
+        tags = [category.tag_name for category in categories]
+        tags.sort()
         return tags
-    vendor_tags_.fget.short_description = ''
 
     @property
-    def category_tags_(self):
-        tags = []
-        if (self.__has_sema_product
-                and self.sema_product.categories.filter(
-                    is_relevant=True).exists()):
-            categories = self.sema_product.categories.filter(
-                is_relevant=True
-            )
-            for category in categories:
-                tags.append(category.tag_name)
-        return tags
-    category_tags_.fget.short_description = ''
+    def sema_images_value(self):
+        if not self.sema_product:
+            return None
 
-    @property
-    def base_vehicle_tags_(self):
-        tags = []
-        if self.__has_sema_product:
-            if self.sema_product.vehicle_count:
-                vehicles = self.sema_product.vehicles.filter(
-                    is_relevant=True
-                )
-            else:
-                vehicles = self.sema_product.dataset.vehicles.filter(
-                    is_relevant=True
-                )
-            base_vehicles = [vehicle.base_vehicle_id for vehicle in vehicles]
-            base_vehicles = list(dict.fromkeys(base_vehicles))
-            for base_vehicle in base_vehicles:
-                tags.append(f'base-vehicle:{base_vehicle}')
-        return tags
-    base_vehicle_tags_.fget.short_description = ''
-
-    @property
-    def tags_(self):
-        return (
-            self.vendor_tags_
-            + self.category_tags_
-            + self.base_vehicle_tags_
+        pies_attrs = self.sema_product.digital_assets_pies_attributes.exclude(
+            Q(value__endswith='.pdf')
+            | Q(value__contains='logo')
         )
-    tags_.fget.short_description = ''
+        if not pies_attrs:
+            return None
 
-    @property
-    def seo_title_(self):
-        return ''
-    seo_title_.fget.short_description = ''
-
-    @property
-    def seo_description_(self):
-        return ''
-    seo_description_.fget.short_description = ''
-
-    @property
-    def weight_(self):
-        if self.__has_premier_product and self.premier_product.weight:
-            return round(self.premier_product.weight, 2)
-        return ''
-    weight_.fget.short_description = ''
-
-    @property
-    def weight_unit_(self):
-        if self.__has_premier_product and self.premier_product.weight:
-            return ShopifyVariant.LB_UNIT
-        return ''
-    weight_unit_.fget.short_description = ''
-
-    @property
-    def cost_(self):
-        if self.__has_premier_product and self.premier_product.cost_cad:
-            return self.premier_product.cost_cad
-        return ''
-    cost_.fget.short_description = ''
-
-    @property
-    def price_(self):
-        if self.cost_:
-            return round(self.cost_ * Decimal(1.2), 2)
-        return ''
-    price_.fget.short_description = ''
-
-    @property
-    def sku_(self):
-        if self.__has_premier_product:
-            return self.premier_product.premier_part_number
-        return ''
-    sku_.fget.short_description = ''
-
-    @property
-    def barcode_(self):
-        if self.__has_premier_product and self.premier_product.upc:
-            return self.premier_product.upc.strip()
-        return ''
-    barcode_.fget.short_description = ''
-
-    @property
-    def images_(self):
-        images = []
-        if self.__has_sema_product:
-            values = self.sema_product.digital_assets_pies_attributes.exclude(
-                Q(value__endswith='.pdf')
-                | Q(value__contains='logo')
-            ).values_list('value', flat=True)
-            images += list(values)
+        images = [pies_attr.value for pies_attr in pies_attrs]
+        images.sort()
         return images
-    images_.fget.short_description = ''
+
+    def all_images_value(self):
+        images = []
+        if self.premier_images_value:
+            images += self.premier_images_value
+        if self.sema_images_value:
+            images += self.sema_images_value
+
+        images.sort()
+        return images
+    # </editor-fold>
+
+    # <editor-fold desc="preview properties ...">
+    @property
+    def premier_description_preview(self):
+        return self.premier_description_value
+    premier_description_preview.fget.short_description = 'Premier Description'
+
+    @property
+    def premier_weight_preview(self):
+        return self.premier_weight_value
+    premier_weight_preview.fget.short_description = 'Premier Weight'
+
+    @property
+    def premier_cost_cad_preview(self):
+        return self.premier_cost_cad_value
+    premier_cost_cad_preview.fget.short_description = 'Premier Cost CAD'
+
+    @property
+    def premier_cost_usd_preview(self):
+        return self.premier_cost_usd_value
+    premier_cost_usd_preview.fget.short_description = 'Premier Cost USD'
+
+    @property
+    def premier_premier_part_number_preview(self):
+        return self.premier_premier_part_number_value
+    premier_premier_part_number_preview.fget.short_description = 'Premier Part Number'
+
+    @property
+    def premier_upc_preview(self):
+        return self.premier_upc_value
+    premier_upc_preview.fget.short_description = 'Premier UPC'
+
+    @property
+    def premier_images_preview(self):
+        if not self.premier_images_value:
+            return None
+
+        return get_images_preview(self.premier_images_value, width="100")
+    premier_images_preview.fget.short_description = 'Premier Images'
+
+    @property
+    def sema_description_def_preview(self):
+        return self.sema_description_def_value
+    sema_description_def_preview.fget.short_description = 'SEMA Definition'
+
+    @property
+    def sema_description_des_preview(self):
+        return self.sema_description_des_value
+    sema_description_des_preview.fget.short_description = 'SEMA Description'
+
+    @property
+    def sema_description_inv_preview(self):
+        return self.sema_description_inv_value
+    sema_description_inv_preview.fget.short_description = 'SEMA Invoice'
+
+    @property
+    def sema_description_ext_preview(self):
+        return self.sema_description_ext_value
+    sema_description_ext_preview.fget.short_description = 'SEMA Extended'
+
+    @property
+    def sema_description_tle_preview(self):
+        return self.sema_description_tle_value
+    sema_description_tle_preview.fget.short_description = 'SEMA Title'
+
+    @property
+    def sema_description_sho_preview(self):
+        return self.sema_description_sho_value
+    sema_description_sho_preview.fget.short_description = 'SEMA Short'
+
+    @property
+    def sema_description_asc_preview(self):
+        return self.sema_description_asc_value
+    sema_description_asc_preview.fget.short_description = 'SEMA ASC'
+
+    @property
+    def sema_description_mkt_preview(self):
+        return self.sema_description_mkt_value
+    sema_description_mkt_preview.fget.short_description = 'SEMA Marketing'
+
+    @property
+    def sema_html_packaging_preview(self):
+        return self.sema_html_packaging_value[:10] + ' ...'
+    sema_html_packaging_preview.fget.short_description = 'SEMA HTML'
+
+    @property
+    def sema_vehicle_fitments_preview(self):
+        return len(self.sema_vehicle_fitments_value)
+    sema_vehicle_fitments_preview.fget.short_description = 'SEMA Vehicles'
+
+    @property
+    def sema_brand_tags_preview(self):
+        if not self.sema_brand_tags_value:
+            return None
+
+        return str(self.sema_brand_tags_value)
+    sema_brand_tags_preview.fget.short_description = 'SEMA Brand'
+
+    @property
+    def sema_category_tags_preview(self):
+        if not self.sema_category_tags_value:
+            return None
+
+        return str(self.sema_category_tags_value)
+    sema_category_tags_preview.fget.short_description = 'SEMA Categories'
+
+    @property
+    def sema_images_preview(self):
+        if not self.sema_images_value:
+            return None
+
+        return get_images_preview(self.sema_images_value, width="100")
+    sema_images_preview.fget.short_description = 'SEMA Images'
+    # </editor-fold>
+
+    # <editor-fold desc="result properties ...">
+    @property
+    def title_result(self):
+        return getattr(self, self.title_option)
+    title_result.fget.short_description = ''
+
+    @property
+    def body_html_result(self):
+        return getattr(self, self.body_html_option)
+    body_html_result.fget.short_description = ''
+
+    @property
+    def variant_weight_result(self):
+        return getattr(self, self.variant_weight_option)
+    variant_weight_result.fget.short_description = ''
+
+    @property
+    def variant_weight_unit_result(self):
+        return self.variant_weight_unit_option
+    variant_weight_unit_result.fget.short_description = ''
+
+    @property
+    def variant_cost_result(self):
+        return getattr(self, self.variant_cost_option)
+    variant_cost_result.fget.short_description = ''
+
+    @property
+    def variant_price_base_result(self):
+        return getattr(self, self.variant_price_base_option)
+    variant_price_base_result.fget.short_description = ''
+
+    @property
+    def variant_price_markup_result(self):
+        return Decimal(self.variant_price_markup_option)
+    variant_price_markup_result.fget.short_description = ''
+
+    @property
+    def variant_price_result(self):
+        price_base = self.variant_price_base_result
+        price_markup = self.variant_price_markup_result
+        if not price_base:
+            return None
+
+        return round(price_base + (price_base * price_markup), 2)
+    variant_price_result.fget.short_description = ''
+
+    @property
+    def variant_sku_result(self):
+        return getattr(self, self.variant_sku_option)
+    variant_sku_result.fget.short_description = ''
+
+    @property
+    def variant_barcode_result(self):
+        return getattr(self, self.variant_barcode_option)
+    variant_barcode_result.fget.short_description = ''
+
+    @property
+    def metafields_packaging_result(self):
+        value = getattr(self, self.metafields_packaging_option)
+        if not value:
+            return None
+
+        return {
+            'namespace': 'additional',
+            'key': 'packaging',
+            'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
+            'value': value,
+            'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+        }
+    metafields_packaging_result.fget.short_description = ''
+
+    @property
+    def metafields_fitments_result(self):
+        fitments = getattr(self, self.metafields_fitments_option)
+        if not fitments:
+            return None
+
+        return {
+            'namespace': 'additional',
+            'key': 'fitments',
+            'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
+            'value': json.dumps(fitments),
+            'value_type': ShopifyMetafield.JSON_VALUE_TYPE
+        }
+    metafields_fitments_result.fget.short_description = ''
+
+    @property
+    def metafields_result(self):
+        metafields = []
+        if self.metafields_packaging_result:
+            metafields.append(self.metafields_packaging_result)
+        if self.metafields_fitments_result:
+            metafields.append(self.metafields_fitments_result)
+
+        metafields = sorted(metafields, key=lambda k: k['key'])
+        return metafields
+    metafields_result.fget.short_description = ''
+
+    @property
+    def tags_vendor_result(self):
+        tag_names = getattr(self, self.tags_vendor_option)
+        if not tag_names:
+            return None
+
+        tags = [
+            {'name': tag_name}
+            for tag_name in tag_names
+        ]
+        tags = sorted(tags, key=lambda k: k['name'])
+        return tags
+    tags_vendor_result.fget.short_description = ''
+
+    @property
+    def tags_categories_result(self):
+        tag_names = getattr(self, self.tags_categories_option)
+        if not tag_names:
+            return None
+
+        tags = [
+            {'name': tag_name}
+            for tag_name in tag_names
+        ]
+        tags = sorted(tags, key=lambda k: k['name'])
+        return tags
+    tags_categories_result.fget.short_description = ''
+
+    @property
+    def tags_result(self):
+        tags = []
+        if self.tags_vendor_result:
+            tags += self.tags_vendor_result
+        if self.tags_categories_result:
+            tags += self.tags_categories_result
+
+        tags = sorted(tags, key=lambda k: k['name'])
+        return tags
+    tags_result.fget.short_description = ''
+
+    @property
+    def images_result(self):
+        image_urls = getattr(self, self.images_option)
+        if not image_urls:
+            return None
+
+        images = [
+            {'src': image_url}
+            for image_url in image_urls
+        ]
+        images = sorted(images, key=lambda k: k['src'])
+        return images
+    images_result.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="match properties ...">
+    def title_match(self):
+        if not self.title_result:
+            return None
+
+        return bool(self.shopify_product.title == self.title_result)
+    title_match.boolean = True
+    title_match.short_description = 'Title Match'
+
+    def body_html_match(self):
+        if not self.body_html_result:
+            return None
+
+        return bool(self.shopify_product.body_html == self.body_html_result)
+    body_html_match.boolean = True
+    body_html_match.short_description = 'Body HTML Match'
+
+    def variant_weight_match(self):
+        if not self.variant_weight_result:
+            return None
+
+        return bool(self.shopify_variant.weight == self.variant_weight_result)
+    variant_weight_match.boolean = True
+    variant_weight_match.short_description = 'Weight Match'
+
+    def variant_weight_unit_match(self):
+        return bool(
+            self.shopify_variant.weight_unit
+            == self.variant_weight_unit_result
+        )
+    variant_weight_unit_match.boolean = True
+    variant_weight_unit_match.short_description = 'Weight Unit Match'
+
+    def variant_cost_match(self):
+        if not self.variant_cost_result:
+            return None
+
+        return bool(self.shopify_variant.cost == self.variant_cost_result)
+    variant_cost_match.boolean = True
+    variant_cost_match.short_description = 'Cost Match'
+
+    def variant_price_match(self):
+        if not self.variant_price_result:
+            return None
+
+        return bool(self.shopify_variant.price == self.variant_price_result)
+    variant_price_match.boolean = True
+    variant_price_match.short_description = 'Price Match'
+
+    def variant_sku_match(self):
+        if not self.variant_sku_result:
+            return None
+
+        return bool(self.shopify_variant.sku == self.variant_sku_result)
+    variant_sku_match.boolean = True
+    variant_sku_match.short_description = 'SKU Match'
+
+    def variant_barcode_match(self):
+        if not self.variant_barcode_result:
+            return None
+
+        return bool(
+            self.shopify_variant.barcode
+            == self.variant_barcode_result
+        )
+    variant_barcode_match.boolean = True
+    variant_barcode_match.short_description = 'Barcode Match'
+
+    def metafields_match(self):
+        if not self.metafields_result:
+            return None
+
+        metafields = [
+            {
+                'namespace': metafield.namespace,
+                'key': metafield.key,
+                'owner_resource': metafield.owner_resource,
+                'value': metafield.value,
+                'value_type': metafield.value_type
+            }
+            for metafield in self.shopify_product.metafields.all()
+        ]
+        metafields = sorted(metafields, key=lambda k: k['key'])
+        return bool(metafields == self.metafields_result)
+    metafields_match.boolean = True
+    metafields_match.short_description = 'Metafields Match'
+
+    def tags_match(self):
+        if not self.tags_result:
+            return None
+
+        tags = [
+            {'name': tag.name}
+            for tag in self.shopify_product.tags.all()
+        ]
+        tags = sorted(tags, key=lambda k: k['name'])
+        return bool(tags == self.tags_result)
+    tags_match.boolean = True
+    tags_match.short_description = 'Tags Match'
+
+    def images_match(self):
+        if not self.images_result:
+            return None
+
+        images = [
+            {'src': image.scr}
+            for image in self.shopify_product.images.all()
+        ]
+        images = sorted(images, key=lambda k: k['src'])
+        return bool(images == self.images_result)
+    images_match.boolean = True
+    images_match.short_description = 'Images Match'
+
+    def full_match(self):
+        return ~bool(
+            self.title_match is False
+            or self.body_html_match is False
+            or self.variant_weight_match is False
+            or self.variant_weight_unit_match is False
+            or self.variant_cost_match is False
+            or self.variant_price_match is False
+            or self.variant_sku_match is False
+            or self.variant_barcode_match is False
+            or self.metafields_match is False
+            or self.tags_match is False
+            or self.images_match is False
+        )
+    full_match.boolean = True
+    full_match.short_description = 'Calculator Match'
+    # </editor-fold>
+
+    # <editor-fold desc="difference properties ...">
+    @property
+    def title_difference(self):
+        if self.title_match is not False:
+            return ''
+
+        return f'{self.shopify_product.title} -> {self.title_result}'
+    title_difference.fget.short_description = ''
+
+    @property
+    def body_html_difference(self):
+        if self.body_html_match is not False:
+            return ''
+
+        return f'{self.shopify_product.body_html} -> {self.body_html_result}'
+    body_html_difference.fget.short_description = ''
+
+    @property
+    def variant_weight_difference(self):
+        if self.variant_weight_match is not False:
+            return ''
+
+        return f'{self.shopify_variant.weight} -> {self.variant_weight_result}'
+    variant_weight_difference.fget.short_description = ''
+
+    @property
+    def variant_weight_unit_difference(self):
+        if self.variant_weight_unit_match is not False:
+            return ''
+
+        return f'{self.shopify_variant.weight_unit} -> {self.variant_weight_unit_result}'
+    variant_weight_unit_difference.fget.short_description = ''
+
+    @property
+    def variant_cost_difference(self):
+        if self.variant_cost_match is not False:
+            return ''
+
+        return f'{self.shopify_variant.cost} -> {self.variant_cost_result}'
+    variant_cost_difference.fget.short_description = ''
+
+    @property
+    def variant_price_difference(self):
+        if self.variant_price_match is not False:
+            return ''
+
+        return f'{self.shopify_variant.price} -> {self.variant_price_result}'
+    variant_price_difference.fget.short_description = ''
+
+    @property
+    def variant_sku_difference(self):
+        if self.variant_sku_match is not False:
+            return ''
+
+        return f'{self.shopify_variant.sku} -> {self.variant_sku_result}'
+    variant_sku_difference.fget.short_description = ''
+
+    @property
+    def variant_barcode_difference(self):
+        if self.variant_barcode_match is not False:
+            return ''
+
+        return f'{self.shopify_variant.barcode} -> {self.variant_barcode_result}'
+    variant_barcode_difference.fget.short_description = ''
+
+    @property
+    def metafields_difference(self):
+        if self.metafields_match is not False:
+            return ''
+
+        return (
+            f'{self.shopify_product.metafields.count()} '
+            f'-> {len(self.metafields_result)}'
+        )
+    metafields_difference.fget.short_description = ''
+
+    @property
+    def tags_difference(self):
+        if self.tags_match is not False:
+            return ''
+
+        return (
+            f'{self.shopify_product.tags.count()} '
+            f'-> {len(self.tags_result)}'
+        )
+    tags_difference.fget.short_description = ''
+
+    @property
+    def images_difference(self):
+        if self.images_match is not False:
+            return ''
+
+        return (
+            f'{self.shopify_product.images.count()} '
+            f'-> {len(self.images_result)}'
+        )
+    images_difference.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_calculated_fields_update(self):
+        try:
+            if self.title_match() is False:
+                self.shopify_product.title = self.title_result
+                self.shopify_product.save()
+
+            if self.body_html_match() is False:
+                self.shopify_product.body_html = self.body_html_result
+                self.shopify_product.save()
+
+            if self.variant_weight_match() is False:
+                self.shopify_variant.weight = self.variant_weight_result
+                self.shopify_variant.save()
+
+            if self.variant_weight_unit_match() is False:
+                self.shopify_variant.weight_unit = self.variant_weight_unit_result
+                self.shopify_variant.save()
+
+            if self.variant_cost_match() is False:
+                self.shopify_variant.cost = self.variant_cost_result
+                self.shopify_variant.save()
+
+            if self.variant_price_match() is False:
+                self.shopify_variant.price = self.variant_price_result
+                self.shopify_variant.save()
+
+            if self.variant_sku_match() is False:
+                self.shopify_variant.sku = self.variant_sku_result
+                self.shopify_variant.save()
+
+            if self.variant_barcode_match() is False:
+                self.shopify_variant.barcode = self.variant_barcode_result
+                self.shopify_variant.save()
+
+            if self.metafields_match() is False:
+                for metafield_data in self.metafields_result:
+                    defaults = {
+                        'value': metafield_data.pop('value'),
+                        'value_type': metafield_data.pop('value_type')
+                    }
+                    ShopifyMetafield.objects.update_or_create(
+                        object_id=self.shopify_product.pk,
+                        content_type=ContentType.objects.get_for_model(self.shopify_product),
+                        **metafield_data,
+                        defaults=defaults
+                    )
+
+            if self.tags_match() is False:
+                for tag_data in self.tags_result:
+                    tag, _ = ShopifyTag.objects.get_or_create(**tag_data)
+                    self.shopify_product.tags.add(tag)
+                    self.shopify_product.save()
+
+            if self.images_match() is False:
+                for image_data in self.images_result:
+                    ShopifyImage.objects.get_or_create(
+                        product=self.shopify_product,
+                        **image_data
+                    )
+
+            return self.shopify_product.get_update_success_msg()
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
     # </editor-fold>
 
     def __str__(self):
         return str(self.product)
 
 
-class ShopifyCollectionCalculator(Model):
+class ShopifyCollectionCalculator(Model, MessagesMixin):
+    CUSTOM_VALUE = 'custom_value'
+
     collection = OneToOneField(
         ShopifyCollection,
         related_name='calculator',
         on_delete=CASCADE
     )
+    title_option = CharField(
+        choices=(
+            ('sema_category_chained_title_value', 'SEMA Categories'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_category_chained_title_value',
+        max_length=50
+    )
+    metafields_display_name_option = CharField(
+        choices=(
+            ('sema_category_display_name_value', 'SEMA Category'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_category_display_name_value',
+        max_length=50
+    )
+    metafields_subcollections_option = CharField(
+        choices=(
+            ('shopify_subcollections_value', 'Shopify Subcollections'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='shopify_subcollections_value',
+        max_length=50
+    )
+    tags_categories_option = CharField(
+        choices=(
+            ('sema_category_tags_value', 'SEMA Categories'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_category_tags_value',
+        max_length=50
+    )
 
-    # <editor-fold desc="update logic properties ...">
+    # <editor-fold desc="internal properties ...">
     @property
-    def category_paths(self):
+    def category_path(self):
         if self.collection.level == '1':
-            return self.collection.root_category_paths.all()
+            return self.collection.root_category_paths.first()
         elif self.collection.level == '2':
             return self.collection.branch_category_paths.filter(
                 shopify_root_collection=self.collection.parent_collection
-            )
+            ).first()
         elif self.collection.level == '3':
             return self.collection.leaf_category_paths.filter(
-                shopify_branch_collection=self.collection.parent_collection,
                 shopify_root_collection=self.collection.parent_collection.parent_collection,
-            )
+                shopify_branch_collection=self.collection.parent_collection,
+            ).first()
+        else:
+            return None
+
+    @property
+    def shopify_collection(self):
+        return self.collection
 
     @property
     def sema_category(self):
         if self.collection.level == '1':
-            return self.category_paths.first().sema_root_category
+            return self.category_path.sema_root_category
         elif self.collection.level == '2':
-            return self.category_paths.first().sema_branch_category
+            return self.category_path.sema_branch_category
         elif self.collection.level == '3':
-            return self.category_paths.first().sema_leaf_category
+            return self.category_path.sema_leaf_category
+        else:
+            return None
 
     @property
-    def title_(self):
-        title = self.sema_category.name
-
-        if self.collection.level == '2':
-            title = (
-                f'{self.category_paths.first().sema_root_category.name} '
-                f'// {title}'
-            )
-
-        if self.collection.level == '3':
-            title = (
-                f'{self.category_paths.first().sema_root_category.name} '
-                f'// {self.category_paths.first().sema_branch_category.name} '
-                f'// {title}'
-            )
-        return title
-    title_.fget.short_description = ''
+    def sema_parent_category(self):
+        if self.collection.level == '1':
+            return None
+        elif self.collection.level == '2':
+            return self.category_path.sema_root_category
+        elif self.collection.level == '3':
+            return self.category_path.sema_branch_category
+        else:
+            return None
 
     @property
-    def tags_(self):
-        tags = [self.sema_category.tag_name]
+    def sema_grandparent_category(self):
+        if self.collection.level == '1':
+            return None
+        elif self.collection.level == '2':
+            return None
+        elif self.collection.level == '3':
+            return self.category_path.sema_root_category
+        else:
+            return None
+    # </editor-fold>
 
-        if int(self.collection.level) > 1:
-            tags.append(
-                self.category_paths.first().sema_root_category.tag_name
+    # <editor-fold desc="value properties ...">
+    @property
+    def custom_value(self):
+        return None
+
+    @property
+    def sema_category_display_name_value(self):
+        if self.shopify_collection.level == '1':
+            return None
+
+        return self.sema_category.name
+
+    @property
+    def sema_category_chained_title_value(self):
+        if self.shopify_collection.level == '1':
+            return f'{self.sema_category.name.strip()}'
+        elif self.shopify_collection.level == '2':
+            return (
+                f'{self.sema_parent_category.name.strip()} '
+                f'// {self.sema_category.name.strip()}'
             )
-
-        if int(self.collection.level) > 2:
-            tags.append(
-                self.category_paths.first().sema_branch_category.tag_name
+        elif self.shopify_collection.level == '3':
+            return (
+                f'{self.sema_grandparent_category.name.strip()} '
+                f'// {self.sema_parent_category.name.strip()} '
+                f'// {self.sema_category.name.strip()}'
             )
+        else:
+            return None
 
+    @property
+    def sema_category_tags_value(self):
+        if self.shopify_collection.level == '1':
+            tags = [self.sema_category.tag_name]
+        elif self.shopify_collection.level == '2':
+            tags = [
+                self.sema_category.tag_name,
+                self.sema_parent_category.tag_name
+            ]
+        elif self.shopify_collection.level == '3':
+            tags = [
+                self.sema_category.tag_name,
+                self.sema_parent_category.tag_name,
+                self.sema_grandparent_category.tag_name,
+            ]
+        else:
+            return None
+
+        tags.sort()
         return tags
-    tags_.fget.short_description = ''
 
     @property
-    def metafields_(self):
-        metafields = []
-
-        if int(self.collection.level) > 1:
-            metafields.append(
-                {
-                    'namespace': 'title',
-                    'key': 'display_name',
-                    'owner_resource':
-                        ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
-                    'value': self.sema_category.name,
-                    'value_type': ShopifyMetafield.STRING_VALUE_TYPE
-                }
-            )
-
-        if int(self.collection.level) < 3:
+    def shopify_subcollections_value(self):
+        if self.shopify_collection.level == '1' or self.shopify_collection.level == '2':
             subcollections = []
-            for child_collection in self.collection.child_collections.all():
+            for child_collection in self.shopify_collection.child_collections.all():
                 if child_collection.collection_id and child_collection.handle:
                     subcollections.append(
                         {
@@ -2352,20 +3177,227 @@ class ShopifyCollectionCalculator(Model):
                             'handle': child_collection.handle
                         }
                     )
-            if subcollections:
-                metafields.append(
-                    {
-                        'namespace': 'category',
-                        'key': 'subcollections',
-                        'owner_resource':
-                            ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
-                        'value': json.dumps(subcollections),
-                        'value_type': ShopifyMetafield.JSON_VALUE_TYPE
-                    }
-                )
+            subcollections = sorted(subcollections, key=lambda k: k['handle'])
+            return subcollections
+        elif self.shopify_collection.level == '3':
+            return None
+        else:
+            return None
+    # </editor-fold>
 
+    # <editor-fold desc="preview properties ...">
+    @property
+    def sema_category_display_name_preview(self):
+        return self.sema_category_display_name_value
+    sema_category_display_name_preview.fget.short_description = 'SEMA Category'
+
+    @property
+    def sema_category_chained_title_preview(self):
+        return self.sema_category_chained_title_value
+    sema_category_chained_title_preview.fget.short_description = 'SEMA Categories'
+
+    @property
+    def sema_category_tags_preview(self):
+        if not self.sema_category_tags_value:
+            return None
+
+        return str(self.sema_category_tags_value)
+    sema_category_tags_preview.fget.short_description = 'SEMA Categories'
+
+    @property
+    def shopify_subcollections_preview(self):
+        if not self.shopify_subcollections_value:
+            return None
+
+        return str(self.shopify_subcollections_value)
+    shopify_subcollections_preview.fget.short_description = 'Shopify Subcollections'
+    # </editor-fold>
+
+    # <editor-fold desc="result properties ...">
+    @property
+    def title_result(self):
+        return getattr(self, self.title_option)
+    title_result.fget.short_description = ''
+
+    @property
+    def metafields_display_name_result(self):
+        value = getattr(self, self.metafields_display_name_option)
+        if not value:
+            return None
+
+        return {
+            'namespace': 'additional',
+            'key': 'display_name',
+            'owner_resource':
+                ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
+            'value': value,
+            'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+        }
+    metafields_display_name_result.fget.short_description = ''
+
+    @property
+    def metafields_subcollections_result(self):
+        subcollections = getattr(self, self.metafields_subcollections_option)
+        if not subcollections:
+            return None
+
+        return {
+            'namespace': 'additional',
+            'key': 'subcollections',
+            'owner_resource':
+                ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
+            'value': json.dumps(subcollections),
+            'value_type': ShopifyMetafield.JSON_VALUE_TYPE
+        }
+    metafields_subcollections_result.fget.short_description = ''
+
+    @property
+    def metafields_result(self):
+        metafields = []
+        if self.metafields_display_name_result:
+            metafields.append(self.metafields_display_name_result)
+        if self.metafields_subcollections_result:
+            metafields.append(self.metafields_subcollections_result)
+        metafields = sorted(metafields, key=lambda k: k['key'])
         return metafields
-    metafields_.fget.short_description = ''
+    metafields_result.fget.short_description = ''
+
+    @property
+    def tags_categories_result(self):
+        tag_names = getattr(self, self.tags_categories_option)
+        if not tag_names:
+            return None
+
+        tags = [
+            {'name': tag_name}
+            for tag_name in tag_names
+        ]
+        tags = sorted(tags, key=lambda k: k['name'])
+        return tags
+    tags_categories_result.fget.short_description = ''
+
+    @property
+    def tags_result(self):
+        tags = []
+        if self.tags_categories_result:
+            tags += self.tags_categories_result
+        tags = sorted(tags, key=lambda k: k['name'])
+        return tags
+    tags_result.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="match properties ...">
+    def title_match(self):
+        if not self.title_result:
+            return None
+
+        return bool(self.shopify_collection.title == self.title_result)
+    title_match.boolean = True
+    title_match.short_description = 'Title Match'
+
+    def metafields_match(self):
+        if not self.metafields_result:
+            return None
+
+        metafields = [
+            {
+                'namespace': metafield.namespace,
+                'key': metafield.key,
+                'owner_resource': metafield.owner_resource,
+                'value': metafield.value,
+                'value_type': metafield.value_type
+            }
+            for metafield in self.shopify_collection.metafields.all()
+        ]
+        metafields = sorted(metafields, key=lambda k: k['key'])
+        return bool(metafields == self.metafields_result)
+    metafields_match.boolean = True
+    metafields_match.short_description = 'Metafields Match'
+
+    def tags_match(self):
+        if not self.tags_result:
+            return None
+
+        tags = [
+            {'name': tag.name}
+            for tag in self.shopify_collection.tags.all()
+        ]
+        tags = sorted(tags, key=lambda k: k['name'])
+        return bool(tags == self.tags_result)
+    tags_match.boolean = True
+    tags_match.short_description = 'Tags Match'
+
+    def full_match(self):
+        return ~bool(
+            self.title_match is False
+            or self.metafields_match is False
+            or self.tags_match is False
+        )
+    full_match.boolean = True
+    full_match.short_description = 'Calculator Match'
+    # </editor-fold>
+
+    # <editor-fold desc="difference properties ...">
+    @property
+    def title_difference(self):
+        if self.title_match is not False:
+            return ''
+
+        return f'{self.shopify_collection.title} -> {self.title_result}'
+    title_difference.fget.short_description = ''
+
+    @property
+    def metafields_difference(self):
+        if self.metafields_match is not False:
+            return ''
+
+        return (
+            f'{self.shopify_collection.metafields.count()} '
+            f'-> {len(self.metafields_result)}'
+        )
+    metafields_difference.fget.short_description = ''
+
+    @property
+    def tags_difference(self):
+        if self.tags_match is not False:
+            return ''
+
+        return (
+            f'{self.shopify_collection.tags.count()} '
+            f'-> {len(self.tags_result)}'
+        )
+    tags_difference.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_calculated_fields_update(self):
+        try:
+            if self.title_match() is False:
+                self.shopify_collection.title = self.title_result
+                self.shopify_collection.save()
+
+            if self.metafields_match() is False:
+                for metafield_data in self.metafields_result:
+                    defaults = {
+                        'value': metafield_data.pop('value'),
+                        'value_type': metafield_data.pop('value_type')
+                    }
+                    ShopifyMetafield.objects.update_or_create(
+                        object_id=self.shopify_collection.pk,
+                        content_type=ContentType.objects.get_for_model(self.shopify_collection),
+                        **metafield_data,
+                        defaults=defaults
+                    )
+
+            if self.tags_match() is False:
+                for tag_data in self.tags_result:
+                    tag, _ = ShopifyTag.objects.get_or_create(**tag_data)
+                    self.shopify_collection.tags.add(tag)
+                    self.shopify_collection.save()
+
+            return self.shopify_collection.get_update_success_msg()
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
     # </editor-fold>
 
     def __str__(self):

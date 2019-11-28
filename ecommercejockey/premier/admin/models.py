@@ -45,11 +45,11 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         'details_link',
         'id',
         'name',
-        'product_count',
+        'product_count_a',
         'primary_image_preview',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -69,6 +69,7 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
             None, {
                 'fields': (
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors'
                 )
             }
@@ -87,20 +88,14 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
                     ('primary_image', 'primary_image_preview'),
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
         'id',
+        'relevancy_warnings',
         'relevancy_errors',
-        'product_count',
+        'product_count_a',
         'details_link',
         'primary_image_preview'
     )
@@ -112,6 +107,10 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
     def details_link(self, obj):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def product_count_a(self, obj):
+        return f'{obj.product_relevant_count}/{obj.product_count}'
+    product_count_a.short_description = 'product count'
 
     primary_image_preview = AdminThumbnail(
         image_field='primary_image_thumbnail'
@@ -160,8 +159,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'primary_image_preview',
         'may_be_relevant_flag',
         'is_relevant',
-        'relevancy_errors',
-        'notes'
+        'relevancy_warnings',
+        'relevancy_errors'
     )
 
     list_display_links = (
@@ -190,6 +189,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                 'fields': (
                     'may_be_relevant_flag',
                     'is_relevant',
+                    'relevancy_warnings',
                     'relevancy_errors',
                 )
             }
@@ -273,17 +273,11 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                     ('primary_image', 'primary_image_preview'),
                 )
             }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
         'details_link',

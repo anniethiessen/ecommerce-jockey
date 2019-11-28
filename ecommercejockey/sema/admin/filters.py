@@ -1,5 +1,5 @@
 from django.contrib.admin import SimpleListFilter
-from django.db.models import Q  # Case, When, BooleanField
+from django.db.models import Q, Count, Case, When, F, IntegerField
 
 from core.admin.filters import MayBeRelevantFilter
 
@@ -196,7 +196,7 @@ class HasHtml(SimpleListFilter):
 
 class HasItem(SimpleListFilter):
     title = 'part of main item'
-    parameter_name = 'items'
+    parameter_name = 'item'
 
     def lookups(self, request, model_admin):
         return (
@@ -206,128 +206,182 @@ class HasItem(SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
-            return queryset.filter(items__isnull=False)
+            return queryset.filter(item__isnull=False)
         if self.value() == 'No':
-            return queryset.filter(items__isnull=True)
+            return queryset.filter(item__isnull=True)
 
 
-class SemaDatasetMayBeRelevant(MayBeRelevantFilter):
+class SemaBrandMayBeRelevant(MayBeRelevantFilter):
     def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _dataset_relevant_count=Count(
+                'datasets',
+                filter=Q(datasets__is_relevant=True),
+                distinct=True
+            )
+        )
         if self.value() == 'Yes':
-            return queryset.filter(brand__is_relevant=True)
+            return queryset.filter(_dataset_relevant_count__gt=0)
         if self.value() == 'No':
-            return queryset.filter(brand__is_relevant=False)
+            return queryset.filter(_dataset_relevant_count=0)
+
+
+class SemaYearMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _vehicle_relevant_count=Count(
+                'make_years__base_vehicles__vehicles',
+                filter=(
+                    Q(make_years__base_vehicles__vehicles__is_relevant=True)
+                ),
+                distinct=True
+            )
+        )
+        if self.value() == 'Yes':
+            return queryset.filter(_vehicle_relevant_count__gt=0)
+        if self.value() == 'No':
+            return queryset.filter(_vehicle_relevant_count=0)
+
+
+class SemaModelMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _vehicle_relevant_count=Count(
+                'base_vehicles__vehicles',
+                filter=(
+                    Q(base_vehicles__vehicles__is_relevant=True)
+                ),
+                distinct=True
+            )
+        )
+        if self.value() == 'Yes':
+            return queryset.filter(_vehicle_relevant_count__gt=0)
+        if self.value() == 'No':
+            return queryset.filter(_vehicle_relevant_count=0)
+
+
+class SemaSubmodelMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _vehicle_relevant_count=Count(
+                'vehicles',
+                filter=(
+                    Q(vehicles__is_relevant=True)
+                ),
+                distinct=True
+            )
+        )
+        if self.value() == 'Yes':
+            return queryset.filter(_vehicle_relevant_count__gt=0)
+        if self.value() == 'No':
+            return queryset.filter(_vehicle_relevant_count=0)
 
 
 class SemaMakeYearMayBeRelevant(MayBeRelevantFilter):
     def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _vehicle_relevant_count=Count(
+                'base_vehicles__vehicles',
+                filter=(
+                    Q(base_vehicles__vehicles__is_relevant=True)
+                ),
+                distinct=True
+            )
+        )
         if self.value() == 'Yes':
-            return queryset.filter(
-                Q(year__is_relevant=True)
-                & Q(make__is_relevant=True)
-            )
+            return queryset.filter(_vehicle_relevant_count__gt=0)
         if self.value() == 'No':
-            return queryset.filter(
-                Q(year__is_relevant=False)
-                | Q(make__is_relevant=False)
-            )
+            return queryset.filter(_vehicle_relevant_count=0)
 
 
 class SemaBaseVehicleMayBeRelevant(MayBeRelevantFilter):
     def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _vehicle_relevant_count=Count(
+                'vehicles',
+                filter=(
+                    Q(vehicles__is_relevant=True)
+                ),
+                distinct=True
+            )
+        )
         if self.value() == 'Yes':
-            return queryset.filter(
-                Q(make_year__is_relevant=True)
-                & Q(model__is_relevant=True)
-            )
+            return queryset.filter(_vehicle_relevant_count__gt=0)
         if self.value() == 'No':
-            return queryset.filter(
-                Q(make_year__is_relevant=False)
-                | Q(model__is_relevant=False)
-            )
+            return queryset.filter(_vehicle_relevant_count=0)
 
 
 class SemaVehicleMayBeRelevant(MayBeRelevantFilter):
     def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _engine_relevant_count=Count(
+                'engines',
+                filter=Q(engines__is_relevant=True),
+                distinct=True
+            )
+        )
         if self.value() == 'Yes':
-            return queryset.filter(
-                Q(base_vehicle__is_relevant=True)
-                & Q(submodel__is_relevant=True)
-            )
+            return queryset.filter(_engine_relevant_count__gt=0)
         if self.value() == 'No':
-            return queryset.filter(
-                Q(base_vehicle__is_relevant=False)
-                | Q(submodel__is_relevant=False)
-            )
+            return queryset.filter(_engine_relevant_count=0)
 
 
 class SemaEngineMayBeRelevant(MayBeRelevantFilter):
     def queryset(self, request, queryset):
         if self.value() == 'Yes':
             return queryset.filter(
-                Q(vehicle__is_relevant=True)
+                Q(vehicle__base_vehicle__make_year__make__is_relevant=True)
                 & Q(fuel_type__exact='DIESEL')
             )
         if self.value() == 'No':
             return queryset.filter(
-                Q(vehicle__is_relevant=False)
+                Q(vehicle__base_vehicle__make_year__make__is_relevant=False)
                 | ~Q(fuel_type__exact='DIESEL')
             )
 
 
-# class SemaCategoryMayBeRelevant(MayBeRelevantFilter):  # FIXME
-#     def queryset(self, request, queryset):
-#         from ..models import SemaProduct
-#         relevant_products = SemaProduct.objects.filter(is_relevant=True)
-#
-#         queryset = queryset.order_by('name').annotate(
-#             _has_relevant_products=Case(
-#                 When(
-#                     Q(products__in=relevant_products),
-#                     then=True
-#                 ),
-#                 default=False,
-#                 output_field=BooleanField()
-#             )
-#         ).order_by(
-#             'name',
-#             '-_has_relevant_products'
-#         ).distinct('name')
-#
-#         if self.value() == 'Yes':
-#             return queryset.filter(_has_relevant_products=True)
-#         if self.value() == 'No':
-#             return queryset.filter(_has_relevant_products=False)
+class SemaCategoryMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset
+        if self.value() == 'No':
+            return queryset.none()
 
 
-# class SemaProductMayBeRelevant(MayBeRelevantFilter):  # FIXME
-#     def queryset(self, request, queryset):
-#         from ..models import SemaVehicle
-#
-#         relevant_vehicles = SemaVehicle.objects.filter(is_relevant=True)
-#
-#         queryset = queryset.annotate(
-#             _has_relevant_vehicles=Case(
-#                 When(
-#                     Q(vehicles__in=relevant_vehicles),
-#                     then=True
-#                 ),
-#                 default=False,
-#                 output_field=BooleanField()
-#             )
-#         ).order_by(
-#             'dataset_id',
-#             'part_number',
-#             '-_has_relevant_vehicles'
-#         ).distinct('dataset_id', 'part_number')
-#
-#         if self.value() == 'Yes':
-#             return queryset.filter(
-#                 Q(dataset__is_relevant=True)
-#                 & Q(_has_relevant_vehicles=True)
-#             )
-#         if self.value() == 'No':
-#             return queryset.filter(
-#                 Q(dataset__is_relevant=False)
-#                 | Q(_has_relevant_vehicles=False)
-#             )
+class SemaProductMayBeRelevant(MayBeRelevantFilter):
+    def queryset(self, request, queryset):
+        queryset = queryset.annotate(
+            _vehicle_count=Count(
+                'vehicles',
+                distinct=True
+            ),
+            _dataset_vehicle_relevant_count=Count(
+                'dataset__vehicles',
+                filter=Q(dataset__vehicles__is_relevant=True),
+                distinct=True
+            ),
+            _product_vehicle_relevant_count=Count(
+                'vehicles',
+                filter=Q(vehicles__is_relevant=True),
+                distinct=True
+            ),
+            _vehicle_relevant_count=Case(
+                When(
+                    _vehicle_count=0,
+                    then=F('_dataset_vehicle_relevant_count')
+                ),
+                default=F('_product_vehicle_relevant_count'),
+                output_field=IntegerField()
+            )
+        )
+
+        if self.value() == 'Yes':
+            return queryset.filter(
+                Q(dataset__is_relevant=True)
+                & Q(_vehicle_relevant_count__gt=0)
+            )
+        if self.value() == 'No':
+            return queryset.filter(
+                Q(dataset__is_relevant=False)
+                | Q(_vehicle_relevant_count=0)
+            )

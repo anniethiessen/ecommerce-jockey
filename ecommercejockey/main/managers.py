@@ -2,7 +2,40 @@ from django.db.models import Manager, QuerySet
 
 
 class VendorQuerySet(QuerySet):
-    pass
+    def create_shopify_vendors(self):
+        from shopify.models import ShopifyVendor
+
+        msgs = []
+        for vendor in self:
+            if vendor.shopify_vendor:
+                msgs.append(
+                    vendor.get_instance_error_msg(
+                        error='Shopify vendor already exists'
+                    )
+                )
+                continue
+
+            if not (vendor.premier_manufacturer and vendor.sema_brand):
+                msgs.append(
+                    vendor.get_instance_error_msg(
+                        error='Missing Premier manufacturer and/or SEMA brand'
+                    )
+                )
+                continue
+
+            try:
+                shopify_vendor = ShopifyVendor.objects.create(
+                    name=vendor.premier_manufacturer.name
+                )
+                vendor.shopify_vendor = shopify_vendor
+                vendor.save()
+                msgs.append(shopify_vendor.get_create_success_msg())
+            except Exception as err:
+                msgs.append(vendor.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
 
 
 class ItemQuerySet(QuerySet):
@@ -32,8 +65,6 @@ class ItemQuerySet(QuerySet):
                 shopify_product = ShopifyProduct.objects.create(vendor=vendor)
                 item.shopify_product = shopify_product
                 item.save()
-                shopify_product.perform_calculated_fields_update()
-                shopify_product.variants.first().perform_calculated_fields_update()
                 msgs.append(shopify_product.get_create_success_msg())
             except Exception as err:
                 msgs.append(item.get_instance_error_msg(str(err)))
@@ -195,6 +226,18 @@ class VendorManager(Manager):
 
         return msgs
 
+    def create_shopify_vendors(self):
+        msgs = []
+
+        try:
+            msgs += self.get_queryset().create_shopify_vendors()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+
     def get_queryset(self):
         return VendorQuerySet(
             self.model,
@@ -206,41 +249,85 @@ class ItemManager(Manager):
     def create_and_link(self):
         from premier.models import PremierProduct
         from sema.models import SemaProduct
-        from .models import Vendor
 
         msgs = []
 
         premier_products = PremierProduct.objects.filter(item__isnull=True)
         for premier_product in premier_products:
             try:
-                item = self.create(premier_product=premier_product)
-                msgs.append(item.get_create_success_msg())
+                premier_vendor = premier_product.manufacturer.vendor
+            except Exception as err:
+                msgs.append(premier_product.get_instance_error_msg(str(err)))
+                continue
+
+            try:
+                item = self.get(
+                    sema_product__dataset__brand__vendor=premier_vendor,
+                    sema_product__part_number=premier_product.vendor_part_number
+                )
+                if item.premier_product:
+                    msgs.append(
+                        premier_product.get_instance_error_msg(
+                            f"Matching item {item} already "
+                            "has a Premier product"
+                        )
+                    )
+                else:
+                    item.premier_product = premier_product
+                    item.save()
+                    msgs.append(
+                        item.get_update_success_msg(
+                            message=f"{premier_product} added"
+                        )
+                    )
+            except self.model.DoesNotExist:
+                try:
+                    item = self.create(premier_product=premier_product)
+                    msgs.append(item.get_create_success_msg())
+                except Exception as err:
+                    msgs.append(self.model.get_class_error_msg(str(err)))
             except Exception as err:
                 msgs.append(premier_product.get_instance_error_msg(str(err)))
 
-        incomplete_items = self.filter(sema_product__isnull=True)
-        for item in incomplete_items:
+        sema_products = SemaProduct.objects.filter(item__isnull=True)
+        for sema_product in sema_products:
             try:
-                sema_product = SemaProduct.objects.get(
-                    dataset__brand__vendor=item.premier_product.manufacturer.vendor,
-                    part_number=item.premier_product.vendor_part_number
-                )
-                item.sema_product = sema_product
-                item.save()
-                msgs.append(
-                    item.get_update_success_msg(
-                        message=f"Sema product {sema_product} added"
-                    )
-                )
-            except SemaProduct.DoesNotExist:
-                msgs.append(
-                    item.get_instance_error_msg(
-                        error="Sema product does not exist"
-                    )
-                )
+                sema_vendor = sema_product.dataset.brand.vendor
             except Exception as err:
-                msgs.append(item.get_instance_error_msg(str(err)))
+                msgs.append(sema_product.get_instance_error_msg(str(err)))
+                continue
 
+            try:
+                item = self.get(
+                    premier_product__manufacturer__vendor=sema_vendor,
+                    premier_product__vendor_part_number=sema_product.part_number
+                )
+                if item.sema_product:
+                    msgs.append(
+                        sema_product.get_instance_error_msg(
+                            f"Matching item {item} already "
+                            "has a SEMA product"
+                        )
+                    )
+                else:
+                    item.sema_product = sema_product
+                    item.save()
+                    msgs.append(
+                        item.get_update_success_msg(
+                            message=f"{sema_product} added"
+                        )
+                    )
+            except self.model.DoesNotExist:
+                try:
+                    item = self.create(sema_product=sema_product)
+                    msgs.append(item.get_create_success_msg())
+                except Exception as err:
+                    msgs.append(self.model.get_class_error_msg(str(err)))
+            except Exception as err:
+                msgs.append(sema_product.get_instance_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
 
     def create_shopify_products(self):

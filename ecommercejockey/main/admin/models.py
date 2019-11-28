@@ -31,8 +31,17 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     )
 
     actions = (
+        'create_shopify_vendors_queryset_action',
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
+    )
+
+    change_actions = (
+        'create_shopify_vendors_object_action',
+    )
+
+    changelist_actions = (
+        'check_unlinked_vendors_class_action',
     )
 
     search_fields = (
@@ -41,10 +50,6 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'sema_brand__name',
         'shopify_vendor__name'
         'slug'
-    )
-
-    changelist_actions = (
-        'check_unlinked_vendors_class_action',
     )
 
     list_display = (
@@ -56,7 +61,9 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'shopify_vendor',
         'may_be_relevant_flag',
         'is_relevant',
+        'relevancy_warnings',
         'relevancy_errors',
+        'relevancy_exceptions',
         'notes'
     )
 
@@ -66,6 +73,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exceptions'
     )
 
     list_filter = (
@@ -78,7 +86,9 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
                 'fields': (
                     'may_be_relevant_flag',
                     'is_relevant',
-                    'relevancy_errors'
+                    'relevancy_warnings',
+                    'relevancy_errors',
+                    'relevancy_exceptions'
                 )
             }
         ),
@@ -124,6 +134,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     )
 
     readonly_fields = (
+        'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
         'id',
@@ -217,7 +228,9 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'shopify_product',
         'may_be_relevant_flag',
         'is_relevant',
+        'relevancy_warnings',
         'relevancy_errors',
+        'relevancy_exceptions',
         'notes'
     )
 
@@ -227,6 +240,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exceptions'
     )
 
     list_filter = (
@@ -242,7 +256,9 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
                 'fields': (
                     'may_be_relevant_flag',
                     'is_relevant',
-                    'relevancy_errors'
+                    'relevancy_warnings',
+                    'relevancy_errors',
+                    'relevancy_exceptions'
                 )
             }
         ),
@@ -288,6 +304,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
 
     readonly_fields = (
         'may_be_relevant_flag',
+        'relevancy_warnings',
         'relevancy_errors',
         'details_link',
         'id',
@@ -393,7 +410,9 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
         'sema_leaf_category',
         'may_be_relevant_flag',
         'is_relevant',
+        'relevancy_warnings',
         'relevancy_errors',
+        'relevancy_exceptions',
         'notes'
     )
 
@@ -416,7 +435,9 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
                 'fields': (
                     'may_be_relevant_flag',
                     'is_relevant',
-                    'relevancy_errors'
+                    'relevancy_warnings',
+                    'relevancy_errors',
+                    'relevancy_exceptions'
                 )
             }
         ),
@@ -469,6 +490,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
     readonly_fields = (
         'details_link',
         'may_be_relevant_flag',
+        'relevancy_warnings',
         'relevancy_errors',
         'id',
         'sema_root_category_link',

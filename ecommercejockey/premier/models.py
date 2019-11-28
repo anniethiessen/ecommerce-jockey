@@ -16,10 +16,7 @@ from django.db.models import (
 )
 
 from core.mixins import MessagesMixin
-from core.models import (
-    NotesBaseModel,
-    RelevancyBaseModel
-)
+from core.models import RelevancyBaseModel
 from .managers import (
     PremierManufacturerManager,
     PremierProductManager
@@ -30,7 +27,7 @@ from .utils import (
 )
 
 
-class PremierManufacturer(RelevancyBaseModel, NotesBaseModel):
+class PremierManufacturer(RelevancyBaseModel):
     name = CharField(
         max_length=50,
         unique=True
@@ -49,6 +46,7 @@ class PremierManufacturer(RelevancyBaseModel, NotesBaseModel):
         options={'quality': 50}
     )
 
+    # <editor-fold desc="relevancy properties ...">
     @property
     def relevancy_errors(self):
         msgs = []
@@ -58,11 +56,18 @@ class PremierManufacturer(RelevancyBaseModel, NotesBaseModel):
                 msgs.append(error)
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
 
+    # <editor-fold desc="count properties ...">
     @property
     def product_count(self):
         return self.products.count()
-    product_count.fget.short_description = 'Product Count'
+
+    @property
+    def product_relevant_count(self):
+        return self.products.filter(is_relevant=True).count()
+    product_relevant_count.fget.short_description = 'Relevant Product Count'
+    # </editor-fold>
 
     objects = PremierManufacturerManager()
 
@@ -120,17 +125,7 @@ class PremierProductInventoryBaseModel(Model, MessagesMixin):
         verbose_name='Colorado inventory'
     )
 
-    def clear_inventory_fields(self):
-        self.inventory_ab = None
-        self.inventory_po = None
-        self.inventory_ut = None
-        self.inventory_ky = None
-        self.inventory_tx = None
-        self.inventory_ca = None
-        self.inventory_wa = None
-        self.inventory_co = None
-        self.save()
-
+    # <editor-fold desc="update properties ...">
     @property
     def inventory_state(self):
         return {
@@ -144,21 +139,18 @@ class PremierProductInventoryBaseModel(Model, MessagesMixin):
             'CO': self.inventory_co
         }
 
-    def update_inventory_from_api(self):
-        try:
-            part_numbers = [self.premier_part_number]
-            data = self._meta.model.objects.get_api_inventory_data(
-                part_numbers
-            )
-            data = data[0]['inventory']
-            update_fields = self._meta.model.objects.parse_api_inventory_data(
-                data
-            )
-            return self.update_inventory_from_api_data(**update_fields)
-        except Exception as err:
-            return self.get_instance_error_msg(str(err))
-
-    def update_inventory_from_api_data(self, **update_fields):
+    def clear_inventory_fields(self):
+        self.inventory_ab = None
+        self.inventory_po = None
+        self.inventory_ut = None
+        self.inventory_ky = None
+        self.inventory_tx = None
+        self.inventory_ca = None
+        self.inventory_wa = None
+        self.inventory_co = None
+        self.save()
+        
+    def perform_inventory_update_from_api_data(self, **update_fields):
         try:
             prev = self.inventory_state
             self.clear_inventory_fields()
@@ -172,6 +164,23 @@ class PremierProductInventoryBaseModel(Model, MessagesMixin):
         except Exception as err:
             msg = self.get_instance_error_msg(f"{update_fields}, {err}")
         return msg
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_inventory_update_from_api(self):
+        try:
+            part_numbers = [self.premier_part_number]
+            data = self._meta.model.objects.retrieve_inventory_data_from_api(
+                part_numbers
+            )
+            data = data[0]['inventory']
+            update_fields = self._meta.model.objects.parse_api_inventory_data(
+                data
+            )
+            return self.perform_inventory_update_from_api_data(**update_fields)
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+    # </editor-fold>
 
     class Meta:
         abstract = True
@@ -243,17 +252,7 @@ class PremierProductPricingBaseModel(Model, MessagesMixin):
         verbose_name='MAP USD'
     )
 
-    def clear_pricing_fields(self):
-        self.cost_cad = None
-        self.cost_usd = None
-        self.jobber_cad = None
-        self.jobber_usd = None
-        self.msrp_cad = None
-        self.msrp_usd = None
-        self.map_cad = None
-        self.map_usd = None
-        self.save()
-
+    # <editor-fold desc="update properties ...">
     @property
     def pricing_state(self):
         return {
@@ -266,20 +265,19 @@ class PremierProductPricingBaseModel(Model, MessagesMixin):
             'MAP CAD': self.map_cad,
             'MAP USD': self.map_usd
         }
-
-    def update_pricing_from_api(self):
-        try:
-            part_numbers = [self.premier_part_number]
-            data = self._meta.model.objects.get_api_pricing_data(part_numbers)
-            data = data[0]['pricing']
-            update_fields = self._meta.model.objects.parse_api_pricing_data(
-                data
-            )
-            return self.update_pricing_from_api_data(**update_fields)
-        except Exception as err:
-            return self.get_instance_error_msg(str(err))
-
-    def update_pricing_from_api_data(self, **update_fields):
+    
+    def clear_pricing_fields(self):
+        self.cost_cad = None
+        self.cost_usd = None
+        self.jobber_cad = None
+        self.jobber_usd = None
+        self.msrp_cad = None
+        self.msrp_usd = None
+        self.map_cad = None
+        self.map_usd = None
+        self.save()
+        
+    def perform_pricing_update_from_api_data(self, **update_fields):
         try:
             prev = self.pricing_state
             self.clear_pricing_fields()
@@ -293,12 +291,27 @@ class PremierProductPricingBaseModel(Model, MessagesMixin):
         except Exception as err:
             msg = self.get_instance_error_msg(f"{update_fields}, {err}")
         return msg
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_pricing_update_from_api(self):
+        try:
+            part_numbers = [self.premier_part_number]
+            data = self._meta.model.objects.retrieve_pricing_data_from_api(part_numbers)
+            data = data[0]['pricing']
+            update_fields = self._meta.model.objects.parse_api_pricing_data(
+                data
+            )
+            return self.perform_pricing_update_from_api_data(**update_fields)
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+    # </editor-fold>
 
     class Meta:
         abstract = True
 
 
-class PremierProduct(PremierProductInventoryBaseModel, NotesBaseModel,
+class PremierProduct(PremierProductInventoryBaseModel,
                      PremierProductPricingBaseModel, RelevancyBaseModel):
     premier_part_number = CharField(
         max_length=30,
@@ -385,6 +398,7 @@ class PremierProduct(PremierProductInventoryBaseModel, NotesBaseModel,
         options={'quality': 50}
     )
 
+    # <editor-fold desc="relevancy properties ...">
     @property
     def may_be_relevant(self):
         return bool(self.manufacturer.is_relevant and self.inventory_ab)
@@ -407,8 +421,10 @@ class PremierProduct(PremierProductInventoryBaseModel, NotesBaseModel,
                 msgs.append(error)
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
+    # </editor-fold>
 
-    def update_primary_image_from_media_root(self):
+    # <editor-fold desc="perform properties ...">
+    def perform_primary_image_update_from_media_root(self):
         try:
             bucket_path = os.path.join(
                 settings.MEDIA_ROOT,
@@ -438,6 +454,7 @@ class PremierProduct(PremierProductInventoryBaseModel, NotesBaseModel,
         except Exception as err:
             msg = self.get_instance_error_msg(str(err))
         return msg
+    # </editor-fold>
 
     objects = PremierProductManager()
 

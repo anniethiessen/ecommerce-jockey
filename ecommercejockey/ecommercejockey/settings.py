@@ -289,6 +289,14 @@ ADMIN_REORDER = (
             {
                 'model': 'shopify.ShopifyMetafield',
                 'label': 'Metafields'
+            },
+            {
+                'model': 'shopify.ShopifyProductCalculator',
+                'label': 'Product Calculators'
+            },
+            {
+                'model': 'shopify.ShopifyCollectionCalculator',
+                'label': 'Collection Calculators'
             }
         )
     }

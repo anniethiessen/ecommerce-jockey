@@ -47,3 +47,15 @@ def get_image_preview(image_link, width="150"):
         )
     except Exception:
         raise
+
+
+def get_images_preview(image_links, width="150"):
+    try:
+        images_html = ''
+        for image_link in image_links:
+            images_html += f'<img src="{image_link}" width={width} />'
+        return mark_safe(
+            f'<div>{images_html}</div>'
+        )
+    except Exception:
+        raise

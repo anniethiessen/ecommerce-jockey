@@ -61,7 +61,8 @@ class PremierProductQuerySet(QuerySet):
             map_usd__isnull=False
         )
 
-    def update_inventory_from_api(self):
+    # <editor-fold desc="perform properties ...">
+    def perform_inventory_update_from_api(self):
         msgs = []
 
         queryset = self.all()
@@ -70,7 +71,7 @@ class PremierProductQuerySet(QuerySet):
         chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
-                response = self.model.objects.get_api_inventory_data(chunk)
+                response = self.model.objects.retrieve_inventory_data_from_api(chunk)
                 for items in response:
                     obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['inventory']
@@ -78,14 +79,14 @@ class PremierProductQuerySet(QuerySet):
                         data
                     )
                     msgs.append(
-                        obj.update_inventory_from_api_data(**update_fields)
+                        obj.perform_inventory_update_from_api_data(**update_fields)
                     )
             except Exception as err:
                 msgs.append(f'Chunk Error: {chunk}, {err}')
                 continue
         return msgs
 
-    def update_pricing_from_api(self):
+    def perform_pricing_update_from_api(self):
         msgs = []
 
         queryset = self.all()
@@ -94,7 +95,7 @@ class PremierProductQuerySet(QuerySet):
         chunks = chunkify_list(part_numbers, chunk_size=50)
         for chunk in chunks:
             try:
-                response = self.model.objects.get_api_pricing_data(chunk)
+                response = self.model.objects.retrieve_pricing_data_from_api(chunk)
                 for items in response:
                     obj = queryset.get(premier_part_number=items['itemNumber'])
                     data = items['pricing']
@@ -102,24 +103,25 @@ class PremierProductQuerySet(QuerySet):
                         data
                     )
                     msgs.append(
-                        obj.update_pricing_from_api_data(**update_fields)
+                        obj.perform_pricing_update_from_api_data(**update_fields)
                     )
             except Exception as err:
                 msgs.append(f'Chunk Error: {chunk}, {err}')
                 continue
         return msgs
 
-    def update_primary_image_from_media_root(self):
+    def perform_primary_image_update_from_media_root(self):
         msgs = []
         for obj in self:
             try:
-                msgs.append(obj.update_primary_image_from_media_root())
+                msgs.append(obj.perform_primary_image_update_from_media_root())
             except Exception as err:
                 msgs.append(self.model.get_class_error_msg(str(err)))
                 continue
         if not msgs:
             msgs.append(self.model.get_class_up_to_date_msg())
         return msgs
+    # </editor-fold>
 
 
 class PremierManufacturerManager(Manager):
@@ -131,20 +133,41 @@ class PremierManufacturerManager(Manager):
 
 
 class PremierProductManager(Manager):
+    def get_queryset(self):
+        return PremierProductQuerySet(
+            self.model,
+            using=self._db
+        )
+
+    def has_all_inventory_data(self):
+        return self.get_queryset().has_all_inventory_data()
+
+    def has_missing_inventory_data(self):
+        return self.get_queryset().has_missing_inventory_data()
+
+    def has_all_pricing_data(self):
+        return self.get_queryset().has_all_pricing_data()
+
+    def has_missing_pricing_data(self):
+        return self.get_queryset().has_missing_pricing_data()
+
+    # <editor-fold desc="retrieve properties ...">
     @staticmethod
-    def get_api_inventory_data(part_numbers):
+    def retrieve_inventory_data_from_api(part_numbers):
         try:
             return premier_client.retrieve_product_inventory(part_numbers)
         except Exception:
             raise
 
     @staticmethod
-    def get_api_pricing_data(part_numbers):
+    def retrieve_pricing_data_from_api(part_numbers):
         try:
             return premier_client.retrieve_product_pricing(part_numbers)
         except Exception:
             raise
+    # </editor-fold>
 
+    # <editor-fold desc="update properties ...">
     @staticmethod
     def parse_api_inventory_data(data):
         try:
@@ -169,35 +192,20 @@ class PremierProductManager(Manager):
             return update_fields
         except Exception:
             raise
+    # </editor-fold>
 
-    def get_queryset(self):
-        return PremierProductQuerySet(
-            self.model,
-            using=self._db
-        )
+    # <editor-fold desc="perform properties ...">
+    def perform_inventory_update_from_api(self):
+        return self.get_queryset().perform_inventory_update_from_api()
 
-    def has_all_inventory_data(self):
-        return self.get_queryset().has_all_inventory_data()
+    def perform_pricing_update_from_api(self):
+        return self.get_queryset().perform_pricing_update_from_api()
 
-    def has_missing_inventory_data(self):
-        return self.get_queryset().has_missing_inventory_data()
-
-    def has_all_pricing_data(self):
-        return self.get_queryset().has_all_pricing_data()
-
-    def has_missing_pricing_data(self):
-        return self.get_queryset().has_missing_pricing_data()
-
-    def update_inventory_from_api(self):
-        return self.get_queryset().update_inventory_from_api()
-
-    def update_pricing_from_api(self):
-        return self.get_queryset().update_pricing_from_api()
-
-    def update_primary_image_from_media_root(self):
+    def perform_primary_image_update_from_media_root(self):
         msgs = []
         try:
-            msgs += self.get_queryset().update_primary_image_from_media_root()
+            msgs += self.get_queryset().perform_primary_image_update_from_media_root()
         except Exception as err:
             msgs.append(self.model.get_class_error_msg(str(err)))
         return msgs
+    # </editor-fold>

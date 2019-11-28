@@ -2,39 +2,43 @@ from django_object_actions import BaseDjangoObjectActions as ObjectActions
 
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
-# from django.utils.safestring import mark_safe
 
 from core.admin.utils import (
     get_change_view_link,
-    # get_image_preview
 )
 from ..models import (
     ShopifyCollection,
+    ShopifyCollectionCalculator,
     ShopifyCollectionRule,
     ShopifyImage,
     ShopifyMetafield,
     ShopifyOption,
     ShopifyProduct,
+    ShopifyProductCalculator,
     ShopifyTag,
     ShopifyVariant,
     ShopifyVendor
 )
 from .actions import (
     ShopifyCollectionActions,
+    ShopifyCollectionCalculatorActions,
     ShopifyCollectionRuleActions,
     ShopifyImageActions,
     ShopifyMetafieldActions,
     ShopifyOptionActions,
     ShopifyProductActions,
+    ShopifyProductCalculatorActions,
     ShopifyTagActions,
     ShopifyVariantActions,
     ShopifyVendorActions
 )
 from .filters import ByCollectionLevel
 from .inlines import (
+    ShopifyCollectionCalculatorStackedInline,
     ShopifyCollectionMetafieldsTabularInline,
     ShopifyCollectionRulesManyToManyTabularInline,
     ShopifyCollectionTagsManyToManyTabularInline,
+    ShopifyProductCalculatorStackedInline,
     ShopifyProductImagesTabularInline,
     ShopifyProductMetafieldsTabularInline,
     ShopifyProductOptionsTabularInline,
@@ -102,8 +106,8 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'update_calculated_fields_queryset_action',
         'import_from_api_queryset_action',
         'export_to_api_queryset_action',
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
+        'mark_as_published_queryset_action',
+        'mark_as_unpublished_queryset_action'
     )
 
     change_actions = (
@@ -128,11 +132,8 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'handle',
         'tag_count',
         'is_published',
-        'may_be_relevant_flag',
-        'is_relevant',
-        'relevancy_errors',
-        'notes',
-        'all_match__'
+        'errors',
+        'full_match'
     )
 
     list_display_links = (
@@ -141,11 +142,9 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
 
     list_editable = (
         'is_published',
-        'is_relevant'
     )
 
     list_filter = (
-        'is_relevant',
         'is_published',
         ByCollectionLevel,
         'published_scope',
@@ -158,8 +157,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         (
             None, {
                 'fields': (
-                    'is_relevant',
-                    'relevancy_errors'
+                    'errors',
                 )
             }
         ),
@@ -168,7 +166,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
                 'fields': (
                     'id',
                     'collection_id',
-                    ('title', 'title_match__', 'title__'),
+                    'title',
                     'handle',
                     'is_published',
                     'published_scope',
@@ -192,38 +190,14 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
                     'image_alt'
                 )
             }
-        ),
-        (
-            'Other Calculated', {
-                'fields': (
-                    ('tags__', 'tags_match__'),
-                    ('metafields__', 'metafields_match__')
-                ),
-                'classes': (
-                    'collapse',
-                )
-            }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
         'id',
         'tag_count',
-        'may_be_relevant_flag',
-        'relevancy_errors',
-        'title__',
-        'title_match__',
-        'tags__',
-        'tags_match__',
-        'metafields__',
-        'metafields_match__',
+        'errors',
+        'full_match',
         'details_link'
     )
 
@@ -234,7 +208,8 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     inlines = (
         ShopifyCollectionRulesManyToManyTabularInline,
         ShopifyCollectionTagsManyToManyTabularInline,
-        ShopifyCollectionMetafieldsTabularInline
+        ShopifyCollectionMetafieldsTabularInline,
+        ShopifyCollectionCalculatorStackedInline
     )
 
     def details_link(self, obj):
@@ -243,94 +218,10 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
-    def may_be_relevant_flag(self, obj):
-        if obj.is_relevant != obj.may_be_relevant:
-            return '~'
-        else:
-            return ''
-    may_be_relevant_flag.short_description = ''
-
-    def title_match__(self, obj):
-        return bool(obj.title == obj.calculator.title_)
-    title_match__.boolean = True
-    title_match__.short_description = ''
-
-    def title__(self, obj):
-        if self.title_match__(obj):
-            return ''
-        return obj.calculator.title_
-    title__.short_description = ''
-
-    def tags_match__(self, obj):
-        existing_tags = list(obj.tags.values_list('name', flat=True))
-        existing_tags.sort()
-        calculated_tags = obj.calculator.tags_
-        calculated_tags.sort()
-        return bool(existing_tags == calculated_tags)
-    tags_match__.boolean = True
-    tags_match__.short_description = ''
-
-    def tags__(self, obj):
-        if self.tags_match__(obj):
-            return ''
-        return f'{obj.tags.count()} / {len(obj.calculator.tags_)}'
-    tags__.short_description = 'tags'
-
-    def metafields_match__(self, obj):
-        from ..models import ShopifyMetafield
-
-        for metafield in obj.metafields.all():
-            metafield_data = {
-                'namespace': metafield.namespace,
-                'key': metafield.key,
-                'owner_resource': metafield.owner_resource,
-                'value': metafield.value,
-                'value_type': metafield.value_type
-            }
-            if metafield_data not in obj.calculator.metafields_:
-                return False
-
-        for metafield in obj.calculator.metafields_:
-            try:
-                obj.metafields.get(
-                    namespace=metafield['namespace'],
-                    key=metafield['key'],
-                    owner_resource=metafield['owner_resource'],
-                    value=metafield['value'],
-                    value_type=metafield['value_type']
-                )
-            except ShopifyMetafield.DoesNotExist:
-                return False
-        return True
-    metafields_match__.boolean = True
-    metafields_match__.short_description = ''
-
-    def metafields__(self, obj):
-        if self.metafields_match__(obj):
-            return ''
-        # metafield_data = []
-        # for metafield in obj.metafields.all():
-        #     metafield_data.append(
-        #         {
-        #             'namespace': metafield.namespace,
-        #             'key': metafield.key,
-        #             'owner_resource': metafield.owner_resource,
-        #             'value': metafield.value,
-        #             'value_type': metafield.value_type
-        #         }
-        #     )
-        # return f'{metafield_data}\n\n{obj.calculator.metafields_}'
-        return f'{obj.metafields.count()} / {len(obj.calculator.metafields_)}'
-    metafields__.short_description = 'metafields'
-
-    def all_match__(self, obj):
-        return bool(
-            self.title_match__(obj)
-            and self.tags_match__(obj)
-            and self.metafields_match__(obj)
-        )
-    all_match__.boolean = True
-    all_match__.short_description = 'calculated'
+    def full_match(self, obj):
+        return obj.calculator.full_match()
+    full_match.boolean = True
+    full_match.short_description = 'calculated'
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -466,8 +357,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'update_calculated_fields_queryset_action',
         'export_to_api_queryset_action',
         'import_from_api_queryset_action',
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action'
+        'mark_as_published_queryset_action',
+        'mark_as_unpublished_queryset_action'
     )
 
     change_actions = (
@@ -499,11 +390,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'body_html',
         'vendor',
         'is_published',
-        'may_be_relevant_flag',
-        'is_relevant',
-        'relevancy_errors',
-        'notes',
-        'all_match__'
+        'errors',
+        'full_match'
     )
 
     list_display_links = (
@@ -512,11 +400,9 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
 
     list_editable = (
         'is_published',
-        'is_relevant'
     )
 
     list_filter = (
-        'is_relevant',
         'is_published',
         'product_type',
         'vendor',
@@ -528,8 +414,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         (
             None, {
                 'fields': (
-                    'is_relevant',
-                    'relevancy_errors'
+                    'errors',
                 )
             }
         ),
@@ -542,10 +427,10 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
                     'id',
                     'product_id',
                     'product_type',
-                    ('title', 'title_match__', 'title__'),
+                    'title',
                     'is_published',
                     'published_scope',
-                    ('body_html', 'body_html_match__', 'body_html__')
+                    'body_html'
                 )
             }
         ),
@@ -564,48 +449,18 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
                     'seo_description'
                 )
             }
-        ),
-        (
-            'Other Calculated', {
-                'fields': (
-                    ('tags__', 'tags_match__'),
-                    ('images__', 'images_match__'),
-                    ('metafields__', 'metafields_match__')
-                ),
-                'classes': (
-                    'collapse',
-                )
-            }
-        ),
-        (
-            'Notes', {
-                'fields': (
-                    'notes',
-                )
-            }
         )
     )
 
     readonly_fields = (
         'id',
-        'may_be_relevant_flag',
-        'relevancy_errors',
+        'errors',
         'details_link',
         'item_link',
         'premier_product_link',
         'sema_product_link',
         'vendor_link',
-        'title__',
-        'title_match__',
-        'body_html__',
-        'body_html_match__',
-        'tags__',
-        'tags_match__',
-        'images__',
-        'images_match__',
-        'metafields__',
-        'metafields_match__',
-        'all_match__'
+        'full_match'
     )
 
     autocomplete_fields = (
@@ -617,7 +472,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         ShopifyProductMetafieldsTabularInline,
         ShopifyProductImagesTabularInline,
         ShopifyProductOptionsTabularInline,
-        ShopifyProductTagsManyToManyTabularInline
+        ShopifyProductTagsManyToManyTabularInline,
+        ShopifyProductCalculatorStackedInline
     )
 
     def details_link(self, obj):
@@ -656,119 +512,10 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         return get_change_view_link(obj.vendor, 'See full vendor')
     vendor_link.short_description = ''
 
-    def may_be_relevant_flag(self, obj):
-        if obj.is_relevant != obj.may_be_relevant:
-            return '~'
-        else:
-            return ''
-    may_be_relevant_flag.short_description = ''
-
-    def title_match__(self, obj):
-        return bool(obj.title == obj.calculator.title_)
-    title_match__.boolean = True
-    title_match__.short_description = ''
-
-    def title__(self, obj):
-        if self.title_match__(obj):
-            return ''
-        return obj.calculator.title_
-    title__.short_description = ''
-
-    def body_html_match__(self, obj):
-        return bool(obj.body_html == obj.calculator.body_html_)
-    body_html_match__.boolean = True
-    body_html_match__.short_description = ''
-
-    def body_html__(self, obj):
-        if self.body_html_match__(obj):
-            return ''
-        return obj.calculator.body_html_
-    body_html__.short_description = ''
-
-    def tags_match__(self, obj):
-        existing_tags = list(obj.tags.values_list('name', flat=True))
-        existing_tags.sort()
-        calculated_tags = obj.calculator.tags_
-        calculated_tags.sort()
-        return bool(existing_tags == calculated_tags)
-    tags_match__.boolean = True
-    tags_match__.short_description = ''
-
-    def tags__(self, obj):
-        if self.tags_match__(obj):
-            return ''
-        return f'{obj.tags.count()} / {len(obj.calculator.tags_)}'
-    tags__.short_description = 'tags'
-
-    def images_match__(self, obj):
-        existing_images = list(obj.images.values_list('src', flat=True))
-        existing_images.sort()
-        calculated_images = obj.calculator.images_
-        calculated_images.sort()
-        return bool(existing_images == calculated_images)
-    images_match__.boolean = True
-    images_match__.short_description = ''
-
-    def images__(self, obj):
-        if self.images_match__(obj):
-            return ''
-        return f'{obj.images.count()} / {len(obj.calculator.images_)}'
-    images__.short_description = 'images'
-
-    def metafields_match__(self, obj):
-        from ..models import ShopifyMetafield
-        for metafield in obj.metafields.all():
-            metafield_data = {
-                'namespace': metafield.namespace,
-                'key': metafield.key,
-                'owner_resource': metafield.owner_resource,
-                'value': metafield.value,
-                'value_type': metafield.value_type
-            }
-            if metafield_data not in obj.calculator.metafields_:
-                return False
-
-        for metafield in obj.calculator.metafields_:
-            try:
-                obj.metafields.get(
-                    namespace=metafield['namespace'],
-                    key=metafield['key'],
-                    owner_resource=metafield['owner_resource'],
-                    value=metafield['value'],
-                    value_type=metafield['value_type']
-                )
-            except ShopifyMetafield.DoesNotExist:
-                return False
-        return True
-    metafields_match__.boolean = True
-    metafields_match__.short_description = ''
-
-    def metafields__(self, obj):
-        if self.metafields_match__(obj):
-            return ''
-        return f'{obj.metafields.count()} / {len(obj.calculator.metafields_)}'
-    metafields__.short_description = 'metafields'
-
-    def all_match__(self, obj):
-        self_match = bool(
-            self.title_match__(obj)
-            and self.body_html_match__(obj)
-            and self.tags_match__(obj)
-            and self.images_match__(obj)
-            and self.metafields_match__(obj)
-        )
-        for variant in obj.variants.all():
-            if not bool(
-                    variant.sku == obj.calculator.sku_
-                    and variant.barcode == obj.calculator.barcode_
-                    and variant.weight == obj.calculator.weight_
-                    and variant.weight_unit == obj.calculator.weight_unit_
-                    and variant.price == obj.calculator.price_
-                    and variant.cost == obj.calculator.cost_):
-                return False
-        return self_match
-    all_match__.boolean = True
-    all_match__.short_description = 'calculated'
+    def full_match(self, obj):
+        return obj.calculator.full_match()
+    full_match.boolean = True
+    full_match.short_description = 'calculated'
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -1164,3 +911,446 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
                 'metafield_id',
             )
         return readonly_fields
+
+
+@admin.register(ShopifyProductCalculator)
+class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
+                                         ShopifyProductCalculatorActions):
+    actions = (
+        'update_calculated_fields_queryset_action',
+    )
+
+    change_actions = (
+        'update_calculated_fields_object_action',
+    )
+
+    list_select_related = (
+        'product',
+    )
+
+    search_fields = (
+        'product__id',
+        'product__product_id',
+        'product__title',
+        'product__body_html',
+        'product__vendor__name',
+        'product__seo_title',
+        'product__seo_description'
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'product',
+        'full_match'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'item_link',
+                    'shopify_product_link',
+                    'premier_product_link',
+                    'sema_product_link'
+                )
+            }
+        ),
+        (
+            'Text Previews', {
+                'fields': (
+                    'sema_description_def_preview',
+                    'sema_description_des_preview',
+                    'sema_description_inv_preview',
+                    'sema_description_ext_preview',
+                    'sema_description_tle_preview',
+                    'sema_description_sho_preview',
+                    'sema_description_asc_preview',
+                    'sema_description_mkt_preview',
+                    'premier_description_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Title', {
+                'fields': (
+                    ('title_match', 'title_difference'),
+                    'title_option'
+                )
+            }
+        ),
+        (
+            'Body HTML', {
+                'fields': (
+                    ('body_html_match', 'body_html_difference'),
+                    'body_html_option'
+                )
+            }
+        ),
+        (
+            'Weight Previews', {
+                'fields': (
+                    'premier_weight_preview',
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Variant Weight', {
+                'fields': (
+                    ('variant_weight_match', 'variant_weight_difference'),
+                    'variant_weight_option'
+                )
+            }
+        ),
+        (
+            'Variant Weight Unit', {
+                'fields': (
+                    ('variant_weight_unit_match',
+                     'variant_weight_unit_difference'),
+                    'variant_weight_unit_option'
+                )
+            }
+        ),
+        (
+            'Cost Previews', {
+                'fields': (
+                    'premier_cost_cad_preview',
+                    'premier_cost_usd_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Variant Cost', {
+                'fields': (
+                    ('variant_cost_match', 'variant_cost_difference'),
+                    'variant_cost_option'
+                )
+            }
+        ),
+        (
+            'Variant Price', {
+                'fields': (
+                    ('variant_price_match', 'variant_price_difference'),
+                    'variant_price_base_option',
+                    'variant_price_markup_option'
+                )
+            }
+        ),
+        (
+            'Identifier Previews', {
+                'fields': (
+                    'premier_premier_part_number_preview',
+                    'premier_upc_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Variant SKU', {
+                'fields': (
+                    ('variant_sku_match', 'variant_sku_difference'),
+                    'variant_sku_option'
+                )
+            }
+        ),
+        (
+            'Variant Barcode', {
+                'fields': (
+                    ('variant_barcode_match', 'variant_barcode_difference'),
+                    'variant_barcode_option'
+                )
+            }
+        ),
+        (
+            'Metafield Previews', {
+                'fields': (
+                    'sema_html_packaging_preview',
+                    'sema_vehicle_fitments_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Metafields', {
+                'fields': (
+                    ('metafields_match', 'metafields_difference'),
+                    'metafields_packaging_option',
+                    'metafields_fitments_option'
+                )
+            }
+        ),
+        (
+            'Tag Previews', {
+                'fields': (
+                    'sema_brand_tags_preview',
+                    'sema_category_tags_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Tags', {
+                'fields': (
+                    ('tags_match', 'tags_difference'),
+                    'tags_vendor_option',
+                    'tags_categories_option'
+                )
+            }
+        ),
+        (
+            'Image Previews', {
+                'fields': (
+                    'sema_images_preview',
+                    'premier_images_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Images', {
+                'fields': (
+                    ('images_match', 'images_difference'),
+                    'images_option'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'item_link',
+        'details_link',
+        'shopify_product_link',
+        'premier_product_link',
+        'sema_product_link',
+        'title_match',
+        'body_html_match',
+        'variant_weight_match',
+        'variant_weight_unit_match',
+        'variant_cost_match',
+        'variant_price_match',
+        'variant_sku_match',
+        'variant_barcode_match',
+        'metafields_match',
+        'tags_match',
+        'images_match',
+        'full_match',
+        'title_difference',
+        'body_html_difference',
+        'variant_weight_difference',
+        'variant_weight_unit_difference',
+        'variant_cost_difference',
+        'variant_price_difference',
+        'variant_sku_difference',
+        'variant_barcode_difference',
+        'metafields_difference',
+        'tags_difference',
+        'images_difference',
+        'sema_description_def_preview',
+        'sema_description_des_preview',
+        'sema_description_inv_preview',
+        'sema_description_ext_preview',
+        'sema_description_tle_preview',
+        'sema_description_sho_preview',
+        'sema_description_asc_preview',
+        'sema_description_mkt_preview',
+        'sema_html_packaging_preview',
+        'sema_vehicle_fitments_preview',
+        'sema_brand_tags_preview',
+        'sema_category_tags_preview',
+        'sema_images_preview',
+        'premier_description_preview',
+        'premier_weight_preview',
+        'premier_cost_cad_preview',
+        'premier_cost_usd_preview',
+        'premier_premier_part_number_preview',
+        'premier_upc_preview',
+        'premier_images_preview'
+    )
+
+    def details_link(self, obj):
+        if not obj:
+            return None
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def item_link(self, obj):
+        if not hasattr(obj.product, 'item'):
+            return '-----'
+        return get_change_view_link(obj.product.item, 'See full item')
+    item_link.short_description = ''
+
+    def shopify_product_link(self, obj):
+        if not obj.product:
+            return '-----'
+        return get_change_view_link(obj.product, 'See full Shopify Product')
+    shopify_product_link.short_description = ''
+
+    def premier_product_link(self, obj):
+        if (not hasattr(obj.product, 'item')
+                or not obj.product.item.premier_product):
+            return '-----'
+        return get_change_view_link(
+            obj.product.item.premier_product,
+            'See full Premier product'
+        )
+    premier_product_link.short_description = ''
+
+    def sema_product_link(self, obj):
+        if (not hasattr(obj.product, 'item')
+                or not obj.product.item.sema_product):
+            return '-----'
+        return get_change_view_link(
+            obj.product.item.sema_product,
+            'See full SEMA product'
+        )
+    sema_product_link.short_description = ''
+
+
+@admin.register(ShopifyCollectionCalculator)
+class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
+                                            ShopifyCollectionCalculatorActions):
+    actions = (
+        'update_calculated_fields_queryset_action',
+    )
+
+    change_actions = (
+        'update_calculated_fields_object_action',
+    )
+
+    list_select_related = (
+        'collection',
+    )
+
+    search_fields = (
+        'collection__id',
+        'collection__collection_id',
+        'collection__title',
+        'collection__handle',
+        'collection__body_html'
+    )
+
+    list_display = (
+        'details_link',
+        'id',
+        'collection',
+        'full_match'
+    )
+
+    list_display_links = (
+        'details_link',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'shopify_collection_link',
+                )
+            }
+        ),
+        (
+            'Text Previews', {
+                'fields': (
+                    'sema_category_chained_title_preview',
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Title', {
+                'fields': (
+                    ('title_match', 'title_difference'),
+                    'title_option'
+                )
+            }
+        ),
+        (
+            'Metafield Previews', {
+                'fields': (
+                    'sema_category_display_name_preview',
+                    'shopify_subcollections_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Metafields', {
+                'fields': (
+                    ('metafields_match', 'metafields_difference'),
+                    'metafields_display_name_option',
+                    'metafields_subcollections_option'
+                )
+            }
+        ),
+        (
+            'Tag Previews', {
+                'fields': (
+                    'sema_category_tags_preview',
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Tags', {
+                'fields': (
+                    ('tags_match', 'tags_difference'),
+                    'tags_categories_option'
+                )
+            }
+        )
+    )
+
+    readonly_fields = (
+        'shopify_collection_link',
+        'details_link',
+        'title_match',
+        'metafields_match',
+        'tags_match',
+        'full_match',
+        'title_difference',
+        'metafields_difference',
+        'tags_difference',
+        'sema_category_chained_title_preview',
+        'sema_category_display_name_preview',
+        'shopify_subcollections_preview',
+        'sema_category_tags_preview'
+    )
+
+    def details_link(self, obj):
+        if not obj:
+            return None
+        return get_change_view_link(obj, 'Details')
+    details_link.short_description = ''
+
+    def shopify_collection_link(self, obj):
+        if not obj.collection:
+            return '-----'
+        return get_change_view_link(obj.collection, 'See full Shopify Collection')
+    shopify_collection_link.short_description = ''

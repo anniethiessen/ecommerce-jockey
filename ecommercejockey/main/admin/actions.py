@@ -33,6 +33,30 @@ class VendorActions(RelevancyActions):
         'or Shopify vendors exist'
     )
 
+    def create_shopify_vendors_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.create_shopify_vendors()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    create_shopify_vendors_queryset_action.allowed_permissions = ('view',)
+    create_shopify_vendors_queryset_action.short_description = (
+        'Create Shopify vendors for selected %(verbose_name_plural)s'
+    )
+
+    def create_shopify_vendors_object_action(self, request, obj):
+        try:
+            queryset = self.model.objects.filter(pk=obj.pk)
+            msgs = queryset.create_shopify_vendors()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    create_shopify_vendors_object_action.allowed_permissions = ('view',)
+    create_shopify_vendors_object_action.label = 'Create Shopify Vendors'
+    create_shopify_vendors_object_action.short_description = (
+        'Create Shopify vendors for item'
+    )
+
 
 class ItemActions(CreateAndLinkActions):
     def mark_as_relevant_queryset_action(self, request, queryset):

@@ -12,10 +12,12 @@ from core.admin.utils import (
 )
 from ..models import (
     ShopifyCollection,
+    ShopifyCollectionCalculator,
     ShopifyImage,
     ShopifyMetafield,
     ShopifyOption,
     ShopifyProduct,
+    ShopifyProductCalculator,
     ShopifyVariant
 )
 
@@ -246,8 +248,8 @@ class ShopifyProductVariantsStackedInline(StackedInline):
                 'fields': (
                     'variant_id',
                     'title',
-                    ('sku', 'sku_match__', 'sku__'),
-                    ('barcode', 'barcode_match__', 'barcode__')
+                    'sku',
+                    'barcode'
                 )
             }
         ),
@@ -255,17 +257,17 @@ class ShopifyProductVariantsStackedInline(StackedInline):
             'Weight', {
                 'fields': (
                     'grams',
-                    ('weight', 'weight_match__', 'weight__'),
-                    ('weight_unit', 'weight_unit_match__', 'weight_unit__')
+                    'weight',
+                    'weight_unit'
                 )
             }
         ),
         (
             'Pricing', {
                 'fields': (
-                    ('price', 'price_match__', 'price__'),
+                    'price',
                     'compare_at_price',
-                    ('cost', 'cost_match__', 'cost__')
+                    'cost',
                 )
             }
         ),
@@ -288,87 +290,6 @@ class ShopifyProductVariantsStackedInline(StackedInline):
         )
     )
 
-    readonly_fields = (
-        'sku__',
-        'sku_match__',
-        'barcode__',
-        'barcode_match__',
-        'weight__',
-        'weight_match__',
-        'weight_unit__',
-        'weight_unit_match__',
-        'price__',
-        'price_match__',
-        'cost__',
-        'cost_match__'
-    )
-
-    def sku_match__(self, obj):
-        return bool(obj.sku == obj.product.calculator.sku_)
-    sku_match__.boolean = True
-    sku_match__.short_description = ''
-
-    def sku__(self, obj):
-        if self.sku_match__(obj):
-            return ''
-        return obj.product.calculator.sku_
-    sku__.short_description = ''
-
-    def barcode_match__(self, obj):
-        return bool(obj.barcode == obj.product.calculator.barcode_)
-    barcode_match__.boolean = True
-    barcode_match__.short_description = ''
-
-    def barcode__(self, obj):
-        if self.barcode_match__(obj):
-            return ''
-        return obj.product.calculator.barcode_
-    barcode__.short_description = ''
-
-    def weight_match__(self, obj):
-        return bool(obj.weight == obj.product.calculator.weight_)
-    weight_match__.boolean = True
-    weight_match__.short_description = ''
-
-    def weight__(self, obj):
-        if self.weight_match__(obj):
-            return ''
-        return obj.product.calculator.weight_
-    weight__.short_description = ''
-
-    def weight_unit_match__(self, obj):
-        return bool(obj.weight_unit == obj.product.calculator.weight_unit_)
-    weight_unit_match__.boolean = True
-    weight_unit_match__.short_description = ''
-
-    def weight_unit__(self, obj):
-        if self.weight_unit_match__(obj):
-            return ''
-        return obj.product.calculator.weight_unit_
-    weight_unit__.short_description = ''
-
-    def price_match__(self, obj):
-        return bool(obj.price == obj.product.calculator.price_)
-    price_match__.boolean = True
-    price_match__.short_description = ''
-
-    def price__(self, obj):
-        if self.price_match__(obj):
-            return ''
-        return obj.product.calculator.price_
-    price__.short_description = ''
-
-    def cost_match__(self, obj):
-        return bool(obj.cost == obj.product.calculator.cost_)
-    cost_match__.boolean = True
-    cost_match__.short_description = ''
-
-    def cost__(self, obj):
-        if self.cost_match__(obj):
-            return ''
-        return obj.product.calculator.cost_
-    cost__.short_description = ''
-
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
         if not request.user.is_superuser:
@@ -376,6 +297,82 @@ class ShopifyProductVariantsStackedInline(StackedInline):
                 'variant_id',
             )
         return readonly_fields
+
+
+class ShopifyProductCalculatorStackedInline(StackedInline):
+    model = ShopifyProductCalculator
+    verbose_name_plural = 'calculator'
+    extra = 0
+    classes = (
+        'collapse',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'details_link',
+                    ('title_match', 'title_difference'),
+                    'title_option',
+                    ('body_html_match', 'body_html_difference'),
+                    'body_html_option',
+                    ('variant_weight_match', 'variant_weight_difference'),
+                    'variant_weight_option',
+                    ('variant_weight_unit_match', 'variant_weight_unit_difference'),
+                    'variant_weight_unit_option',
+                    ('variant_cost_match', 'variant_cost_difference'),
+                    'variant_cost_option',
+                    ('variant_price_match', 'variant_price_difference'),
+                    'variant_price_base_option',
+                    'variant_price_markup_option',
+                    ('variant_sku_match', 'variant_sku_difference'),
+                    'variant_sku_option',
+                    ('variant_barcode_match', 'variant_barcode_difference'),
+                    'variant_barcode_option',
+                    ('metafields_match', 'metafields_difference'),
+                    'metafields_packaging_option',
+                    'metafields_fitments_option',
+                    ('tags_match', 'tags_difference'),
+                    'tags_vendor_option',
+                    'tags_categories_option',
+                    ('images_match', 'images_difference'),
+                    'images_option'
+                )
+            }
+        ),
+    )
+
+    readonly_fields = (
+        'details_link',
+        'title_match',
+        'body_html_match',
+        'variant_weight_match',
+        'variant_weight_unit_match',
+        'variant_cost_match',
+        'variant_price_match',
+        'variant_sku_match',
+        'variant_barcode_match',
+        'metafields_match',
+        'tags_match',
+        'images_match',
+        'title_difference',
+        'body_html_difference',
+        'variant_weight_difference',
+        'variant_weight_unit_difference',
+        'variant_cost_difference',
+        'variant_price_difference',
+        'variant_sku_difference',
+        'variant_barcode_difference',
+        'metafields_difference',
+        'tags_difference',
+        'images_difference'
+    )
+
+    def details_link(self, obj):
+        if not obj:
+            return None
+        return get_change_view_link(obj, 'See Full Calculator')
+    details_link.short_description = ''
 
 
 class ShopifyProductMetafieldsTabularInline(ShopifyMetafieldBaseTabularInline):
@@ -396,6 +393,48 @@ class ShopifyProductTagsManyToManyTabularInline(TabularInline):
     classes = (
         'collapse',
     )
+
+
+class ShopifyCollectionCalculatorStackedInline(StackedInline):
+    model = ShopifyCollectionCalculator
+    verbose_name_plural = 'calculator'
+    extra = 0
+    classes = (
+        'collapse',
+    )
+
+    fieldsets = (
+        (
+            None, {
+                'fields': (
+                    'details_link',
+                    ('title_match', 'title_difference'),
+                    'title_option',
+                    ('metafields_match', 'metafields_difference'),
+                    'metafields_display_name_option',
+                    'metafields_subcollections_option',
+                    ('tags_match', 'tags_difference'),
+                    'tags_categories_option'
+                )
+            }
+        ),
+    )
+
+    readonly_fields = (
+        'details_link',
+        'title_match',
+        'metafields_match',
+        'tags_match',
+        'title_difference',
+        'metafields_difference',
+        'tags_difference'
+    )
+
+    def details_link(self, obj):
+        if not obj:
+            return None
+        return get_change_view_link(obj, 'See Full Calculator')
+    details_link.short_description = ''
 
 
 class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
