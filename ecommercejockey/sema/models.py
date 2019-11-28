@@ -3535,7 +3535,8 @@ class SemaCategory(SemaBaseModel):
 
     @property
     def tag_name(self):
-        return f'category:{slugify(self.name)}'
+        name = self.name
+        return f'category:{slugify(name)}-{self.level}'
 
     @property
     def level(self):
