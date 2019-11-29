@@ -98,7 +98,7 @@ class ShopifyCollectionRule(Model, MessagesMixin):
         max_length=10
     )
     condition = CharField(
-        max_length=50
+        max_length=200
     )
 
     def __str__(self):
@@ -542,6 +542,12 @@ class ShopifyCollection(Model, MessagesMixin):
     @property
     def tag_count(self):
         return self.tags.count()
+    tag_count.fget.short_description = 'Tag Count'
+
+    @property
+    def rule_count(self):
+        return self.rules.count()
+    rule_count.fget.short_description = 'Rule Count'
     # </editor-fold>
 
     # <editor-fold desc="error properties ...">
@@ -709,22 +715,22 @@ class ShopifyCollection(Model, MessagesMixin):
                                 message=f'{tag} added'
                             )
                         )
-                else:
-                    rule, created = ShopifyCollectionRule.objects.get_or_create(
-                        column=value['column'],
-                        relation=value['relation'],
-                        condition=value['condition']
-                    )
-                    if created:
-                        msgs.append(rule.get_create_success_msg())
-                    if rule not in self.rules.all():
-                        self.rules.add(rule)
-                        self.save()
-                        msgs.append(
-                            self.get_update_success_msg(
-                                message=f'{rule} added'
-                            )
+
+                rule, created = ShopifyCollectionRule.objects.get_or_create(
+                    column=value['column'],
+                    relation=value['relation'],
+                    condition=value['condition']
+                )
+                if created:
+                    msgs.append(rule.get_create_success_msg())
+                if rule not in self.rules.all():
+                    self.rules.add(rule)
+                    self.save()
+                    msgs.append(
+                        self.get_update_success_msg(
+                            message=f'{rule} added'
                         )
+                    )
 
             tag_values = [
                 value['condition'] for value in values
@@ -739,16 +745,14 @@ class ShopifyCollection(Model, MessagesMixin):
                             message=f'{tag} removed'
                         )
                     )
-            rule_values = [
-                value for value in values
-                if value['column'] != 'tag' or value['relation'] != 'equals'
-            ]
+
+            rule_values = [value for value in values]
             for rule in self.rules.all():
                 if {
                     'column': rule.column,
                     'relation': rule.relation,
                     'condition': rule.condition
-                } not in tag_values:
+                } not in rule_values:
                     self.rules.remove(rule)
                     self.save()
                     msgs.append(

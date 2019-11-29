@@ -137,6 +137,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'title',
         'handle',
         'tag_count',
+        'rule_count',
         'is_published',
         'errors',
         'full_match'
@@ -202,6 +203,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     readonly_fields = (
         'id',
         'tag_count',
+        'rule_count',
         'errors',
         'full_match',
         'details_link'
