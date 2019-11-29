@@ -61,7 +61,8 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
     list_display = (
         'details_link',
         'id',
-        'name'
+        'name',
+        'product_count_a'
     )
 
     list_display_links = (
@@ -81,6 +82,7 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
 
     readonly_fields = (
         'id',
+        'product_count_a'
     )
 
     inlines = (
@@ -92,6 +94,10 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
             return None
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def product_count_a(self, obj):
+        return f'{obj.product_published_count}/{obj.product_count}'
+    product_count_a.short_description = 'product_count'
 
     def get_inline_instances(self, request, obj=None):
         if not obj:

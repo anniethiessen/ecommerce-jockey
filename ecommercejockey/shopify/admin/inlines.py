@@ -4,11 +4,9 @@ from django.contrib.admin import (
 )
 from django.contrib.contenttypes.admin import GenericTabularInline
 
-from core.admin.forms import LimitedInlineFormSet
 from core.admin.utils import (
     get_change_view_link,
-    get_changelist_view_link,
-    # get_image_preview
+    get_changelist_view_link
 )
 from ..models import (
     ShopifyCollection,
@@ -20,6 +18,7 @@ from ..models import (
     ShopifyProductCalculator,
     ShopifyVariant
 )
+from .forms import LimitedInlineFormSet
 
 
 class ShopifyMetafieldBaseTabularInline(GenericTabularInline):  # TODO

@@ -50,6 +50,32 @@ class ShopifyVendor(Model, MessagesMixin):
         unique=True
     )
 
+    # <editor-fold desc="count properties ...">
+    @property
+    def product_count(self):
+        """
+        Returns product count.
+
+        :return: product count
+        :rtype: int
+
+        """
+
+        return self.products.distinct().count()
+
+    @property
+    def product_published_count(self):
+        """
+        Returns published product count.
+
+        :return: published product count
+        :rtype: int
+
+        """
+
+        return self.products.filter(is_published=True).distinct().count()
+    # </editor-fold>
+
     def __str__(self):
         return self.name
 
