@@ -30,3 +30,54 @@ class ByCollectionLevel(SimpleListFilter):
                 parent_collection__isnull=False,
                 child_collections__isnull=True
             ).distinct()
+
+
+class HasVendor(SimpleListFilter):
+    title = 'has main vendor'
+    parameter_name = 'vendor'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(vendor__isnull=False)
+        if self.value() == 'No':
+            return queryset.filter(vendor__isnull=True)
+
+
+class HasPremierManufacturer(SimpleListFilter):
+    title = 'has Premier manufacturer'
+    parameter_name = 'vendor__premier_manufacturer'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(vendor__premier_manufacturer__isnull=False)
+        if self.value() == 'No':
+            return queryset.filter(vendor__premier_manufacturer__isnull=True)
+
+
+class HasSemaBrand(SimpleListFilter):
+    title = 'has SEMA brand'
+    parameter_name = 'vendor__sema_brand'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('Yes', 'Yes'),
+            ('No', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'Yes':
+            return queryset.filter(vendor__sema_brand__isnull=False)
+        if self.value() == 'No':
+            return queryset.filter(vendor__sema_brand__isnull=True)

@@ -86,6 +86,30 @@ class ShopifyTag(Model, MessagesMixin):
         unique=True
     )
 
+    # <editor-fold desc="count properties ...">
+    @property
+    def product_count(self):
+        return self.products.count()
+    product_count.fget.short_description = 'Product Count'
+
+    @property
+    def product_published_count(self):
+        return self.products.filter(is_published=True).count()
+    product_published_count.fget.short_description = 'Published Product Count'
+
+    @property
+    def collection_count(self):
+        return self.collections.count()
+    collection_count.fget.short_description = 'Collection Count'
+
+    @property
+    def collection_published_count(self):
+        return self.collections.filter(is_published=True).count()
+    collection_published_count.fget.short_description = (
+        'Published Collection Count'
+    )
+    # </editor-fold>
+
     def __str__(self):
         return self.name
 
@@ -543,6 +567,11 @@ class ShopifyCollection(Model, MessagesMixin):
     def tag_count(self):
         return self.tags.count()
     tag_count.fget.short_description = 'Tag Count'
+
+    @property
+    def metafield_count(self):
+        return self.metafields.count()
+    metafield_count.fget.short_description = 'Metafield Count'
 
     @property
     def rule_count(self):
@@ -1038,6 +1067,33 @@ class ShopifyProduct(Model, MessagesMixin):
         ShopifyMetafield,
         related_query_name='product'
     )
+
+    # <editor-fold desc="count properties ...">
+    @property
+    def variant_count(self):
+        return self.variants.count()
+    variant_count.fget.short_description = 'Variant Count'
+
+    @property
+    def option_count(self):
+        return self.options.count()
+    option_count.fget.short_description = 'Option Count'
+
+    @property
+    def image_count(self):
+        return self.images.count()
+    image_count.fget.short_description = 'Image Count'
+
+    @property
+    def metafield_count(self):
+        return self.metafields.count()
+    metafield_count.fget.short_description = 'Metafield Count'
+
+    @property
+    def tag_count(self):
+        return self.tags.count()
+    tag_count.fget.short_description = 'Tag Count'
+    # </editor-fold>
 
     # <editor-fold desc="error properties ...">
     @property

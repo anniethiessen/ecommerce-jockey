@@ -32,7 +32,12 @@ from .actions import (
     ShopifyVariantActions,
     ShopifyVendorActions
 )
-from .filters import ByCollectionLevel
+from .filters import (
+    ByCollectionLevel,
+    HasPremierManufacturer,
+    HasSemaBrand,
+    HasVendor
+)
 from .inlines import (
     ShopifyCollectionCalculatorStackedInline,
     ShopifyCollectionMetafieldsTabularInline,
@@ -69,7 +74,22 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
         'details_link',
     )
 
+    list_filter = (
+        HasVendor,
+        HasPremierManufacturer,
+        HasSemaBrand
+    )
+
     fieldsets = (
+        (
+            'Vendor', {
+                'fields': (
+                    'vendor_link',
+                    'premier_manufacturer_link',
+                    'sema_brand_link'
+                )
+            }
+        ),
         (
             'Vendor', {
                 'fields': (
@@ -82,7 +102,10 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
 
     readonly_fields = (
         'id',
-        'product_count_a'
+        'details_link',
+        'vendor_link',
+        'premier_manufacturer_link',
+        'sema_brand_link'
     )
 
     inlines = (
@@ -95,9 +118,46 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
+    def vendor_link(self, obj):
+        if not hasattr(obj, 'vendor'):
+            return None
+        return get_change_view_link(obj.vendor, 'See Full Vendor')
+    vendor_link.short_description = ''
+
+    def premier_manufacturer_link(self, obj):
+        if not hasattr(obj, 'vendor') or not obj.vendor.premier_manufacturer:
+            return None
+        return get_change_view_link(
+            obj.vendor.premier_manufacturer,
+            'See Premier Manufacturer'
+        )
+    premier_manufacturer_link.short_description = ''
+
+    def sema_brand_link(self, obj):
+        if not hasattr(obj, 'vendor') or not obj.vendor.sema_brand:
+            return None
+        return get_change_view_link(
+            obj.vendor.sema_brand,
+            'See SEMA Brand'
+        )
+    sema_brand_link.short_description = ''
+
     def product_count_a(self, obj):
         return f'{obj.product_published_count}/{obj.product_count}'
     product_count_a.short_description = 'product_count'
+
+    def get_fieldsets(self, request, obj=None):
+        if not obj:
+            return (
+                (
+                    None, {
+                        'fields': (
+                            'name',
+                        )
+                    }
+                ),
+            )
+        return super().get_fieldsets(request, obj)
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
@@ -137,6 +197,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'title',
         'handle',
         'tag_count',
+        'metafield_count',
         'rule_count',
         'is_published',
         'errors',
@@ -203,6 +264,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     readonly_fields = (
         'id',
         'tag_count',
+        'metafield_count',
         'rule_count',
         'errors',
         'full_match',
@@ -318,7 +380,9 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
     list_display = (
         'details_link',
         'id',
-        'name'
+        'name',
+        'product_count_a',
+        'collection_count_a'
     )
 
     list_display_links = (
@@ -338,6 +402,8 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
 
     readonly_fields = (
         'id',
+        'product_count_a',
+        'collection_count_a',
         'details_link'
     )
 
@@ -351,6 +417,14 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
             return None
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def product_count_a(self, obj):
+        return f'{obj.product_published_count}/{obj.product_count}'
+    product_count_a.short_description = 'Product Count'
+
+    def collection_count_a(self, obj):
+        return f'{obj.collection_published_count}/{obj.collection_count}'
+    collection_count_a.short_description = 'Collection Count'
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
@@ -397,6 +471,11 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'title',
         'body_html',
         'vendor',
+        'variant_count',
+        'option_count',
+        'image_count',
+        'metafield_count',
+        'tag_count',
         'is_published',
         'errors',
         'full_match'
@@ -462,6 +541,11 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
+        'variant_count',
+        'option_count',
+        'image_count',
+        'metafield_count',
+        'tag_count',
         'errors',
         'details_link',
         'item_link',
@@ -477,10 +561,10 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
 
     inlines = (
         ShopifyProductVariantsStackedInline,
-        ShopifyProductMetafieldsTabularInline,
-        ShopifyProductImagesTabularInline,
         ShopifyProductOptionsTabularInline,
+        ShopifyProductImagesTabularInline,
         ShopifyProductTagsManyToManyTabularInline,
+        ShopifyProductMetafieldsTabularInline,
         ShopifyProductCalculatorStackedInline
     )
 
