@@ -62,6 +62,7 @@ class ShopifyVendor(Model, MessagesMixin):
         """
 
         return self.products.distinct().count()
+    product_count.fget.short_description = 'product count'
 
     @property
     def product_published_count(self):
@@ -74,6 +75,7 @@ class ShopifyVendor(Model, MessagesMixin):
         """
 
         return self.products.filter(is_published=True).distinct().count()
+    product_published_count.fget.short_description = 'published product count'
     # </editor-fold>
 
     def __str__(self):
@@ -90,43 +92,28 @@ class ShopifyTag(Model, MessagesMixin):
     @property
     def product_count(self):
         return self.products.count()
-    product_count.fget.short_description = 'Product Count'
+    product_count.fget.short_description = 'product count'
 
     @property
     def product_published_count(self):
         return self.products.filter(is_published=True).count()
-    product_published_count.fget.short_description = 'Published Product Count'
+    product_published_count.fget.short_description = 'published product count'
 
     @property
     def collection_count(self):
         return self.collections.count()
-    collection_count.fget.short_description = 'Collection Count'
+    collection_count.fget.short_description = 'collection count'
 
     @property
     def collection_published_count(self):
         return self.collections.filter(is_published=True).count()
     collection_published_count.fget.short_description = (
-        'Published Collection Count'
+        'published collection count'
     )
     # </editor-fold>
 
     def __str__(self):
         return self.name
-
-
-class ShopifyCollectionRule(Model, MessagesMixin):
-    column = CharField(
-        max_length=25
-    )
-    relation = CharField(
-        max_length=10
-    )
-    condition = CharField(
-        max_length=200
-    )
-
-    def __str__(self):
-        return f'{self.column} :: {self.relation} :: {self.condition}'
 
 
 class ShopifyMetafield(Model, MessagesMixin):
@@ -180,6 +167,19 @@ class ShopifyMetafield(Model, MessagesMixin):
     value = TextField(
         max_length=100
     )
+
+    # <editor-fold desc="count properties ...">
+    def json_item_count(self):
+        if not self.pk:
+            return None
+
+        if self.value_type == self._meta.model.JSON_VALUE_TYPE:
+            value = json.loads(self.value)
+            if isinstance(value, list):
+                return len(value)
+        return 'N/A'
+    json_item_count.short_description = 'item count'
+    # </editor-fold>
 
     # <editor-fold desc="format properties ...">
     @property
@@ -461,6 +461,35 @@ class ShopifyMetafield(Model, MessagesMixin):
         return f'{self.content_object} :: {self.namespace} :: {self.key}'
 
 
+class ShopifyCollectionRule(Model, MessagesMixin):
+    column = CharField(
+        max_length=25
+    )
+    relation = CharField(
+        max_length=10
+    )
+    condition = CharField(
+        max_length=200
+    )
+
+    # <editor-fold desc="count properties ...">
+    @property
+    def collection_count(self):
+        return self.collections.count()
+    collection_count.fget.short_description = 'collection count'
+
+    @property
+    def collection_published_count(self):
+        return self.collections.filter(is_published=True).count()
+    collection_published_count.fget.short_description = (
+        'published collection count'
+    )
+    # </editor-fold>
+
+    def __str__(self):
+        return f'{self.column} :: {self.relation} :: {self.condition}'
+
+
 class ShopifyCollection(Model, MessagesMixin):
     WEB_SCOPE = 'web'
     GLOBAL_SCOPE = 'global'
@@ -566,17 +595,29 @@ class ShopifyCollection(Model, MessagesMixin):
     @property
     def tag_count(self):
         return self.tags.count()
-    tag_count.fget.short_description = 'Tag Count'
+    tag_count.fget.short_description = 'tag count'
 
     @property
     def metafield_count(self):
         return self.metafields.count()
-    metafield_count.fget.short_description = 'Metafield Count'
+    metafield_count.fget.short_description = 'metafield mount'
 
     @property
     def rule_count(self):
         return self.rules.count()
-    rule_count.fget.short_description = 'Rule Count'
+    rule_count.fget.short_description = 'rule count'
+
+    @property
+    def child_collection_count(self):
+        return self.child_collections.count()
+    child_collection_count.fget.short_description = 'child count'
+
+    @property
+    def child_collection_published_count(self):
+        return self.child_collections.filter(is_published=True).count()
+    child_collection_published_count.fget.short_description = (
+        'published child count'
+    )
     # </editor-fold>
 
     # <editor-fold desc="error properties ...">
@@ -1002,6 +1043,392 @@ class ShopifyCollection(Model, MessagesMixin):
         return self.title
 
 
+class ShopifyCollectionCalculator(Model, MessagesMixin):
+    CUSTOM_VALUE = 'custom_value'
+
+    collection = OneToOneField(
+        ShopifyCollection,
+        related_name='calculator',
+        on_delete=CASCADE
+    )
+    title_option = CharField(
+        choices=(
+            ('sema_category_chained_title_value', 'SEMA Categories'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_category_chained_title_value',
+        max_length=50
+    )
+    metafields_display_name_option = CharField(
+        choices=(
+            ('sema_category_display_name_value', 'SEMA Category'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_category_display_name_value',
+        max_length=50
+    )
+    metafields_subcollections_option = CharField(
+        choices=(
+            ('shopify_subcollections_value', 'Shopify Subcollections'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='shopify_subcollections_value',
+        max_length=50
+    )
+    tags_categories_option = CharField(
+        choices=(
+            ('sema_category_tags_value', 'SEMA Categories'),
+            (CUSTOM_VALUE, 'Custom')
+        ),
+        default='sema_category_tags_value',
+        max_length=50
+    )
+
+    # <editor-fold desc="internal properties ...">
+    @property
+    def category_path(self):
+        if self.collection.level == '1':
+            return self.collection.root_category_paths.first()
+        elif self.collection.level == '2':
+            return self.collection.branch_category_paths.filter(
+                shopify_root_collection=self.collection.parent_collection
+            ).first()
+        elif self.collection.level == '3':
+            return self.collection.leaf_category_paths.filter(
+                shopify_root_collection=self.collection.parent_collection.parent_collection,
+                shopify_branch_collection=self.collection.parent_collection,
+            ).first()
+        else:
+            return None
+
+    @property
+    def shopify_collection(self):
+        return self.collection
+
+    @property
+    def sema_category(self):
+        if self.collection.level == '1':
+            return self.category_path.sema_root_category
+        elif self.collection.level == '2':
+            return self.category_path.sema_branch_category
+        elif self.collection.level == '3':
+            return self.category_path.sema_leaf_category
+        else:
+            return None
+
+    @property
+    def sema_parent_category(self):
+        if self.collection.level == '1':
+            return None
+        elif self.collection.level == '2':
+            return self.category_path.sema_root_category
+        elif self.collection.level == '3':
+            return self.category_path.sema_branch_category
+        else:
+            return None
+
+    @property
+    def sema_grandparent_category(self):
+        if self.collection.level == '1':
+            return None
+        elif self.collection.level == '2':
+            return None
+        elif self.collection.level == '3':
+            return self.category_path.sema_root_category
+        else:
+            return None
+    # </editor-fold>
+
+    # <editor-fold desc="value properties ...">
+    @property
+    def custom_value(self):
+        return None
+
+    @property
+    def sema_category_display_name_value(self):
+        if self.shopify_collection.level == '1':
+            return None
+
+        return self.sema_category.name
+
+    @property
+    def sema_category_chained_title_value(self):
+        if self.shopify_collection.level == '1':
+            return f'{self.sema_category.name.strip()}'
+        elif self.shopify_collection.level == '2':
+            return (
+                f'{self.sema_parent_category.name.strip()} '
+                f'// {self.sema_category.name.strip()}'
+            )
+        elif self.shopify_collection.level == '3':
+            return (
+                f'{self.sema_grandparent_category.name.strip()} '
+                f'// {self.sema_parent_category.name.strip()} '
+                f'// {self.sema_category.name.strip()}'
+            )
+        else:
+            return None
+
+    @property
+    def sema_category_tags_value(self):
+        if self.shopify_collection.level == '1':
+            tags = [self.sema_category.tag_name]
+        elif self.shopify_collection.level == '2':
+            tags = [
+                self.sema_category.tag_name,
+                self.sema_parent_category.tag_name
+            ]
+        elif self.shopify_collection.level == '3':
+            tags = [
+                self.sema_category.tag_name,
+                self.sema_parent_category.tag_name,
+                self.sema_grandparent_category.tag_name,
+            ]
+        else:
+            return None
+
+        tags.sort()
+        return tags
+
+    @property
+    def shopify_subcollections_value(self):
+        if self.shopify_collection.level == '1' or self.shopify_collection.level == '2':
+            subcollections = []
+            for child_collection in self.shopify_collection.child_collections.all():
+                if child_collection.collection_id and child_collection.handle:
+                    subcollections.append(
+                        {
+                            'id': child_collection.collection_id,
+                            'handle': child_collection.handle
+                        }
+                    )
+            subcollections = sorted(subcollections, key=lambda k: k['handle'])
+            return subcollections
+        elif self.shopify_collection.level == '3':
+            return None
+        else:
+            return None
+    # </editor-fold>
+
+    # <editor-fold desc="preview properties ...">
+    @property
+    def sema_category_display_name_preview(self):
+        return self.sema_category_display_name_value
+    sema_category_display_name_preview.fget.short_description = 'SEMA Category'
+
+    @property
+    def sema_category_chained_title_preview(self):
+        return self.sema_category_chained_title_value
+    sema_category_chained_title_preview.fget.short_description = 'SEMA Categories'
+
+    @property
+    def sema_category_tags_preview(self):
+        if not self.sema_category_tags_value:
+            return None
+
+        return str(self.sema_category_tags_value)
+    sema_category_tags_preview.fget.short_description = 'SEMA Categories'
+
+    @property
+    def shopify_subcollections_preview(self):
+        if not self.shopify_subcollections_value:
+            return None
+
+        return str(self.shopify_subcollections_value)
+    shopify_subcollections_preview.fget.short_description = 'Shopify Subcollections'
+    # </editor-fold>
+
+    # <editor-fold desc="result properties ...">
+    @property
+    def title_result(self):
+        return getattr(self, self.title_option)
+    title_result.fget.short_description = ''
+
+    @property
+    def metafields_display_name_result(self):
+        value = getattr(self, self.metafields_display_name_option)
+        if not value:
+            return None
+
+        return {
+            'namespace': 'additional',
+            'key': 'display_name',
+            'owner_resource':
+                ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
+            'value': value,
+            'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+        }
+    metafields_display_name_result.fget.short_description = ''
+
+    @property
+    def metafields_subcollections_result(self):
+        subcollections = getattr(self, self.metafields_subcollections_option)
+        if not subcollections:
+            return None
+
+        return {
+            'namespace': 'additional',
+            'key': 'subcollections',
+            'owner_resource':
+                ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
+            'value': json.dumps(subcollections),
+            'value_type': ShopifyMetafield.JSON_VALUE_TYPE
+        }
+    metafields_subcollections_result.fget.short_description = ''
+
+    @property
+    def metafields_result(self):
+        metafields = []
+        if self.metafields_display_name_result:
+            metafields.append(self.metafields_display_name_result)
+        if self.metafields_subcollections_result:
+            metafields.append(self.metafields_subcollections_result)
+        metafields = sorted(metafields, key=lambda k: k['value'])
+        return metafields
+    metafields_result.fget.short_description = ''
+
+    @property
+    def tags_categories_result(self):
+        tag_names = getattr(self, self.tags_categories_option)
+        if not tag_names:
+            return None
+
+        tags = [
+            {'name': tag_name}
+            for tag_name in tag_names
+        ]
+        tags = sorted(tags, key=lambda k: k['name'])
+        return tags
+    tags_categories_result.fget.short_description = ''
+
+    @property
+    def tags_result(self):
+        tags = []
+        if self.tags_categories_result:
+            tags += self.tags_categories_result
+        tags = sorted(tags, key=lambda k: k['name'])
+        return tags
+    tags_result.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="match properties ...">
+    def title_match(self):
+        if not self.title_result:
+            return None
+
+        return bool(self.shopify_collection.title == self.title_result)
+    title_match.boolean = True
+    title_match.short_description = 'Title Match'
+
+    def metafields_match(self):
+        if not self.metafields_result:
+            return None
+
+        metafields = [
+            {
+                'namespace': metafield.namespace,
+                'key': metafield.key,
+                'owner_resource': metafield.owner_resource,
+                'value': metafield.value,
+                'value_type': metafield.value_type
+            }
+            for metafield in self.shopify_collection.metafields.all()
+        ]
+        metafields = sorted(metafields, key=lambda k: k['value'])
+        return bool(metafields == self.metafields_result)
+    metafields_match.boolean = True
+    metafields_match.short_description = 'Metafields Match'
+
+    def tags_match(self):
+        if not self.tags_result:
+            return None
+
+        tags = [
+            {'name': tag.name}
+            for tag in self.shopify_collection.tags.all()
+        ]
+        tags = sorted(tags, key=lambda k: k['name'])
+        return bool(tags == self.tags_result)
+    tags_match.boolean = True
+    tags_match.short_description = 'Tags Match'
+
+    def full_match(self):
+        return bool(
+            self.title_match() is not False
+            and self.metafields_match() is not False
+            and self.tags_match() is not False
+        )
+    full_match.boolean = True
+    full_match.short_description = 'Calculator Match'
+    # </editor-fold>
+
+    # <editor-fold desc="difference properties ...">
+    @property
+    def title_difference(self):
+        if self.title_match() is not False:
+            return ''
+
+        return f'{self.shopify_collection.title} <- {self.title_result}'
+    title_difference.fget.short_description = ''
+
+    @property
+    def metafields_difference(self):
+        if self.metafields_match() is not False:
+            return ''
+
+        return (
+            f'{self.shopify_collection.metafields.count()} '
+            f'<- {len(self.metafields_result)}'
+        )
+    metafields_difference.fget.short_description = ''
+
+    @property
+    def tags_difference(self):
+        if self.tags_match() is not False:
+            return ''
+
+        return (
+            f'{self.shopify_collection.tags.count()} '
+            f'<- {len(self.tags_result)}'
+        )
+    tags_difference.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="perform properties ...">
+    def perform_calculated_fields_update(self):
+        try:
+            if self.title_match() is False:
+                self.shopify_collection.title = self.title_result
+                self.shopify_collection.save()
+
+            if self.metafields_match() is False:
+                for metafield_data in self.metafields_result:
+                    defaults = {
+                        'value': metafield_data.pop('value'),
+                        'value_type': metafield_data.pop('value_type')
+                    }
+                    ShopifyMetafield.objects.update_or_create(
+                        object_id=self.shopify_collection.pk,
+                        content_type=ContentType.objects.get_for_model(self.shopify_collection),
+                        **metafield_data,
+                        defaults=defaults
+                    )
+
+            if self.tags_match() is False:
+                for tag_data in self.tags_result:
+                    tag, _ = ShopifyTag.objects.get_or_create(**tag_data)
+                    self.shopify_collection.tags.add(tag)
+                    self.shopify_collection.save()
+
+            return self.shopify_collection.get_update_success_msg()
+        except Exception as err:
+            return self.get_instance_error_msg(str(err))
+    # </editor-fold>
+
+    def __str__(self):
+        return str(self.collection)
+
+
 class ShopifyProduct(Model, MessagesMixin):
     APPAREL_TYPE = 'Apparel'
     AUTOMOTIVE_TYPE = 'Automotive Parts'
@@ -1072,27 +1499,27 @@ class ShopifyProduct(Model, MessagesMixin):
     @property
     def variant_count(self):
         return self.variants.count()
-    variant_count.fget.short_description = 'Variant Count'
+    variant_count.fget.short_description = 'variant count'
 
     @property
     def option_count(self):
         return self.options.count()
-    option_count.fget.short_description = 'Option Count'
+    option_count.fget.short_description = 'option count'
 
     @property
     def image_count(self):
         return self.images.count()
-    image_count.fget.short_description = 'Image Count'
+    image_count.fget.short_description = 'image count'
 
     @property
     def metafield_count(self):
         return self.metafields.count()
-    metafield_count.fget.short_description = 'Metafield Count'
+    metafield_count.fget.short_description = 'metafield count'
 
     @property
     def tag_count(self):
         return self.tags.count()
-    tag_count.fget.short_description = 'Tag Count'
+    tag_count.fget.short_description = 'tag count'
     # </editor-fold>
 
     # <editor-fold desc="error properties ...">
@@ -3353,389 +3780,3 @@ class ShopifyProductCalculator(Model, MessagesMixin):
 
     def __str__(self):
         return str(self.product)
-
-
-class ShopifyCollectionCalculator(Model, MessagesMixin):
-    CUSTOM_VALUE = 'custom_value'
-
-    collection = OneToOneField(
-        ShopifyCollection,
-        related_name='calculator',
-        on_delete=CASCADE
-    )
-    title_option = CharField(
-        choices=(
-            ('sema_category_chained_title_value', 'SEMA Categories'),
-            (CUSTOM_VALUE, 'Custom')
-        ),
-        default='sema_category_chained_title_value',
-        max_length=50
-    )
-    metafields_display_name_option = CharField(
-        choices=(
-            ('sema_category_display_name_value', 'SEMA Category'),
-            (CUSTOM_VALUE, 'Custom')
-        ),
-        default='sema_category_display_name_value',
-        max_length=50
-    )
-    metafields_subcollections_option = CharField(
-        choices=(
-            ('shopify_subcollections_value', 'Shopify Subcollections'),
-            (CUSTOM_VALUE, 'Custom')
-        ),
-        default='shopify_subcollections_value',
-        max_length=50
-    )
-    tags_categories_option = CharField(
-        choices=(
-            ('sema_category_tags_value', 'SEMA Categories'),
-            (CUSTOM_VALUE, 'Custom')
-        ),
-        default='sema_category_tags_value',
-        max_length=50
-    )
-
-    # <editor-fold desc="internal properties ...">
-    @property
-    def category_path(self):
-        if self.collection.level == '1':
-            return self.collection.root_category_paths.first()
-        elif self.collection.level == '2':
-            return self.collection.branch_category_paths.filter(
-                shopify_root_collection=self.collection.parent_collection
-            ).first()
-        elif self.collection.level == '3':
-            return self.collection.leaf_category_paths.filter(
-                shopify_root_collection=self.collection.parent_collection.parent_collection,
-                shopify_branch_collection=self.collection.parent_collection,
-            ).first()
-        else:
-            return None
-
-    @property
-    def shopify_collection(self):
-        return self.collection
-
-    @property
-    def sema_category(self):
-        if self.collection.level == '1':
-            return self.category_path.sema_root_category
-        elif self.collection.level == '2':
-            return self.category_path.sema_branch_category
-        elif self.collection.level == '3':
-            return self.category_path.sema_leaf_category
-        else:
-            return None
-
-    @property
-    def sema_parent_category(self):
-        if self.collection.level == '1':
-            return None
-        elif self.collection.level == '2':
-            return self.category_path.sema_root_category
-        elif self.collection.level == '3':
-            return self.category_path.sema_branch_category
-        else:
-            return None
-
-    @property
-    def sema_grandparent_category(self):
-        if self.collection.level == '1':
-            return None
-        elif self.collection.level == '2':
-            return None
-        elif self.collection.level == '3':
-            return self.category_path.sema_root_category
-        else:
-            return None
-    # </editor-fold>
-
-    # <editor-fold desc="value properties ...">
-    @property
-    def custom_value(self):
-        return None
-
-    @property
-    def sema_category_display_name_value(self):
-        if self.shopify_collection.level == '1':
-            return None
-
-        return self.sema_category.name
-
-    @property
-    def sema_category_chained_title_value(self):
-        if self.shopify_collection.level == '1':
-            return f'{self.sema_category.name.strip()}'
-        elif self.shopify_collection.level == '2':
-            return (
-                f'{self.sema_parent_category.name.strip()} '
-                f'// {self.sema_category.name.strip()}'
-            )
-        elif self.shopify_collection.level == '3':
-            return (
-                f'{self.sema_grandparent_category.name.strip()} '
-                f'// {self.sema_parent_category.name.strip()} '
-                f'// {self.sema_category.name.strip()}'
-            )
-        else:
-            return None
-
-    @property
-    def sema_category_tags_value(self):
-        if self.shopify_collection.level == '1':
-            tags = [self.sema_category.tag_name]
-        elif self.shopify_collection.level == '2':
-            tags = [
-                self.sema_category.tag_name,
-                self.sema_parent_category.tag_name
-            ]
-        elif self.shopify_collection.level == '3':
-            tags = [
-                self.sema_category.tag_name,
-                self.sema_parent_category.tag_name,
-                self.sema_grandparent_category.tag_name,
-            ]
-        else:
-            return None
-
-        tags.sort()
-        return tags
-
-    @property
-    def shopify_subcollections_value(self):
-        if self.shopify_collection.level == '1' or self.shopify_collection.level == '2':
-            subcollections = []
-            for child_collection in self.shopify_collection.child_collections.all():
-                if child_collection.collection_id and child_collection.handle:
-                    subcollections.append(
-                        {
-                            'id': child_collection.collection_id,
-                            'handle': child_collection.handle
-                        }
-                    )
-            subcollections = sorted(subcollections, key=lambda k: k['handle'])
-            return subcollections
-        elif self.shopify_collection.level == '3':
-            return None
-        else:
-            return None
-    # </editor-fold>
-
-    # <editor-fold desc="preview properties ...">
-    @property
-    def sema_category_display_name_preview(self):
-        return self.sema_category_display_name_value
-    sema_category_display_name_preview.fget.short_description = 'SEMA Category'
-
-    @property
-    def sema_category_chained_title_preview(self):
-        return self.sema_category_chained_title_value
-    sema_category_chained_title_preview.fget.short_description = 'SEMA Categories'
-
-    @property
-    def sema_category_tags_preview(self):
-        if not self.sema_category_tags_value:
-            return None
-
-        return str(self.sema_category_tags_value)
-    sema_category_tags_preview.fget.short_description = 'SEMA Categories'
-
-    @property
-    def shopify_subcollections_preview(self):
-        if not self.shopify_subcollections_value:
-            return None
-
-        return str(self.shopify_subcollections_value)
-    shopify_subcollections_preview.fget.short_description = 'Shopify Subcollections'
-    # </editor-fold>
-
-    # <editor-fold desc="result properties ...">
-    @property
-    def title_result(self):
-        return getattr(self, self.title_option)
-    title_result.fget.short_description = ''
-
-    @property
-    def metafields_display_name_result(self):
-        value = getattr(self, self.metafields_display_name_option)
-        if not value:
-            return None
-
-        return {
-            'namespace': 'additional',
-            'key': 'display_name',
-            'owner_resource':
-                ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
-            'value': value,
-            'value_type': ShopifyMetafield.STRING_VALUE_TYPE
-        }
-    metafields_display_name_result.fget.short_description = ''
-
-    @property
-    def metafields_subcollections_result(self):
-        subcollections = getattr(self, self.metafields_subcollections_option)
-        if not subcollections:
-            return None
-
-        return {
-            'namespace': 'additional',
-            'key': 'subcollections',
-            'owner_resource':
-                ShopifyMetafield.COLLECTION_OWNER_RESOURCE,
-            'value': json.dumps(subcollections),
-            'value_type': ShopifyMetafield.JSON_VALUE_TYPE
-        }
-    metafields_subcollections_result.fget.short_description = ''
-
-    @property
-    def metafields_result(self):
-        metafields = []
-        if self.metafields_display_name_result:
-            metafields.append(self.metafields_display_name_result)
-        if self.metafields_subcollections_result:
-            metafields.append(self.metafields_subcollections_result)
-        metafields = sorted(metafields, key=lambda k: k['value'])
-        return metafields
-    metafields_result.fget.short_description = ''
-
-    @property
-    def tags_categories_result(self):
-        tag_names = getattr(self, self.tags_categories_option)
-        if not tag_names:
-            return None
-
-        tags = [
-            {'name': tag_name}
-            for tag_name in tag_names
-        ]
-        tags = sorted(tags, key=lambda k: k['name'])
-        return tags
-    tags_categories_result.fget.short_description = ''
-
-    @property
-    def tags_result(self):
-        tags = []
-        if self.tags_categories_result:
-            tags += self.tags_categories_result
-        tags = sorted(tags, key=lambda k: k['name'])
-        return tags
-    tags_result.fget.short_description = ''
-    # </editor-fold>
-
-    # <editor-fold desc="match properties ...">
-    def title_match(self):
-        if not self.title_result:
-            return None
-
-        return bool(self.shopify_collection.title == self.title_result)
-    title_match.boolean = True
-    title_match.short_description = 'Title Match'
-
-    def metafields_match(self):
-        if not self.metafields_result:
-            return None
-
-        metafields = [
-            {
-                'namespace': metafield.namespace,
-                'key': metafield.key,
-                'owner_resource': metafield.owner_resource,
-                'value': metafield.value,
-                'value_type': metafield.value_type
-            }
-            for metafield in self.shopify_collection.metafields.all()
-        ]
-        metafields = sorted(metafields, key=lambda k: k['value'])
-        return bool(metafields == self.metafields_result)
-    metafields_match.boolean = True
-    metafields_match.short_description = 'Metafields Match'
-
-    def tags_match(self):
-        if not self.tags_result:
-            return None
-
-        tags = [
-            {'name': tag.name}
-            for tag in self.shopify_collection.tags.all()
-        ]
-        tags = sorted(tags, key=lambda k: k['name'])
-        return bool(tags == self.tags_result)
-    tags_match.boolean = True
-    tags_match.short_description = 'Tags Match'
-
-    def full_match(self):
-        return bool(
-            self.title_match() is not False
-            and self.metafields_match() is not False
-            and self.tags_match() is not False
-        )
-    full_match.boolean = True
-    full_match.short_description = 'Calculator Match'
-    # </editor-fold>
-
-    # <editor-fold desc="difference properties ...">
-    @property
-    def title_difference(self):
-        if self.title_match() is not False:
-            return ''
-
-        return f'{self.shopify_collection.title} <- {self.title_result}'
-    title_difference.fget.short_description = ''
-
-    @property
-    def metafields_difference(self):
-        if self.metafields_match() is not False:
-            return ''
-
-        return (
-            f'{self.shopify_collection.metafields.count()} '
-            f'<- {len(self.metafields_result)}'
-        )
-    metafields_difference.fget.short_description = ''
-
-    @property
-    def tags_difference(self):
-        if self.tags_match() is not False:
-            return ''
-
-        return (
-            f'{self.shopify_collection.tags.count()} '
-            f'<- {len(self.tags_result)}'
-        )
-    tags_difference.fget.short_description = ''
-    # </editor-fold>
-
-    # <editor-fold desc="perform properties ...">
-    def perform_calculated_fields_update(self):
-        try:
-            if self.title_match() is False:
-                self.shopify_collection.title = self.title_result
-                self.shopify_collection.save()
-
-            if self.metafields_match() is False:
-                for metafield_data in self.metafields_result:
-                    defaults = {
-                        'value': metafield_data.pop('value'),
-                        'value_type': metafield_data.pop('value_type')
-                    }
-                    ShopifyMetafield.objects.update_or_create(
-                        object_id=self.shopify_collection.pk,
-                        content_type=ContentType.objects.get_for_model(self.shopify_collection),
-                        **metafield_data,
-                        defaults=defaults
-                    )
-
-            if self.tags_match() is False:
-                for tag_data in self.tags_result:
-                    tag, _ = ShopifyTag.objects.get_or_create(**tag_data)
-                    self.shopify_collection.tags.add(tag)
-                    self.shopify_collection.save()
-
-            return self.shopify_collection.get_update_success_msg()
-        except Exception as err:
-            return self.get_instance_error_msg(str(err))
-    # </editor-fold>
-
-    def __str__(self):
-        return str(self.collection)

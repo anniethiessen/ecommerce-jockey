@@ -6,7 +6,8 @@ from django.contrib.contenttypes.admin import GenericTabularInline
 
 from core.admin.utils import (
     get_change_view_link,
-    get_changelist_view_link
+    get_changelist_view_link,
+    get_image_preview
 )
 from ..models import (
     ShopifyCollection,
@@ -21,7 +22,7 @@ from ..models import (
 from .forms import LimitedInlineFormSet
 
 
-class ShopifyMetafieldBaseTabularInline(GenericTabularInline):  # TODO
+class ShopifyMetafieldBaseTabularInline(GenericTabularInline):
     model = ShopifyMetafield
     verbose_name_plural = 'metafields'
     extra = 0
@@ -37,16 +38,21 @@ class ShopifyMetafieldBaseTabularInline(GenericTabularInline):  # TODO
         'owner_resource',
         'namespace',
         'value_type',
-        'key'
+        'key',
+        'json_item_count'
     )
 
     readonly_fields = (
         'id',
         'details_link',
-        'all_link'
+        'all_link',
+        'json_item_count'
     )
 
     def all_link(self, obj):
+        if not obj or not obj.pk or not obj.object_id or not obj.content_type:
+            return None
+
         query = (
             f'object_id__exact={obj.object_id}'
             f'&content_type_id__exact={obj.content_type.pk}'
@@ -55,8 +61,9 @@ class ShopifyMetafieldBaseTabularInline(GenericTabularInline):  # TODO
     all_link.short_description = ''
 
     def details_link(self, obj):
-        if not obj.pk:
+        if not obj or not obj.pk:
             return None
+
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
@@ -96,13 +103,27 @@ class ShopifyVendorProductsTabularInline(TabularInline):
         'product_id',
         'title',
         'vendor',
-        'is_published'
+        'is_published',
+        'variant_count',
+        'option_count',
+        'image_count',
+        'metafield_count',
+        'tag_count',
+        'errors',
+        'full_match'
     )
 
     readonly_fields = (
         'id',
+        'errors',
+        'full_match',
         'details_link',
-        'all_link'
+        'all_link',
+        'variant_count',
+        'option_count',
+        'image_count',
+        'metafield_count',
+        'tag_count'
     )
 
     def get_rel_obj(self, obj):
@@ -120,6 +141,11 @@ class ShopifyVendorProductsTabularInline(TabularInline):
             return None
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def full_match(self, obj):
+        return obj.calculator.full_match()
+    full_match.boolean = True
+    full_match.short_description = 'calculated'
 
     def formfield_for_dbfield(self, db_field, **kwargs):
         formfield = super().formfield_for_dbfield(db_field, **kwargs)
@@ -153,11 +179,12 @@ class ShopifyProductImagesTabularInline(TabularInline):
         'image_id',
         'product',
         'link',
-        'src'
+        'image_preview'
     )
 
     readonly_fields = (
         'id',
+        'image_preview',
         'details_link',
         'all_link'
     )
@@ -175,6 +202,13 @@ class ShopifyProductImagesTabularInline(TabularInline):
             return None
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def image_preview(self, obj):
+        if not obj or not obj.pk or not obj.link:
+            return None
+
+        return get_image_preview(obj.link)
+    image_preview.short_description = ''
 
     def formfield_for_dbfield(self, db_field, **kwargs):
         formfield = super().formfield_for_dbfield(db_field, **kwargs)
@@ -214,21 +248,25 @@ class ShopifyProductOptionsTabularInline(TabularInline):
 
     readonly_fields = (
         'id',
-        'details_link',
-        'all_link'
+        'all_link',
+        'details_link'
     )
 
     def get_rel_obj(self, obj):
         return getattr(obj, self.fk_name)
 
     def all_link(self, obj):
+        if not obj or not obj.pk:
+            return None
+
         query = f'{self.all_link_query}={getattr(self.get_rel_obj(obj), "pk")}'
         return get_changelist_view_link(obj, 'See All', query)
     all_link.short_description = ''
 
     def details_link(self, obj):
-        if not obj.pk:
+        if not obj or not obj.pk:
             return None
+
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
@@ -254,8 +292,9 @@ class ShopifyProductVariantsStackedInline(StackedInline):
 
     fieldsets = (
         (
-            'Variant', {
+            None, {
                 'fields': (
+                    'details_link',
                     'variant_id',
                     'title',
                     'sku',
@@ -275,9 +314,9 @@ class ShopifyProductVariantsStackedInline(StackedInline):
         (
             'Pricing', {
                 'fields': (
-                    'price',
-                    'compare_at_price',
                     'cost',
+                    'price',
+                    'compare_at_price'
                 )
             }
         ),
@@ -299,6 +338,17 @@ class ShopifyProductVariantsStackedInline(StackedInline):
             }
         )
     )
+
+    readonly_fields = (
+        'details_link',
+    )
+
+    def details_link(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return get_change_view_link(obj, 'See Full Variant')
+    details_link.short_description = ''
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -389,15 +439,9 @@ class ShopifyProductMetafieldsTabularInline(ShopifyMetafieldBaseTabularInline):
     pass
 
 
-class ShopifyTagProductsManyToManyTabularInline(TabularInline):
-    model = ShopifyProduct.tags.through
-    fk_name = 'shopifytag'
-    extra = 0
-
-
 class ShopifyProductTagsManyToManyTabularInline(TabularInline):
-    verbose_name_plural = 'Tags'
     model = ShopifyProduct.tags.through
+    verbose_name_plural = 'tags'
     fk_name = 'shopifyproduct'
     extra = 0
     classes = (
@@ -463,14 +507,28 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
         'id',
         'collection_id',
         'title',
-        'body_html',
-        'handle'
+        'handle',
+        'level',
+        'is_published',
+        'tag_count',
+        'metafield_count',
+        'rule_count',
+        'child_collection_count',
+        'errors',
+        'full_match'
     )
 
     readonly_fields = (
         'id',
+        'level',
+        'errors',
+        'full_match',
         'details_link',
-        'all_link'
+        'all_link',
+        'tag_count',
+        'metafield_count',
+        'rule_count',
+        'child_collection_count'
     )
 
     def get_rel_obj(self, obj):
@@ -487,6 +545,15 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
+    def full_match(self, obj):
+        if not obj or not obj.pk or not hasattr(obj, 'calculator'):
+            return None
+
+        return obj.calculator.full_match()
+    full_match.boolean = True
+    full_match.short_description = 'calculated'
+
+
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
         if not request.user.is_superuser:
@@ -499,27 +566,53 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
 
 class ShopifyCollectionTagsManyToManyTabularInline(TabularInline):
     model = ShopifyCollection.tags.through
+    verbose_name_plural = 'tags'
     fk_name = 'shopifycollection'
     extra = 0
+    classes = (
+        'collapse',
+    )
 
 
 class ShopifyCollectionRulesManyToManyTabularInline(TabularInline):
     model = ShopifyCollection.rules.through
+    verbose_name_plural = 'rules'
     fk_name = 'shopifycollection'
     extra = 0
+    classes = (
+        'collapse',
+    )
 
 
 class ShopifyCollectionMetafieldsTabularInline(ShopifyMetafieldBaseTabularInline):
     pass
 
 
-class ShopifyTagCollectionsManyToManyTabularInline(TabularInline):
-    model = ShopifyCollection.tags.through
+class ShopifyTagProductsManyToManyTabularInline(TabularInline):
+    model = ShopifyProduct.tags.through
+    verbose_name_plural = 'products'
     fk_name = 'shopifytag'
     extra = 0
+    classes = (
+        'collapse',
+    )
+
+
+class ShopifyTagCollectionsManyToManyTabularInline(TabularInline):
+    model = ShopifyCollection.tags.through
+    verbose_name_plural = 'collections'
+    fk_name = 'shopifytag'
+    extra = 0
+    classes = (
+        'collapse',
+    )
 
 
 class ShopifyRuleCollectionsManyToManyTabularInline(TabularInline):
     model = ShopifyCollection.rules.through
+    verbose_name_plural = 'collections'
     fk_name = 'shopifycollectionrule'
     extra = 0
+    classes = (
+        'collapse',
+    )

@@ -1,3 +1,9 @@
+import json
+
+from pygments import highlight
+from pygments.lexers.web import JSONLexer
+from pygments.formatters.html import HtmlFormatter
+
 from django.contrib.admin import FieldListFilter
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -54,8 +60,17 @@ def get_images_preview(image_links, width="150"):
         images_html = ''
         for image_link in image_links:
             images_html += f'<img src="{image_link}" width={width} />'
-        return mark_safe(
-            f'<div>{images_html}</div>'
-        )
+        return mark_safe(f'<div>{images_html}</div>')
+    except Exception:
+        raise
+
+
+def get_json_preview(json_value):
+    try:
+        response = json.dumps(json.loads(json_value), indent=2)
+        formatter = HtmlFormatter(style='colorful')
+        response = highlight(response, JSONLexer(), formatter)
+        style = f'<style>{formatter.get_style_defs()}</style><br>'
+        return mark_safe(style + response)
     except Exception:
         raise
