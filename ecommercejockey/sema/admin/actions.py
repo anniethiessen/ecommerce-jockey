@@ -119,7 +119,7 @@ class SemaDatasetCategoriesActions(SemaBaseActions):
 class SemaProductVehiclesActions(SemaBaseActions):
     def update_product_vehicles_queryset_action(self, request, queryset):
         try:
-            msgs = queryset.perform_product_vehicle_update()
+            msgs = queryset.perform_product_vehicles_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))
@@ -130,7 +130,7 @@ class SemaProductVehiclesActions(SemaBaseActions):
 
     def update_product_vehicles_object_action(self, request, obj):
         try:
-            msgs = obj.perform_product_vehicle_update()
+            msgs = obj.perform_product_vehicles_update_from_api()
             self.display_messages(request, msgs, include_info=False)
         except Exception as err:
             messages.error(request, str(err))

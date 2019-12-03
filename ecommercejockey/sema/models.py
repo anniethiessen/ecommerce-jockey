@@ -6860,7 +6860,7 @@ class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
         related_name='description_pies_attributes'
     )
     value = CharField(
-        max_length=500
+        max_length=2000
     )
 
     objects = SemaDescriptionPiesAttributeManager()
