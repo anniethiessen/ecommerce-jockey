@@ -1,4 +1,3 @@
-import json
 from django_object_actions import BaseDjangoObjectActions as ObjectActions
 
 from django.contrib import admin
@@ -163,8 +162,12 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
         if not obj or not obj.pk:
             return None
 
-        return f'{obj.product_published_count}/{obj.product_count}'
+        return f'{obj._product_published_count}/{obj._product_count}'
+    product_count.admin_order_field = '_product_published_count'
     product_count.short_description = 'product count'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -183,9 +186,6 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
         if not obj:
             return ()
         return super().get_inline_instances(request, obj)
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related('products')
 
 
 @admin.register(ShopifyCollection)
@@ -314,9 +314,9 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'category_paths_link',
         'sema_category_link',
         'parent_collection_link',
+        'rule_count',
         'tag_count',
         'metafield_count',
-        'rule_count',
         'child_collection_count'
     )
 
@@ -389,15 +389,42 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
             'See Full Parent Collection'
         )
     parent_collection_link.short_description = ''
+    
+    def rule_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._rule_count
+    rule_count.admin_order_field = '_rule_count'
+    rule_count.short_description = 'rule count'
+    
+    def tag_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._tag_count
+    tag_count.admin_order_field = '_tag_count'
+    tag_count.short_description = 'tag count'
+    
+    def metafield_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._metafield_count
+    metafield_count.admin_order_field = '_metafield_count'
+    metafield_count.short_description = 'metafield count'
 
     def child_collection_count(self, obj):
         if not obj or not obj.pk:
             return None
 
         return (
-            f'{obj.child_collection_published_count}'
-            f'/{obj.child_collection_count}'
+            f'{obj._child_collection_published_count}'
+            f'/{obj._child_collection_count}'
         )
+    child_collection_count.admin_order_field = (
+        '_child_collection_published_count'
+    )
     child_collection_count.short_description = 'child count'
 
     def full_match(self, obj):
@@ -414,6 +441,9 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
 
         return get_image_preview(obj.image_src)
     image_preview.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -449,14 +479,6 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         if not obj:
             return ()
         return super().get_inline_instances(request, obj)
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'rules',
-            'tags',
-            'metafields',
-            'child_collections'
-        )
 
 
 @admin.register(ShopifyCollectionRule)
@@ -525,11 +547,12 @@ class ShopifyCollectionRuleModelAdmin(ObjectActions, ModelAdmin,
         if not obj or not obj.pk:
             return None
 
-        return f'{obj.collection_published_count}/{obj.collection_count}'
+        return f'{obj._collection_published_count}/{obj._collection_count}'
+    collection_count.admin_order_field = '_collection_published_count'
     collection_count.short_description = 'collection count'
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related('collections')
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -615,21 +638,20 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
         if not obj or not obj.pk:
             return None
 
-        return f'{obj.product_published_count}/{obj.product_count}'
+        return f'{obj._product_published_count}/{obj._product_count}'
+    product_count.admin_order_field = '_product_published_count'
     product_count.short_description = 'product count'
 
     def collection_count(self, obj):
         if not obj or not obj.pk:
             return None
 
-        return f'{obj.collection_published_count}/{obj.collection_count}'
+        return f'{obj._collection_published_count}/{obj._collection_count}'
+    collection_count.admin_order_field = '_collection_published_count'
     collection_count.short_description = 'collection count'
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'products',
-            'collections'
-        )
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -775,8 +797,8 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'variant_count',
         'option_count',
         'image_count',
-        'metafield_count',
-        'tag_count'
+        'tag_count',
+        'metafield_count'
     )
 
     autocomplete_fields = (
@@ -835,6 +857,46 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         return get_change_view_link(obj.vendor, 'See Full Vendor')
     vendor_link.short_description = ''
 
+    def variant_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._variant_count
+    variant_count.admin_order_field = '_variant_count'
+    variant_count.short_description = 'variant count'
+    
+    def option_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._option_count
+    option_count.admin_order_field = '_option_count'
+    option_count.short_description = 'option count'
+    
+    def image_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._image_count
+    image_count.admin_order_field = '_image_count'
+    image_count.short_description = 'image count'
+
+    def tag_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._tag_count
+    tag_count.admin_order_field = '_tag_count'
+    tag_count.short_description = 'tag count'
+
+    def metafield_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._metafield_count
+    metafield_count.admin_order_field = '_metafield_count'
+    metafield_count.short_description = 'metafield count'
+
     def full_match(self, obj):
         if not obj or not obj.pk or not hasattr(obj, 'calculator'):
             return None
@@ -844,13 +906,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
     full_match.short_description = 'calculated'
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'variants',
-            'options',
-            'images',
-            'tags',
-            'metafields'
-        )
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -990,6 +1046,9 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
 
         return get_image_preview(obj.link)
     image_preview.short_description = ''
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -1105,6 +1164,9 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
             return None
         return get_change_view_link(obj.product, 'See Full Product')
     product_link.short_description = ''
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -1272,6 +1334,9 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
 
         return get_change_view_link(obj.product, 'See Full Product')
     product_link.short_description = ''
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -1354,7 +1419,7 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
         'namespace',
         'value_type',
         'key',
-        'json_item_count'
+        'value_item_count'
     )
 
     list_display_links = (
@@ -1425,7 +1490,7 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
         'value_preview',
         'details_link',
         'content_object_link',
-        'json_item_count'
+        'value_item_count'
     )
 
     def details_link(self, obj):
@@ -1461,6 +1526,9 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
         else:
             return None
     value_preview.short_description = ''
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -1850,6 +1918,9 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
             'See SEMA Product'
         )
     sema_product_link.short_description = ''
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
@@ -2079,6 +2150,9 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
             'See SEMA Category'
         )
     sema_category_link.short_description = ''
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_fieldsets(self, request, obj=None):
         if not obj:

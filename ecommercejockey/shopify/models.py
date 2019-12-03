@@ -35,12 +35,17 @@ from core.models import (
 from core.admin.utils import get_images_preview
 from .clients import shopify_client
 from .managers import (
+    ShopifyCollectionCalculatorManager,
     ShopifyCollectionManager,
+    ShopifyCollectionRuleManager,
     ShopifyImageManager,
     ShopifyOptionManager,
     ShopifyMetafieldManager,
+    ShopifyProductCalculatorManager,
     ShopifyProductManager,
-    ShopifyVariantManager
+    ShopifyTagManager,
+    ShopifyVariantManager,
+    ShopifyVendorManager
 )
 
 
@@ -78,6 +83,8 @@ class ShopifyVendor(Model, MessagesMixin):
     product_published_count.fget.short_description = 'published product count'
     # </editor-fold>
 
+    objects = ShopifyVendorManager()
+
     def __str__(self):
         return self.name
 
@@ -111,6 +118,8 @@ class ShopifyTag(Model, MessagesMixin):
         'published collection count'
     )
     # </editor-fold>
+    
+    objects = ShopifyTagManager()
 
     def __str__(self):
         return self.name
@@ -169,7 +178,7 @@ class ShopifyMetafield(Model, MessagesMixin):
     )
 
     # <editor-fold desc="count properties ...">
-    def json_item_count(self):
+    def value_item_count(self):
         if not self.pk:
             return None
 
@@ -178,7 +187,7 @@ class ShopifyMetafield(Model, MessagesMixin):
             if isinstance(value, list):
                 return len(value)
         return 'N/A'
-    json_item_count.short_description = 'item count'
+    value_item_count.short_description = 'item count'
     # </editor-fold>
 
     # <editor-fold desc="format properties ...">
@@ -485,6 +494,8 @@ class ShopifyCollectionRule(Model, MessagesMixin):
         'published collection count'
     )
     # </editor-fold>
+    
+    objects = ShopifyCollectionRuleManager()
 
     def __str__(self):
         return f'{self.column} :: {self.relation} :: {self.condition}'
@@ -1424,6 +1435,8 @@ class ShopifyCollectionCalculator(Model, MessagesMixin):
         except Exception as err:
             return self.get_instance_error_msg(str(err))
     # </editor-fold>
+    
+    objects = ShopifyCollectionCalculatorManager()
 
     def __str__(self):
         return str(self.collection)
@@ -3777,6 +3790,8 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         except Exception as err:
             return self.get_instance_error_msg(str(err))
     # </editor-fold>
+    
+    objects = ShopifyProductCalculatorManager()
 
     def __str__(self):
         return str(self.product)

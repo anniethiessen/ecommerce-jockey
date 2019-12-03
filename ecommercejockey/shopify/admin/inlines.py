@@ -39,14 +39,14 @@ class ShopifyMetafieldBaseTabularInline(GenericTabularInline):
         'namespace',
         'value_type',
         'key',
-        'json_item_count'
+        'value_item_count'
     )
 
     readonly_fields = (
         'id',
         'details_link',
         'all_link',
-        'json_item_count'
+        'value_item_count'
     )
 
     def all_link(self, obj):
@@ -66,6 +66,9 @@ class ShopifyMetafieldBaseTabularInline(GenericTabularInline):
 
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def formfield_for_dbfield(self, db_field, **kwargs):
         formfield = super().formfield_for_dbfield(db_field, **kwargs)
@@ -122,8 +125,8 @@ class ShopifyVendorProductsTabularInline(TabularInline):
         'variant_count',
         'option_count',
         'image_count',
-        'metafield_count',
-        'tag_count'
+        'tag_count',
+        'metafield_count'
     )
 
     def get_rel_obj(self, obj):
@@ -142,6 +145,46 @@ class ShopifyVendorProductsTabularInline(TabularInline):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
+    def variant_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._variant_count
+    variant_count.admin_order_field = '_variant_count'
+    variant_count.short_description = 'variant count'
+
+    def option_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._option_count
+    option_count.admin_order_field = '_option_count'
+    option_count.short_description = 'option count'
+
+    def image_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._image_count
+    image_count.admin_order_field = '_image_count'
+    image_count.short_description = 'image count'
+
+    def tag_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._tag_count
+    tag_count.admin_order_field = '_tag_count'
+    tag_count.short_description = 'tag count'
+
+    def metafield_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._metafield_count
+    metafield_count.admin_order_field = '_metafield_count'
+    metafield_count.short_description = 'metafield count'
+
     def full_match(self, obj):
         return obj.calculator.full_match()
     full_match.boolean = True
@@ -152,6 +195,9 @@ class ShopifyVendorProductsTabularInline(TabularInline):
         if db_field.name == 'vendor':
             formfield.choices = formfield.choices
         return formfield
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -216,6 +262,9 @@ class ShopifyProductImagesTabularInline(TabularInline):
             formfield.choices = formfield.choices
         return formfield
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
         if not request.user.is_superuser:
@@ -275,6 +324,9 @@ class ShopifyProductOptionsTabularInline(TabularInline):
         if db_field.name == 'product':
             formfield.choices = formfield.choices
         return formfield
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -349,6 +401,9 @@ class ShopifyProductVariantsStackedInline(StackedInline):
 
         return get_change_view_link(obj, 'See Full Variant')
     details_link.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
@@ -434,6 +489,9 @@ class ShopifyProductCalculatorStackedInline(StackedInline):
         return get_change_view_link(obj, 'See Full Calculator')
     details_link.short_description = ''
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
 
 class ShopifyProductMetafieldsTabularInline(ShopifyMetafieldBaseTabularInline):
     pass
@@ -490,6 +548,9 @@ class ShopifyCollectionCalculatorStackedInline(StackedInline):
         return get_change_view_link(obj, 'See Full Calculator')
     details_link.short_description = ''
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
 
 class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
     model = ShopifyCollection
@@ -525,9 +586,9 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
         'full_match',
         'details_link',
         'all_link',
+        'rule_count',
         'tag_count',
         'metafield_count',
-        'rule_count',
         'child_collection_count'
     )
 
@@ -545,6 +606,43 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
         return get_change_view_link(obj, 'Details')
     details_link.short_description = ''
 
+    def rule_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._rule_count
+    rule_count.admin_order_field = '_rule_count'
+    rule_count.short_description = 'rule count'
+
+    def tag_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._tag_count
+    tag_count.admin_order_field = '_tag_count'
+    tag_count.short_description = 'tag count'
+
+    def metafield_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return obj._metafield_count
+    metafield_count.admin_order_field = '_metafield_count'
+    metafield_count.short_description = 'metafield count'
+
+    def child_collection_count(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        return (
+            f'{obj._child_collection_published_count}'
+            f'/{obj._child_collection_count}'
+        )
+    child_collection_count.admin_order_field = (
+        '_child_collection_published_count'
+    )
+    child_collection_count.short_description = 'child count'
+
     def full_match(self, obj):
         if not obj or not obj.pk or not hasattr(obj, 'calculator'):
             return None
@@ -553,6 +651,8 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
     full_match.boolean = True
     full_match.short_description = 'calculated'
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
