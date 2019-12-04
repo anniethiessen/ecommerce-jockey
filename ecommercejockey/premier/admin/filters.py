@@ -1,7 +1,7 @@
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
 
-from core.admin.filters import MayBeRelevantFilter
+from core.admin.filters import MayBeRelevantBaseListFilter
 
 
 class HasApiInventory(SimpleListFilter):
@@ -101,14 +101,14 @@ class HasPrimaryImage(SimpleListFilter):
             )
 
 
-class PremierProductMayBeRelevant(MayBeRelevantFilter):
+class PremierProductMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 Q(manufacturer__is_relevant=True)
                 & Q(inventory_ab__gt=0)
             )
-        if self.value() == 'No':
+        if self.value() == 'False':
             return queryset.filter(
                 Q(manufacturer__is_relevant=False)
                 | Q(inventory_ab__lte=0)

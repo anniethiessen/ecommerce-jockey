@@ -1,67 +1,56 @@
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q, Count, Case, When, F, IntegerField
 
-from core.admin.filters import MayBeRelevantFilter
+from core.admin.filters import (
+    BooleanBaseListFilter,
+    LevelBaseListFilter,
+    MayBeRelevantBaseListFilter
+)
 
 
-class HasCategory(SimpleListFilter):
+class HasCategory(BooleanBaseListFilter):
     title = 'has category'
     parameter_name = 'categories'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(~Q(categories=None))
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(categories=None)
 
 
-class HasVehicle(SimpleListFilter):
+class HasVehicle(BooleanBaseListFilter):
     title = 'has vehicle'
     parameter_name = 'vehicles'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(~Q(vehicles=None))
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(vehicles=None)
 
 
-class HasPrimaryImage(SimpleListFilter):
+class HasPrimaryImage(BooleanBaseListFilter):
     title = 'has primary image'
     parameter_name = 'primary_image_url'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 Q(primary_image_url__isnull=False)
                 & ~Q(primary_image_url='')
             )
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(
                 Q(primary_image_url__isnull=True)
                 | Q(primary_image_url='')
             )
 
 
-class ByDecadeFilter(SimpleListFilter):
+class ByDecadeBaseListFilter(SimpleListFilter):
     title = 'year'
     parameter_name = 'year'
 
@@ -86,13 +75,13 @@ class ByDecadeFilter(SimpleListFilter):
         raise Exception("Filter must be defined")
 
 
-class SemaYearByDecade(ByDecadeFilter):
+class SemaYearByDecade(ByDecadeBaseListFilter):
     def queryset(self, request, queryset):
         if self.value():
             return queryset.with_year_data().filter(decade=int(self.value()))
 
 
-class SemaMakeYearByDecade(ByDecadeFilter):
+class SemaMakeYearByDecade(ByDecadeBaseListFilter):
     def queryset(self, request, queryset):
         from sema.models import SemaYear
 
@@ -100,10 +89,11 @@ class SemaMakeYearByDecade(ByDecadeFilter):
             years = SemaYear.objects.with_year_data().filter(
                 decade=int(self.value())
             )
+
             return queryset.filter(year__in=years)
 
 
-class SemaBaseVehicleByDecade(ByDecadeFilter):
+class SemaBaseVehicleByDecade(ByDecadeBaseListFilter):
     def queryset(self, request, queryset):
         from sema.models import SemaYear
 
@@ -111,10 +101,11 @@ class SemaBaseVehicleByDecade(ByDecadeFilter):
             years = SemaYear.objects.with_year_data().filter(
                 decade=int(self.value())
             )
+
             return queryset.filter(make_year__year__in=years)
 
 
-class SemaVehicleByDecade(ByDecadeFilter):
+class SemaVehicleByDecade(ByDecadeBaseListFilter):
     def queryset(self, request, queryset):
         from sema.models import SemaYear
 
@@ -122,12 +113,13 @@ class SemaVehicleByDecade(ByDecadeFilter):
             years = SemaYear.objects.with_year_data().filter(
                 decade=int(self.value())
             )
+
             return queryset.filter(
                 base_vehicle__make_year__year__in=years
             )
 
 
-class SemaEngineByDecade(ByDecadeFilter):
+class SemaEngineByDecade(ByDecadeBaseListFilter):
     def queryset(self, request, queryset):
         from sema.models import SemaYear
 
@@ -135,22 +127,13 @@ class SemaEngineByDecade(ByDecadeFilter):
             years = SemaYear.objects.with_year_data().filter(
                 decade=int(self.value())
             )
+
             return queryset.filter(
                 vehicle__base_vehicle__make_year__year__in=years
             )
 
 
-class ByCategoryLevel(SimpleListFilter):
-    title = 'category level'
-    parameter_name = 'category_level'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('1', 'Root'),
-            ('2', 'Branch'),
-            ('3', 'Leaf')
-        )
-
+class ByCategoryLevel(LevelBaseListFilter):
     def queryset(self, request, queryset):
         if self.value() == '1':
             return queryset.filter(
@@ -171,62 +154,164 @@ class ByCategoryLevel(SimpleListFilter):
             )
 
 
-class HasHtml(SimpleListFilter):
+class HasHtml(BooleanBaseListFilter):
     title = 'has HTML'
     parameter_name = 'html'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 Q(html__isnull=False)
                 & ~Q(html='')
             )
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(
                 Q(html__isnull=True)
                 | Q(html='')
             )
 
 
-class HasItem(SimpleListFilter):
-    title = 'part of main item'
-    parameter_name = 'item'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
+class HasVendor(BooleanBaseListFilter):
+    title = 'has vendor'
+    parameter_name = 'vendor'
 
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
+            return queryset.filter(vendor__isnull=False)
+
+        if self.value() == 'False':
+            return queryset.filter(vendor__isnull=True)
+
+
+class HasPremierManufacturer(BooleanBaseListFilter):
+    title = 'has Premier manufacturer'
+    parameter_name = 'vendor__premier_manufacturer'
+
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset.filter(vendor__premier_manufacturer__isnull=False)
+
+        if self.value() == 'False':
+            return queryset.filter(vendor__premier_manufacturer__isnull=True)
+
+
+class HasShopifyVendor(BooleanBaseListFilter):
+    title = 'has Shopify vendor'
+    parameter_name = 'vendor__shopify_vendor'
+
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset.filter(vendor__shopify_vendor__isnull=False)
+
+        if self.value() == 'False':
+            return queryset.filter(vendor__shopify_vendor__isnull=True)
+
+
+class HasCategoryPath(BooleanBaseListFilter):
+    title = 'has category path'
+    parameter_name = 'category_paths'
+
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset.filter(
+                Q(root_category_paths__isnull=False)
+                | Q(branch_category_paths__isnull=False)
+                | Q(leaf_category_paths__isnull=False)
+            ).distinct()
+
+        if self.value() == 'False':
+            return queryset.filter(
+                Q(root_category_paths__isnull=True)
+                & Q(branch_category_paths__isnull=True)
+                & Q(leaf_category_paths__isnull=True)
+            ).distinct()
+
+
+class HasShopifyCollection(BooleanBaseListFilter):
+    title = 'has Shopify collection'
+    parameter_name = 'category_paths__shopify_collection'
+
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset.filter(
+                (
+                    Q(root_category_paths__isnull=False)
+                    & Q(root_category_paths__shopify_root_collection__isnull=False)
+                )
+                | (
+                    Q(branch_category_paths__isnull=False)
+                    & Q(branch_category_paths__shopify_branch_collection__isnull=False)
+                )
+                | (
+                    Q(leaf_category_paths__isnull=False)
+                    & Q(leaf_category_paths__shopify_leaf_collection__isnull=False)
+                )
+            ).distinct()
+
+        if self.value() == 'False':
+            return queryset.filter(
+                (
+                    Q(root_category_paths__isnull=True)
+                    | Q(root_category_paths__shopify_root_collection__isnull=True)
+                )
+                & (
+                    Q(branch_category_paths__isnull=True)
+                    | Q(branch_category_paths__shopify_branch_collection__isnull=True)
+                )
+                & (
+                    Q(leaf_category_paths__isnull=True)
+                    | Q(leaf_category_paths__shopify_leaf_collection__isnull=True)
+                )
+            ).distinct()
+
+
+class HasItem(BooleanBaseListFilter):
+    title = 'has item'
+    parameter_name = 'item'
+
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
             return queryset.filter(item__isnull=False)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(item__isnull=True)
 
 
-class SemaBrandMayBeRelevant(MayBeRelevantFilter):
+class HasPremierProduct(BooleanBaseListFilter):
+    title = 'has Premier product'
+    parameter_name = 'item__premier_product'
+
     def queryset(self, request, queryset):
-        queryset = queryset.annotate(
-            _dataset_relevant_count=Count(
-                'datasets',
-                filter=Q(datasets__is_relevant=True),
-                distinct=True
-            )
-        )
-        if self.value() == 'Yes':
+        if self.value() == 'True':
+            return queryset.filter(item__premier_product__isnull=False)
+
+        if self.value() == 'False':
+            return queryset.filter(item__premier_product__isnull=True)
+
+
+class HasShopifyProduct(BooleanBaseListFilter):
+    title = 'has Shopify product'
+    parameter_name = 'item__shopify_product'
+
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset.filter(item__shopify_product__isnull=False)
+
+        if self.value() == 'False':
+            return queryset.filter(item__shopify_product__isnull=True)
+
+
+class SemaBrandMayBeRelevant(MayBeRelevantBaseListFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
             return queryset.filter(_dataset_relevant_count__gt=0)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(_dataset_relevant_count=0)
 
 
-class SemaYearMayBeRelevant(MayBeRelevantFilter):
+class SemaYearMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
         queryset = queryset.annotate(
             _vehicle_relevant_count=Count(
@@ -237,13 +322,15 @@ class SemaYearMayBeRelevant(MayBeRelevantFilter):
                 distinct=True
             )
         )
-        if self.value() == 'Yes':
+
+        if self.value() == 'True':
             return queryset.filter(_vehicle_relevant_count__gt=0)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(_vehicle_relevant_count=0)
 
 
-class SemaModelMayBeRelevant(MayBeRelevantFilter):
+class SemaModelMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
         queryset = queryset.annotate(
             _vehicle_relevant_count=Count(
@@ -254,30 +341,24 @@ class SemaModelMayBeRelevant(MayBeRelevantFilter):
                 distinct=True
             )
         )
-        if self.value() == 'Yes':
+
+        if self.value() == 'True':
             return queryset.filter(_vehicle_relevant_count__gt=0)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(_vehicle_relevant_count=0)
 
 
-class SemaSubmodelMayBeRelevant(MayBeRelevantFilter):
+class SemaSubmodelMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
-        queryset = queryset.annotate(
-            _vehicle_relevant_count=Count(
-                'vehicles',
-                filter=(
-                    Q(vehicles__is_relevant=True)
-                ),
-                distinct=True
-            )
-        )
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(_vehicle_relevant_count__gt=0)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(_vehicle_relevant_count=0)
 
 
-class SemaMakeYearMayBeRelevant(MayBeRelevantFilter):
+class SemaMakeYearMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
         queryset = queryset.annotate(
             _vehicle_relevant_count=Count(
@@ -288,76 +369,61 @@ class SemaMakeYearMayBeRelevant(MayBeRelevantFilter):
                 distinct=True
             )
         )
-        if self.value() == 'Yes':
+
+        if self.value() == 'True':
             return queryset.filter(_vehicle_relevant_count__gt=0)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(_vehicle_relevant_count=0)
 
 
-class SemaBaseVehicleMayBeRelevant(MayBeRelevantFilter):
+class SemaBaseVehicleMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
-        queryset = queryset.annotate(
-            _vehicle_relevant_count=Count(
-                'vehicles',
-                filter=(
-                    Q(vehicles__is_relevant=True)
-                ),
-                distinct=True
-            )
-        )
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(_vehicle_relevant_count__gt=0)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(_vehicle_relevant_count=0)
 
 
-class SemaVehicleMayBeRelevant(MayBeRelevantFilter):
+class SemaVehicleMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
-        queryset = queryset.annotate(
-            _engine_relevant_count=Count(
-                'engines',
-                filter=Q(engines__is_relevant=True),
-                distinct=True
-            )
-        )
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(_engine_relevant_count__gt=0)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(_engine_relevant_count=0)
 
 
-class SemaEngineMayBeRelevant(MayBeRelevantFilter):
+class SemaEngineMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 Q(vehicle__base_vehicle__make_year__make__is_relevant=True)
                 & Q(fuel_type__exact='DIESEL')
             )
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(
                 Q(vehicle__base_vehicle__make_year__make__is_relevant=False)
                 | ~Q(fuel_type__exact='DIESEL')
             )
 
 
-class SemaCategoryMayBeRelevant(MayBeRelevantFilter):
+class SemaCategoryMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.none()
 
 
-class SemaProductMayBeRelevant(MayBeRelevantFilter):
+class SemaProductMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
         queryset = queryset.annotate(
-            _vehicle_count=Count(
+            _product_vehicle_count=Count(
                 'vehicles',
-                distinct=True
-            ),
-            _dataset_vehicle_relevant_count=Count(
-                'dataset__vehicles',
-                filter=Q(dataset__vehicles__is_relevant=True),
                 distinct=True
             ),
             _product_vehicle_relevant_count=Count(
@@ -365,9 +431,14 @@ class SemaProductMayBeRelevant(MayBeRelevantFilter):
                 filter=Q(vehicles__is_relevant=True),
                 distinct=True
             ),
+            _dataset_vehicle_relevant_count=Count(
+                'dataset__vehicles',
+                filter=Q(dataset__vehicles__is_relevant=True),
+                distinct=True
+            ),
             _vehicle_relevant_count=Case(
                 When(
-                    _vehicle_count=0,
+                    _product_vehicle_count=0,
                     then=F('_dataset_vehicle_relevant_count')
                 ),
                 default=F('_product_vehicle_relevant_count'),
@@ -375,12 +446,13 @@ class SemaProductMayBeRelevant(MayBeRelevantFilter):
             )
         )
 
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 Q(dataset__is_relevant=True)
                 & Q(_vehicle_relevant_count__gt=0)
             )
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(
                 Q(dataset__is_relevant=False)
                 | Q(_vehicle_relevant_count=0)

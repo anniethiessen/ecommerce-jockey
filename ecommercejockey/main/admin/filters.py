@@ -1,7 +1,7 @@
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
 
-from core.admin.filters import MayBeRelevantFilter
+from core.admin.filters import MayBeRelevantBaseListFilter
 
 
 class IsCompleteItem(SimpleListFilter):  # TODO add product checks
@@ -63,15 +63,15 @@ class HasShopifyProduct(SimpleListFilter):
             return queryset.filter(shopify_product__isnull=True)
 
 
-class CategoryPathMayBeRelevant(MayBeRelevantFilter):
+class CategoryPathMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 sema_root_category__is_relevant=True,
                 sema_branch_category__is_relevant=True,
                 sema_leaf_category__is_relevant=True,
             )
-        if self.value() == 'No':
+        if self.value() == 'False':
             return queryset.filter(
                 Q(sema_root_category__is_relevant=False)
                 | Q(sema_branch_category__is_relevant=False)

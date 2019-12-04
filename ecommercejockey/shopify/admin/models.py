@@ -75,14 +75,14 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'name',
         'product_count'
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_filter = (
@@ -113,7 +113,7 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
 
     readonly_fields = (
         'id',
-        'details_link',
+        'detail_link',
         'vendor_link',
         'premier_manufacturer_link',
         'sema_brand_link',
@@ -124,11 +124,11 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
         ShopifyVendorProductsTabularInline,
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def vendor_link(self, obj):
         if not obj or not obj.pk or not hasattr(obj, 'vendor'):
@@ -180,11 +180,13 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
                     }
                 ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
-            return ()
+            return []
+
         return super().get_inline_instances(request, obj)
 
 
@@ -218,7 +220,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'collection_id',
         'title',
@@ -235,7 +237,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -243,10 +245,10 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_filter = (
-        HasCategoryPath,
-        HasSemaCategory,
         'is_published',
         ByCollectionLevel,
+        HasCategoryPath,
+        HasSemaCategory,
         'published_scope',
         'disjunctive',
         'sort_order'
@@ -310,7 +312,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'errors',
         'full_match',
         'image_preview',
-        'details_link',
+        'detail_link',
         'category_paths_link',
         'sema_category_link',
         'parent_collection_link',
@@ -332,30 +334,30 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         ShopifyCollectionCalculatorStackedInline
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def category_paths_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         if obj.level == '1':
-            o = obj.root_category_paths.first()
+            category_path_model = obj.root_category_paths.first()._meta.model
             query = f'shopify_root_collection={obj.pk}'
         elif obj.level == '2':
-            o = obj.branch_category_paths.first()
+            category_path_model = obj.branch_category_paths.first()._meta.model
             query = f'shopify_branch_collection={obj.pk}'
         else:
-            o = obj.leaf_category_paths.first()
+            category_path_model = obj.leaf_category_paths.first()._meta.model
             query = f'shopify_leaf_collection={obj.pk}'
 
         return get_changelist_view_link(
-            o,
-            'See All Category Paths',
+            category_path_model,
+            'See Category Paths',
             query=query
         )
     category_paths_link.short_description = ''
@@ -366,13 +368,10 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
 
         if obj.level == '1':
             o = obj.root_category_paths.first().sema_root_category
-            query = f'shopify_root_collection={obj.pk}'
         elif obj.level == '2':
             o = obj.branch_category_paths.first().sema_branch_category
-            query = f'shopify_branch_collection={obj.pk}'
         else:
             o = obj.leaf_category_paths.first().sema_leaf_category
-            query = f'shopify_leaf_collection={obj.pk}'
 
         return get_change_view_link(
             o,
@@ -462,22 +461,26 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
                             'image_alt'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
+
         if not request.user.is_superuser:
             readonly_fields += (
                 'collection_id',
                 'handle'
             )
+
         return readonly_fields
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
-            return ()
+            return []
+
         return super().get_inline_instances(request, obj)
 
 
@@ -490,7 +493,7 @@ class ShopifyCollectionRuleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'column',
         'relation',
@@ -499,7 +502,7 @@ class ShopifyCollectionRuleModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_filter = (
@@ -528,7 +531,7 @@ class ShopifyCollectionRuleModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
-        'details_link',
+        'detail_link',
         'collection_count'
     )
 
@@ -536,12 +539,12 @@ class ShopifyCollectionRuleModelAdmin(ObjectActions, ModelAdmin,
         ShopifyRuleCollectionsManyToManyTabularInline,
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def collection_count(self, obj):
         if not obj or not obj.pk:
@@ -567,11 +570,13 @@ class ShopifyCollectionRuleModelAdmin(ObjectActions, ModelAdmin,
                     }
                 ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
-            return ()
+            return []
+
         return super().get_inline_instances(request, obj)
 
 
@@ -583,7 +588,7 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'name',
         'product_count',
@@ -591,7 +596,7 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_filter = (
@@ -617,7 +622,7 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
 
     readonly_fields = (
         'id',
-        'details_link',
+        'detail_link',
         'product_count',
         'collection_count'
     )
@@ -627,12 +632,12 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
         ShopifyTagCollectionsManyToManyTabularInline
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def product_count(self, obj):
         if not obj or not obj.pk:
@@ -664,11 +669,13 @@ class ShopifyTagModelAdmin(ObjectActions, ModelAdmin, ShopifyTagActions):
                     }
                 ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
-            return ()
+            return []
+
         return super().get_inline_instances(request, obj)
 
 
@@ -700,7 +707,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'product_id',
         'title',
@@ -717,7 +724,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -725,10 +732,10 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_filter = (
+        'is_published',
         HasItem,
         HasPremierProduct,
         HasSemaProduct,
-        'is_published',
         'published_scope',
         'product_type',
         'vendor'
@@ -789,7 +796,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'errors',
         'full_match',
-        'details_link',
+        'detail_link',
         'item_link',
         'premier_product_link',
         'sema_product_link',
@@ -814,12 +821,12 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         ShopifyProductCalculatorStackedInline
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def item_link(self, obj):
         if not obj or not obj.pk or not hasattr(obj, 'item'):
@@ -924,21 +931,25 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
                             'seo_description'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
+
         if not request.user.is_superuser:
             readonly_fields += (
                 'product_id',
             )
+
         return readonly_fields
 
     def get_inline_instances(self, request, obj=None):
         if not obj:
-            return ()
+            return []
+
         return super().get_inline_instances(request, obj)
 
 
@@ -969,7 +980,7 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'image_id',
         'product',
@@ -978,7 +989,7 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     change_actions = (
@@ -1019,7 +1030,7 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
     readonly_fields = (
         'id',
         'image_preview',
-        'details_link',
+        'detail_link',
         'product_link'
     )
 
@@ -1027,11 +1038,11 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
         'product',
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def product_link(self, obj):
         if not obj or not obj.pk or not obj.product:
@@ -1060,17 +1071,20 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
                             'link'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
+
         if not request.user.is_superuser:
             readonly_fields += [
                 'image_id',
                 'src'
             ]
+
         return readonly_fields
 
 
@@ -1096,7 +1110,7 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'option_id',
         'product',
@@ -1105,7 +1119,7 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_filter = (
@@ -1144,7 +1158,7 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
 
     readonly_fields = (
         'id',
-        'details_link',
+        'detail_link',
         'product_link'
     )
 
@@ -1152,12 +1166,12 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
         'product',
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def product_link(self, obj):
         if not obj or not obj.pk or not obj.product:
@@ -1179,16 +1193,19 @@ class ShopifyOptionModelAdmin(ObjectActions, ModelAdmin, ShopifyOptionActions):
                             'values'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
+
         if not request.user.is_superuser:
             readonly_fields += (
                 'option_id',
             )
+
         return readonly_fields
 
 
@@ -1216,7 +1233,7 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'variant_id',
         'product',
@@ -1233,7 +1250,7 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_filter = (
@@ -1313,7 +1330,7 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
-        'details_link',
+        'detail_link',
         'product_link'
     )
 
@@ -1321,12 +1338,12 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
         'product',
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def product_link(self, obj):
         if not obj or not obj.pk or not obj.product:
@@ -1361,16 +1378,19 @@ class ShopifyVariantModelAdmin(ObjectActions, ModelAdmin,
                             'fulfillment_service'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
+
         if not request.user.is_superuser:
             readonly_fields += (
                 'variant_id',
             )
+
         return readonly_fields
 
 
@@ -1411,7 +1431,7 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'metafield_id',
         'content_object',
@@ -1423,7 +1443,7 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_filter = (
@@ -1488,17 +1508,17 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'content_object_str',
         'value_preview',
-        'details_link',
+        'detail_link',
         'content_object_link',
         'value_item_count'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def content_object_link(self, obj):
         if not obj or not obj.pk or not obj.content_object:
@@ -1545,16 +1565,19 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
                             'value'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = super().get_readonly_fields(request, obj)
+
         if not request.user.is_superuser:
             readonly_fields += (
                 'metafield_id',
             )
+
         return readonly_fields
 
 
@@ -1582,7 +1605,7 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'product',
         'full_match',
@@ -1605,7 +1628,7 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -1863,7 +1886,7 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'premier_premier_part_number_preview',
         'premier_upc_preview',
         'premier_images_preview',
-        'details_link',
+        'detail_link',
         'item_link',
         'product_link',
         'premier_product_link',
@@ -1874,12 +1897,12 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'product',
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def product_link(self, obj):
         if not obj or not obj.pk or not obj.product:
@@ -1945,8 +1968,9 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
                             'images_option'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)
 
 
@@ -1976,7 +2000,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'collection',
         'full_match',
@@ -1984,7 +2008,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -2087,7 +2111,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'sema_category_display_name_preview',
         'shopify_subcollections_preview',
         'sema_category_tags_preview',
-        'details_link',
+        'detail_link',
         'collection_link',
         'category_paths_link',
         'sema_category_link'
@@ -2097,11 +2121,11 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'collection',
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj:
             return None
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def collection_link(self, obj):
         if not obj or not obj.pk or not obj.collection:
@@ -2115,18 +2139,18 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
             return None
 
         if obj.collection.level == '1':
-            o = obj.collection.root_category_paths.first()
+            category_path_model = obj.collection.root_category_paths.first()._meta.model
             query = f'shopify_root_collection={obj.collection.pk}'
         elif obj.collection.level == '2':
-            o = obj.collection.branch_category_paths.first()
+            category_path_model = obj.collection.branch_category_paths.first()._meta.model
             query = f'shopify_branch_collection={obj.collection.pk}'
         else:
-            o = obj.collection.leaf_category_paths.first()
+            category_path_model = obj.collection.leaf_category_paths.first()._meta.model
             query = f'shopify_leaf_collection={obj.collection.pk}'
 
         return get_changelist_view_link(
-            o,
-            'See All Category Paths',
+            category_path_model,
+            'See Category Paths',
             query=query
         )
     category_paths_link.short_description = ''
@@ -2167,6 +2191,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
                             'tags_categories_option'
                         )
                     }
-                )
+                ),
             )
+
         return super().get_fieldsets(request, obj)

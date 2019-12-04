@@ -16,7 +16,7 @@ class PremierProductTabularInline(TabularInline):
     )
 
     fields = (
-        'details_link',
+        'detail_link',
         'premier_part_number',
         'vendor_part_number',
         'description',
@@ -31,14 +31,14 @@ class PremierProductTabularInline(TabularInline):
 
     readonly_fields = (
         'primary_image_preview',
-        'details_link'
+        'detail_link'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj.pk:
             return None
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     primary_image_preview = AdminThumbnail(
         image_field='primary_image_thumbnail'

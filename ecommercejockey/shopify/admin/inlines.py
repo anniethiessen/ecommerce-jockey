@@ -32,7 +32,7 @@ class ShopifyMetafieldBaseTabularInline(GenericTabularInline):
 
     fields = (
         'all_link',
-        'details_link',
+        'detail_link',
         'id',
         'metafield_id',
         'owner_resource',
@@ -44,7 +44,7 @@ class ShopifyMetafieldBaseTabularInline(GenericTabularInline):
 
     readonly_fields = (
         'id',
-        'details_link',
+        'detail_link',
         'all_link',
         'value_item_count'
     )
@@ -57,15 +57,15 @@ class ShopifyMetafieldBaseTabularInline(GenericTabularInline):
             f'object_id__exact={obj.object_id}'
             f'&content_type_id__exact={obj.content_type.pk}'
         )
-        return get_changelist_view_link(obj, 'See All', query)
+        return get_changelist_view_link(obj._meta.model, 'See All', query)
     all_link.short_description = ''
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -101,7 +101,7 @@ class ShopifyVendorProductsTabularInline(TabularInline):
 
     fields = (
         'all_link',
-        'details_link',
+        'detail_link',
         'id',
         'product_id',
         'title',
@@ -120,7 +120,7 @@ class ShopifyVendorProductsTabularInline(TabularInline):
         'id',
         'errors',
         'full_match',
-        'details_link',
+        'detail_link',
         'all_link',
         'variant_count',
         'option_count',
@@ -136,14 +136,14 @@ class ShopifyVendorProductsTabularInline(TabularInline):
         if not obj:
             return None
         query = f'{self.all_link_query}={getattr(self.get_rel_obj(obj), "pk")}'
-        return get_changelist_view_link(obj, 'See All', query)
+        return get_changelist_view_link(obj._meta.model, 'See All', query)
     all_link.short_description = ''
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj:
             return None
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def variant_count(self, obj):
         if not obj or not obj.pk:
@@ -220,7 +220,7 @@ class ShopifyProductImagesTabularInline(TabularInline):
 
     fields = (
         'all_link',
-        'details_link',
+        'detail_link',
         'id',
         'image_id',
         'product',
@@ -231,7 +231,7 @@ class ShopifyProductImagesTabularInline(TabularInline):
     readonly_fields = (
         'id',
         'image_preview',
-        'details_link',
+        'detail_link',
         'all_link'
     )
 
@@ -240,14 +240,14 @@ class ShopifyProductImagesTabularInline(TabularInline):
 
     def all_link(self, obj):
         query = f'{self.all_link_query}={getattr(self.get_rel_obj(obj), "pk")}'
-        return get_changelist_view_link(obj, 'See All', query)
+        return get_changelist_view_link(obj._meta.model, 'See All', query)
     all_link.short_description = ''
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj.pk:
             return None
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def image_preview(self, obj):
         if not obj or not obj.pk or not obj.link:
@@ -287,7 +287,7 @@ class ShopifyProductOptionsTabularInline(TabularInline):
 
     fields = (
         'all_link',
-        'details_link',
+        'detail_link',
         'id',
         'option_id',
         'product',
@@ -298,7 +298,7 @@ class ShopifyProductOptionsTabularInline(TabularInline):
     readonly_fields = (
         'id',
         'all_link',
-        'details_link'
+        'detail_link'
     )
 
     def get_rel_obj(self, obj):
@@ -309,15 +309,15 @@ class ShopifyProductOptionsTabularInline(TabularInline):
             return None
 
         query = f'{self.all_link_query}={getattr(self.get_rel_obj(obj), "pk")}'
-        return get_changelist_view_link(obj, 'See All', query)
+        return get_changelist_view_link(obj._meta.model, 'See All', query)
     all_link.short_description = ''
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def formfield_for_dbfield(self, db_field, **kwargs):
         formfield = super().formfield_for_dbfield(db_field, **kwargs)
@@ -346,7 +346,7 @@ class ShopifyProductVariantsStackedInline(StackedInline):
         (
             None, {
                 'fields': (
-                    'details_link',
+                    'detail_link',
                     'variant_id',
                     'title',
                     'sku',
@@ -392,15 +392,15 @@ class ShopifyProductVariantsStackedInline(StackedInline):
     )
 
     readonly_fields = (
-        'details_link',
+        'detail_link',
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj or not obj.pk:
             return None
 
         return get_change_view_link(obj, 'See Full Variant')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -426,7 +426,7 @@ class ShopifyProductCalculatorStackedInline(StackedInline):
         (
             None, {
                 'fields': (
-                    'details_link',
+                    'detail_link',
                     ('title_match', 'title_difference'),
                     'title_option',
                     ('body_html_match', 'body_html_difference'),
@@ -458,7 +458,7 @@ class ShopifyProductCalculatorStackedInline(StackedInline):
     )
 
     readonly_fields = (
-        'details_link',
+        'detail_link',
         'title_match',
         'body_html_match',
         'variant_weight_match',
@@ -483,11 +483,11 @@ class ShopifyProductCalculatorStackedInline(StackedInline):
         'images_difference'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj:
             return None
         return get_change_view_link(obj, 'See Full Calculator')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -519,7 +519,7 @@ class ShopifyCollectionCalculatorStackedInline(StackedInline):
         (
             None, {
                 'fields': (
-                    'details_link',
+                    'detail_link',
                     ('title_match', 'title_difference'),
                     'title_option',
                     ('metafields_match', 'metafields_difference'),
@@ -533,7 +533,7 @@ class ShopifyCollectionCalculatorStackedInline(StackedInline):
     )
 
     readonly_fields = (
-        'details_link',
+        'detail_link',
         'title_match',
         'metafields_match',
         'tags_match',
@@ -542,11 +542,11 @@ class ShopifyCollectionCalculatorStackedInline(StackedInline):
         'tags_difference'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj:
             return None
         return get_change_view_link(obj, 'See Full Calculator')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def get_queryset(self, request):
         return super().get_queryset(request).with_admin_data()
@@ -564,7 +564,7 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
 
     fields = (
         'all_link',
-        'details_link',
+        'detail_link',
         'id',
         'collection_id',
         'title',
@@ -584,7 +584,7 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
         'level',
         'errors',
         'full_match',
-        'details_link',
+        'detail_link',
         'all_link',
         'rule_count',
         'tag_count',
@@ -597,14 +597,14 @@ class ShopifyCollectionChildCollectionsTabularInline(TabularInline):
 
     def all_link(self, obj):
         query = f'{self.all_link_query}={getattr(self.get_rel_obj(obj), "pk")}'
-        return get_changelist_view_link(obj, 'See All', query)
+        return get_changelist_view_link(obj._meta.model, 'See All', query)
     all_link.short_description = ''
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         if not obj.pk:
             return None
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def rule_count(self, obj):
         if not obj or not obj.pk:

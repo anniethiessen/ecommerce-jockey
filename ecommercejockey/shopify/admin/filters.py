@@ -1,18 +1,12 @@
-from django.contrib.admin.filters import SimpleListFilter
 from django.db.models import Q
 
+from core.admin.filters import (
+    BooleanBaseListFilter,
+    LevelBaseListFilter
+)
 
-class ByCollectionLevel(SimpleListFilter):
-    title = 'collection level'
-    parameter_name = 'collection_level'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('1', 'Root'),
-            ('2', 'Branch'),
-            ('3', 'Leaf')
-        )
-
+class ByCollectionLevel(LevelBaseListFilter):
     def queryset(self, request, queryset):
         if self.value() == '1':
             return queryset.filter(
@@ -33,92 +27,61 @@ class ByCollectionLevel(SimpleListFilter):
             ).distinct()
 
 
-class ByTagLevel(SimpleListFilter):
-    title = 'tag level'
-    parameter_name = 'tag_level'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('1', 'Root'),
-            ('2', 'Branch'),
-            ('3', 'Leaf')
-        )
-
+class ByTagLevel(LevelBaseListFilter):
     def queryset(self, request, queryset):
-        if not self.value():
-            return queryset
-        return queryset.filter(name__endswith=self.value())
+        if self.value():
+            return queryset.filter(name__endswith=self.value())
 
 
-class HasVendor(SimpleListFilter):
-    title = 'has main vendor'
+class HasVendor(BooleanBaseListFilter):
+    title = 'has vendor'
     parameter_name = 'vendor'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(vendor__isnull=False)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(vendor__isnull=True)
 
 
-class HasPremierManufacturer(SimpleListFilter):
+class HasPremierManufacturer(BooleanBaseListFilter):
     title = 'has Premier manufacturer'
     parameter_name = 'vendor__premier_manufacturer'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(vendor__premier_manufacturer__isnull=False)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(vendor__premier_manufacturer__isnull=True)
 
 
-class HasSemaBrand(SimpleListFilter):
+class HasSemaBrand(BooleanBaseListFilter):
     title = 'has SEMA brand'
     parameter_name = 'vendor__sema_brand'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(vendor__sema_brand__isnull=False)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(vendor__sema_brand__isnull=True)
 
 
-class HasCategoryPath(SimpleListFilter):
-    title = 'has main category path(s)'
+class HasCategoryPath(BooleanBaseListFilter):
+    title = 'has category path'
     parameter_name = 'category_paths'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 Q(root_category_paths__isnull=False)
                 | Q(branch_category_paths__isnull=False)
                 | Q(leaf_category_paths__isnull=False)
             ).distinct()
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(
                 Q(root_category_paths__isnull=True)
                 & Q(branch_category_paths__isnull=True)
@@ -126,18 +89,12 @@ class HasCategoryPath(SimpleListFilter):
             ).distinct()
 
 
-class HasSemaCategory(SimpleListFilter):
+class HasSemaCategory(BooleanBaseListFilter):
     title = 'has SEMA category'
-    parameter_name = 'sema_category'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
+    parameter_name = 'category_paths__sema_category'
 
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(
                 (
                     Q(root_category_paths__isnull=False)
@@ -153,69 +110,54 @@ class HasSemaCategory(SimpleListFilter):
                 )
             ).distinct()
 
-        if self.value() == 'No':
+        if self.value() == 'False':
             return queryset.filter(
                 (
                     Q(root_category_paths__isnull=True)
-                    & Q(root_category_paths__sema_root_category__isnull=True)
+                    | Q(root_category_paths__sema_root_category__isnull=True)
                 )
                 & (
                     Q(branch_category_paths__isnull=True)
-                    & Q(branch_category_paths__sema_branch_category__isnull=True)
+                    | Q(branch_category_paths__sema_branch_category__isnull=True)
                 )
                 & (
                     Q(leaf_category_paths__isnull=True)
-                    & Q(leaf_category_paths__sema_leaf_category__isnull=True)
+                    | Q(leaf_category_paths__sema_leaf_category__isnull=True)
                 )
             ).distinct()
 
 
-class HasItem(SimpleListFilter):
-    title = 'has main item'
+class HasItem(BooleanBaseListFilter):
+    title = 'has item'
     parameter_name = 'item'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(item__isnull=False)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(item__isnull=True)
 
 
-class HasPremierProduct(SimpleListFilter):
+class HasPremierProduct(BooleanBaseListFilter):
     title = 'has Premier manufacturer'
     parameter_name = 'item__premier_product'
 
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
-
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(item__premier_product__isnull=False)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(item__premier_product__isnull=True)
 
 
-class HasSemaProduct(SimpleListFilter):
+class HasSemaProduct(BooleanBaseListFilter):
     title = 'has SEMA brand'
-    parameter_name = 'vendor__sema_product'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('Yes', 'Yes'),
-            ('No', 'No'),
-        )
+    parameter_name = 'item__sema_product'
 
     def queryset(self, request, queryset):
-        if self.value() == 'Yes':
+        if self.value() == 'True':
             return queryset.filter(item__sema_product__isnull=False)
-        if self.value() == 'No':
+
+        if self.value() == 'False':
             return queryset.filter(item__sema_product__isnull=True)

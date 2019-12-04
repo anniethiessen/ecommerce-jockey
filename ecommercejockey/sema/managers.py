@@ -953,7 +953,9 @@ class SemaDatasetQuerySet(SemaBaseQuerySet):
     """
 
     def with_admin_data(self):
-        return self.prefetch_related(
+        return self.select_related(
+            'brand'
+        ).prefetch_related(
             'categories',
             'vehicles',
             'products'
@@ -2756,7 +2758,10 @@ class SemaMakeYearQuerySet(SemaBaseQuerySet):
     """
 
     def with_admin_data(self):
-        return self.prefetch_related(
+        return self.select_related(
+            'year',
+            'make'
+        ).prefetch_related(
             'base_vehicles'
         ).annotate(
             _base_vehicle_count=Count(
@@ -3017,7 +3022,10 @@ class SemaBaseVehicleQuerySet(SemaBaseQuerySet):
     """
 
     def with_admin_data(self):
-        return self.prefetch_related(
+        return self.select_related(
+            'make_year',
+            'model'
+        ).prefetch_related(
             'vehicles'
         ).annotate(
             _vehicle_count=Count(
@@ -3688,7 +3696,10 @@ class SemaVehicleQuerySet(SemaBaseQuerySet):
     """
 
     def with_admin_data(self):
-        return self.prefetch_related(
+        return self.select_related(
+            'base_vehicle',
+            'submodel'
+        ).prefetch_related(
             'engines',
             'datasets',
             'products'
@@ -4217,7 +4228,10 @@ class SemaEngineQuerySet(SemaBaseQuerySet):
 
     """
 
-    pass
+    def with_admin_data(self):
+        return self.select_related(
+            'vehicle'
+        )
 
 
 class SemaCategoryQuerySet(SemaBaseQuerySet):
@@ -4426,7 +4440,9 @@ class SemaProductQuerySet(SemaBaseQuerySet):
     """
 
     def with_admin_data(self):
-        return self.prefetch_related(
+        return self.select_related(
+            'dataset'
+        ).prefetch_related(
             'description_pies_attributes',
             'digital_assets_pies_attributes',
             'categories',
@@ -10694,6 +10710,9 @@ class SemaEngineManager(SemaBaseManager):
             self.model,
             using=self._db
         )
+
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_data_from_api(self, brand_ids=None, dataset_ids=None,

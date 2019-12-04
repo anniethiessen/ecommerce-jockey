@@ -3507,6 +3507,26 @@ class SemaEngine(SemaBaseModel):
     objects = SemaEngineManager()
 
     class Meta:
+        unique_together = (
+            'litre',
+            'cc',
+            'cid',
+            'cylinders',
+            'block_type',
+            'engine_bore_in',
+            'engine_bore_metric',
+            'engine_stroke_in',
+            'engine_stroke_metric',
+            'valves_per_engine',
+            'aspiration',
+            'cylinder_head_type',
+            'fuel_type',
+            'ignition_system_type',
+            'manufacturer',
+            'horse_power',
+            'kilowatt_power',
+            'engine_designation'
+        )
         verbose_name = 'SEMA engine'
 
     def __str__(self):

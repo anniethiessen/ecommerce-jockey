@@ -53,7 +53,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'slug',
         'premier_manufacturer',
@@ -68,7 +68,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -138,7 +138,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'relevancy_errors',
         'may_be_relevant_flag',
         'id',
-        'details_link',
+        'detail_link',
         'premier_manufacturer_link',
         'shopify_vendor_link',
         'sema_brand_link'
@@ -150,9 +150,9 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'shopify_vendor'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def premier_manufacturer_link(self, obj):
         return get_change_view_link(
@@ -221,7 +221,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'premier_product',
         'sema_product',
@@ -235,7 +235,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -306,7 +306,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'may_be_relevant_flag',
         'relevancy_warnings',
         'relevancy_errors',
-        'details_link',
+        'detail_link',
         'id',
         'premier_product_link',
         'sema_product_link',
@@ -319,16 +319,16 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'shopify_product'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def premier_product_link(self, obj):
         if not obj.premier_product:
             return '-----'
         return get_change_view_link(
             obj.premier_product, 'See full Premier product')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def sema_product_link(self, obj):
         if not obj.sema_product:
@@ -403,7 +403,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'sema_root_category',
         'sema_branch_category',
@@ -417,7 +417,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -488,7 +488,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
     )
 
     readonly_fields = (
-        'details_link',
+        'detail_link',
         'may_be_relevant_flag',
         'relevancy_warnings',
         'relevancy_errors',
@@ -510,9 +510,9 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
         'shopify_leaf_collection'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def sema_root_category_link(self, obj):
         if not obj.sema_root_category:

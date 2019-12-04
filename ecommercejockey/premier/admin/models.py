@@ -42,7 +42,7 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'id',
         'name',
         'product_count_a',
@@ -53,7 +53,7 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -96,7 +96,7 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         'relevancy_warnings',
         'relevancy_errors',
         'product_count_a',
-        'details_link',
+        'detail_link',
         'primary_image_preview'
     )
 
@@ -104,9 +104,9 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
     #     PremierProductTabularInline,  # TO NOTE: too long
     # )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def product_count_a(self, obj):
         return f'{obj.product_relevant_count}/{obj.product_count}'
@@ -150,7 +150,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     )
 
     list_display = (
-        'details_link',
+        'detail_link',
         'premier_part_number',
         'vendor_part_number',
         'description',
@@ -164,7 +164,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     )
 
     list_display_links = (
-        'details_link',
+        'detail_link',
     )
 
     list_editable = (
@@ -280,7 +280,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
-        'details_link',
+        'detail_link',
         'manufacturer_link',
         'item_link',
         'sema_product_link',
@@ -288,9 +288,9 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'primary_image_preview'
     )
 
-    def details_link(self, obj):
+    def detail_link(self, obj):
         return get_change_view_link(obj, 'Details')
-    details_link.short_description = ''
+    detail_link.short_description = ''
 
     def item_link(self, obj):
         if not hasattr(obj, 'item'):
