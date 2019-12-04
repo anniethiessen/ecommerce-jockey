@@ -1,6 +1,7 @@
 from django.db.models import (
     Manager,
     QuerySet,
+    Count,
     Q
 )
 
@@ -9,10 +10,28 @@ from .clients import premier_client
 
 
 class PremierManufacturerQuerySet(QuerySet):
-    pass
+    def with_admin_data(self):
+        return self.prefetch_related(
+            'products'
+        ).annotate(
+            _product_count=Count(
+                'products',
+                distinct=True
+            ),
+            _product_relevant_count=Count(
+                'products',
+                filter=Q(products__is_relevant=True),
+                distinct=True
+            )
+        )
 
 
 class PremierProductQuerySet(QuerySet):
+    def with_admin_data(self):
+        return self.select_related(
+            'manufacturer'
+        )
+
     def has_missing_inventory_data(self):
         return self.filter(
             Q(inventory_ab__isnull=True)
@@ -131,6 +150,9 @@ class PremierManufacturerManager(Manager):
             using=self._db
         )
 
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
+
 
 class PremierProductManager(Manager):
     def get_queryset(self):
@@ -138,6 +160,9 @@ class PremierProductManager(Manager):
             self.model,
             using=self._db
         )
+
+    def with_admin_data(self):
+        return self.get_queryset().with_admin_data()
 
     def has_all_inventory_data(self):
         return self.get_queryset().has_all_inventory_data()

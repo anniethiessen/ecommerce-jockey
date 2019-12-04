@@ -23,29 +23,35 @@ from .filters import (
     HasApiPricing,
     HasItem,
     HasPrimaryImage,
+    HasSemaBrand,
+    HasSemaProduct,
+    HasShopifyProduct,
+    HasShopifyVendor,
+    HasVendor,
     PremierProductMayBeRelevant
 )
-# from .inlines import PremierProductTabularInline
+from .inlines import PremierManufacturerProductsTabularInline
 from .resources import PremierProductResource
 
 
 @admin.register(PremierManufacturer)
 class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
                                     PremierManufacturerActions):
-    search_fields = (
-        'name',
-    )
-
     actions = (
         'mark_as_relevant_queryset_action',
         'mark_as_irrelevant_queryset_action'
+    )
+
+    search_fields = (
+        'id',
+        'name'
     )
 
     list_display = (
         'detail_link',
         'id',
         'name',
-        'product_count_a',
+        'product_count',
         'primary_image_preview',
         'is_relevant',
         'relevancy_warnings',
@@ -62,23 +68,29 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
 
     list_filter = (
         'is_relevant',
+        HasVendor,
+        HasSemaBrand,
+        HasShopifyVendor
     )
 
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'vendor_link',
+                    'sema_brand_link',
+                    'shopify_vendor_link',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'id'
                 )
             }
         ),
         (
             'Manufacturer', {
                 'fields': (
-                    'id',
-                    'name'
+                    'name',
                 )
             }
         ),
@@ -95,27 +107,83 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'relevancy_warnings',
         'relevancy_errors',
-        'product_count_a',
+        'primary_image_preview',
         'detail_link',
-        'primary_image_preview'
+        'vendor_link',
+        'sema_brand_link',
+        'shopify_vendor_link',
+        'product_count'
     )
 
-    # inlines = (
-    #     PremierProductTabularInline,  # TO NOTE: too long
-    # )
+    inlines = (
+        PremierManufacturerProductsTabularInline,  # TO NOTE: too long
+    )
 
     def detail_link(self, obj):
         return get_change_view_link(obj, 'Details')
     detail_link.short_description = ''
 
-    def product_count_a(self, obj):
-        return f'{obj.product_relevant_count}/{obj.product_count}'
-    product_count_a.short_description = 'product count'
+    def vendor_link(self, obj):
+        if not obj or not obj.pk or not hasattr(obj, 'vendor'):
+            return None
+
+        return get_change_view_link(obj.vendor, 'See Vendor')
+    vendor_link.short_description = ''
+
+    def sema_brand_link(self, obj):
+        if (not obj or not obj.pk or not hasattr(obj, 'vendor')
+                or not obj.vendor.sema_brand):
+            return None
+
+        return get_change_view_link(
+            obj.vendor.sema_brand,
+            'See SEMA brand'
+        )
+    sema_brand_link.short_description = ''
+
+    def shopify_vendor_link(self, obj):
+        if (not obj or not obj.pk or not hasattr(obj, 'vendor')
+                or not obj.vendor.shopify_vendor):
+            return None
+
+        return get_change_view_link(
+            obj.vendor.shopify_vendor,
+            'See Shopify vendor'
+        )
+    shopify_vendor_link.short_description = ''
+
+    def product_count(self, obj):
+        return f'{obj._product_relevant_count}/{obj._product_count}'
+    product_count.admin_order_field = '_product_relevant_count'
+    product_count.short_description = 'product count'
 
     primary_image_preview = AdminThumbnail(
         image_field='primary_image_thumbnail'
     )
     primary_image_preview.short_description = 'primary image'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
+    def get_fieldsets(self, request, obj=None):
+        if not obj:
+            return (
+                (
+                    None, {
+                        'fields': (
+                            'name',
+                        )
+                    }
+                ),
+            )
+
+        return super().get_fieldsets(request, obj)
+
+    def get_inline_instances(self, request, obj=None):
+        if not obj:
+            return []
+
+        return super().get_inline_instances(request, obj)
 
 
 @admin.register(PremierProduct)
@@ -127,26 +195,21 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'manufacturer',
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action',
+        'update_inventory_queryset_action',
+        'update_pricing_queryset_action',
+        'update_primary_image_queryset_action'
+    )
+
     search_fields = (
         'premier_part_number',
         'vendor_part_number',
         'description',
+        'upc',
+        'manufacturer__id',
         'manufacturer__name',
-        'upc'
-    )
-
-    actions = (
-        'update_inventory_queryset_action',
-        'update_pricing_queryset_action',
-        'mark_as_relevant_queryset_action',
-        'mark_as_irrelevant_queryset_action',
-        'update_primary_image_queryset_action'
-    )
-
-    change_actions = (
-        'update_inventory_object_action',
-        'update_pricing_object_action',
-        'update_primary_image_object_action'
     )
 
     list_display = (
@@ -155,7 +218,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'vendor_part_number',
         'description',
         'manufacturer',
-        'cost',
+        'inventory_ab',
+        'cost_cad',
         'primary_image_preview',
         'may_be_relevant_flag',
         'is_relevant',
@@ -172,37 +236,45 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     )
 
     list_filter = (
-        HasItem,
         'is_relevant',
         PremierProductMayBeRelevant,
         ('manufacturer__name', get_custom_filter_title('manufacturer')),
         'part_status',
+        HasItem,
+        HasSemaProduct,
+        HasShopifyProduct,
         HasApiInventory,
         HasApiPricing,
         HasAlbertaInventory,
         HasPrimaryImage
     )
 
+    change_actions = (
+        'update_inventory_object_action',
+        'update_pricing_object_action',
+        'update_primary_image_object_action'
+    )
+
     fieldsets = (
         (
             None, {
                 'fields': (
+                    'item_link',
+                    'sema_product_link',
+                    'shopify_product_link',
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors',
+                    'relevancy_errors'
                 )
             }
         ),
         (
             'Product', {
                 'fields': (
-                    'item_link',
-                    'sema_product_link',
-                    'shopify_product_link',
                     'premier_part_number',
-                    'description',
                     'vendor_part_number',
+                    'description',
                     'part_status',
                     'upc'
                 )
@@ -213,6 +285,9 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                 'fields': (
                     'manufacturer_link',
                     'manufacturer'
+                ),
+                'classes': (
+                    'collapse',
                 )
             }
         ),
@@ -280,27 +355,33 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'relevancy_warnings',
         'relevancy_errors',
         'may_be_relevant_flag',
+        'primary_image_preview',
         'detail_link',
         'manufacturer_link',
         'item_link',
         'sema_product_link',
-        'shopify_product_link',
-        'primary_image_preview'
+        'shopify_product_link'
     )
 
     def detail_link(self, obj):
+        if not obj or not obj.pk:
+            return None
+
         return get_change_view_link(obj, 'Details')
     detail_link.short_description = ''
 
     def item_link(self, obj):
-        if not hasattr(obj, 'item'):
-            return '-----'
-        return get_change_view_link(obj.item, 'See full item')
+        if not obj or not obj.pk or not hasattr(obj, 'item'):
+            return None
+
+        return get_change_view_link(obj.item, 'See Item')
     item_link.short_description = ''
 
     def sema_product_link(self, obj):
-        if not hasattr(obj, 'item') or not obj.item.sema_product:
-            return '-----'
+        if (not obj or not obj.pk or not hasattr(obj, 'item')
+                or not obj.item.sema_product):
+            return None
+
         return get_change_view_link(
             obj.item.sema_product,
             'See SEMA product'
@@ -308,8 +389,10 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     sema_product_link.short_description = ''
 
     def shopify_product_link(self, obj):
-        if not hasattr(obj, 'item') or not obj.item.shopify_product:
-            return '-----'
+        if (not obj or not obj.pk or not hasattr(obj, 'item')
+                or not obj.item.shopify_product):
+            return None
+
         return get_change_view_link(
             obj.item.shopify_product,
             'See Shopify product'
@@ -317,11 +400,12 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
     shopify_product_link.short_description = ''
 
     def manufacturer_link(self, obj):
-        if not obj.manufacturer:
-            return '-----'
+        if not obj or not obj.pk or not obj.manufacturer:
+            return None
+
         return get_change_view_link(
             obj.manufacturer,
-            'See all full manufacturer'
+            'See Full Manufacturer'
         )
     manufacturer_link.short_description = ''
 
@@ -336,3 +420,43 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         else:
             return ''
     may_be_relevant_flag.short_description = ''
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).with_admin_data()
+
+    def get_fieldsets(self, request, obj=None):
+        if not obj:
+            return (
+                (
+                    None, {
+                        'fields': (
+                            'premier_part_number',
+                            'vendor_part_number',
+                            'manufacturer',
+                            'description',
+                            'part_status',
+                            'upc',
+                            'cost',
+                            'jobber',
+                            'msrp',
+                            'map',
+                            'weight',
+                            'length',
+                            'width',
+                            'height'
+                        )
+                    }
+                ),
+            )
+
+        return super().get_fieldsets(request, obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = super().get_readonly_fields(request, obj)
+
+        if not request.user.is_superuser:
+            readonly_fields += (
+                'premier_part_number',
+            )
+
+        return readonly_fields

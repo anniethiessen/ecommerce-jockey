@@ -152,7 +152,7 @@ class HasPremierProduct(BooleanBaseListFilter):
 
 
 class HasSemaProduct(BooleanBaseListFilter):
-    title = 'has SEMA brand'
+    title = 'has SEMA product'
     parameter_name = 'item__sema_product'
 
     def queryset(self, request, queryset):
