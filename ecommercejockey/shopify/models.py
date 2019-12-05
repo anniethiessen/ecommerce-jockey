@@ -55,6 +55,34 @@ class ShopifyVendor(Model, MessagesMixin):
         unique=True
     )
 
+    # <editor-fold desc="error properties ...">
+    @property
+    def warnings(self):
+        """
+        Returns a concatenation of warnings.
+
+        :return: warnings
+        :rtype: str
+
+        """
+
+        msgs = []
+        return ', '.join(msgs)
+
+    @property
+    def errors(self):
+        """
+        Returns a concatenation of errors.
+
+        :return: errors
+        :rtype: str
+
+        """
+
+        msgs = []
+        return ', '.join(msgs)
+    # </editor-fold>
+
     # <editor-fold desc="count properties ...">
     @property
     def product_count(self):
@@ -632,6 +660,19 @@ class ShopifyCollection(Model, MessagesMixin):
     # </editor-fold>
 
     # <editor-fold desc="error properties ...">
+    @property
+    def warnings(self):
+        """
+        Returns a concatenation of warnings.
+
+        :return: warnings
+        :rtype: str
+
+        """
+
+        msgs = []
+        return ', '.join(msgs)
+
     @property
     def errors(self):
         """
@@ -1536,6 +1577,19 @@ class ShopifyProduct(Model, MessagesMixin):
     # </editor-fold>
 
     # <editor-fold desc="error properties ...">
+    @property
+    def warnings(self):
+        """
+        Returns a concatenation of warnings.
+
+        :return: warnings
+        :rtype: str
+
+        """
+
+        msgs = []
+        return ', '.join(msgs)
+
     @property
     def errors(self):
         """

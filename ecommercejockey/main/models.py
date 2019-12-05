@@ -65,15 +65,48 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
         )
 
     @property
+    def relevancy_warnings(self):
+        msgs = []
+
+        if (self.premier_manufacturer
+                and self.premier_manufacturer.relevancy_warnings):
+            msgs.append(
+                f"PREMIER: {self.premier_manufacturer.relevancy_warnings}"
+            )
+
+        if (self.sema_brand
+                and self.sema_brand.relevancy_warnings):
+            msgs.append(f"SEMA: {self.sema_brand.relevancy_warnings}")
+
+        if (self.shopify_vendor
+                and self.shopify_vendor.warnings):
+            msgs.append(f"SHOPIFY: {self.shopify_vendor.warnings}")
+
+        return ', '.join(msgs)
+    relevancy_warnings.fget.short_description = 'Warnings'
+
+    @property
     def relevancy_errors(self):
         msgs = []
 
         if self.is_relevant:
+            if self.premier_manufacturer and not self.premier_manufacturer.is_relevant:
+                msgs.append('Premier manufacturer not relevant')
+
+            if self.sema_brand and not self.sema_brand.is_relevant:
+                error = 'SEMA brand not relevant'
+                msgs.append(error)
+
             if not self.premier_manufacturer:
                 error = 'Missing Premier manufacturer'
                 msgs.append(error)
+
             if not self.sema_brand:
                 error = 'Missing SEMA brand'
+                msgs.append(error)
+
+            if not self.shopify_vendor:
+                error = 'Missing Shopify vendor'
                 msgs.append(error)
 
         if (self.premier_manufacturer
@@ -85,6 +118,11 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
         if (self.sema_brand
                 and self.sema_brand.relevancy_errors):
             msgs.append(f"SEMA: {self.sema_brand.relevancy_errors}")
+
+        if (self.shopify_vendor
+                and self.shopify_vendor.errors):
+            msgs.append(f"SHOPIFY: {self.shopify_vendor.errors}")
+
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
@@ -146,11 +184,127 @@ class CategoryPath(RelevancyBaseModel, NotesBaseModel):
         )
 
     @property
+    def relevancy_warnings(self):
+        msgs = []
+
+        if (self.sema_root_category
+                and self.sema_root_category.relevancy_warnings):
+            msgs.append(
+                f"SEMA ROOT: {self.sema_root_category.relevancy_warnings}"
+            )
+
+        if (self.sema_branch_category
+                and self.sema_branch_category.relevancy_warnings):
+            msgs.append(
+                f"SEMA BRANCH: {self.sema_branch_category.relevancy_warnings}"
+            )
+
+        if (self.sema_leaf_category
+                and self.sema_leaf_category.relevancy_warnings):
+            msgs.append(
+                f"SEMA LEAF: {self.sema_leaf_category.relevancy_warnings}"
+            )
+
+        if (self.shopify_root_collection
+                and self.shopify_root_collection.warnings):
+            msgs.append(
+                f"SHOPIFY ROOT: {self.shopify_root_collection.warnings}"
+            )
+
+        if (self.shopify_branch_collection
+                and self.shopify_branch_collection.warnings):
+            msgs.append(
+                f"SHOPIFY BRANCH: {self.shopify_branch_collection.warnings}"
+            )
+
+        if (self.shopify_leaf_collection
+                and self.shopify_leaf_collection.warnings):
+            msgs.append(
+                f"SHOPIFY LEAF: {self.shopify_leaf_collection.warnings}"
+            )
+
+        return ', '.join(msgs)
+    relevancy_warnings.fget.short_description = 'Warnings'
+
+    @property
     def relevancy_errors(self):
         msgs = []
+
         if self.is_relevant:
-            pass
+            if self.sema_root_category and not self.sema_root_category.is_relevant:
+                error = 'SEMA root category not relevant'
+                msgs.append(error)
+
+            if self.sema_branch_category and not self.sema_branch_category.is_relevant:
+                error = 'SEMA branch category not relevant'
+                msgs.append(error)
+
+            if self.sema_leaf_category and not self.sema_leaf_category.is_relevant:
+                error = 'SEMA leaf category not relevant'
+                msgs.append(error)
+
+            if not self.sema_root_category:
+                error = 'Missing SEMA root category'
+                msgs.append(error)
+
+            if not self.sema_branch_category:
+                error = 'Missing SEMA branch category'
+                msgs.append(error)
+
+            if not self.sema_leaf_category:
+                error = 'Missing SEMA leaf category'
+                msgs.append(error)
+
+            if not self.shopify_root_collection:
+                error = 'Missing Shopify root collection'
+                msgs.append(error)
+
+            if not self.shopify_branch_collection:
+                error = 'Missing Shopify branch collection'
+                msgs.append(error)
+
+            if not self.shopify_leaf_collection:
+                error = 'Missing Shopify leaf collection'
+                msgs.append(error)
+
+        if (self.sema_root_category
+                and self.sema_root_category.relevancy_errors):
+            msgs.append(
+                f"SEMA ROOT: {self.sema_root_category.relevancy_errors}"
+            )
+
+        if (self.sema_branch_category
+                and self.sema_branch_category.relevancy_errors):
+            msgs.append(
+                f"SEMA BRANCH: {self.sema_branch_category.relevancy_errors}"
+            )
+
+        if (self.sema_leaf_category
+                and self.sema_leaf_category.relevancy_errors):
+            msgs.append(
+                f"SEMA LEAF: {self.sema_leaf_category.relevancy_errors}"
+            )
+
+        if (self.shopify_root_collection
+                and self.shopify_root_collection.errors):
+            msgs.append(
+                f"SHOPIFY ROOT: {self.shopify_root_collection.errors}"
+            )
+
+        if (self.shopify_branch_collection
+                and self.shopify_branch_collection.errors):
+            msgs.append(
+                f"SHOPIFY BRANCH: {self.shopify_branch_collection.errors}"
+            )
+
+        if (self.shopify_leaf_collection
+                and self.shopify_leaf_collection.errors):
+            msgs.append(
+                f"SHOPIFY LEAF: {self.shopify_leaf_collection.errors}"
+            )
+
         return ', '.join(msgs)
+
     relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>
 
@@ -207,35 +361,63 @@ class Item(RelevancyBaseModel, NotesBaseModel):
         )
 
     @property
+    def relevancy_warnings(self):
+        msgs = []
+
+        if (self.premier_product
+                and self.premier_product.relevancy_warnings):
+            msgs.append(
+                f"PREMIER: {self.premier_product.relevancy_warnings}"
+            )
+
+        if (self.sema_product
+                and self.sema_product.relevancy_warnings):
+            msgs.append(f"SEMA: {self.sema_product.relevancy_warnings}")
+
+        if (self.shopify_product
+                and self.shopify_product.warnings):
+            msgs.append(f"SHOPIFY: {self.shopify_product.warnings}")
+
+        return ', '.join(msgs)
+    relevancy_warnings.fget.short_description = 'Warnings'
+
+    @property
     def relevancy_errors(self):
         msgs = []
         if self.is_relevant:
-            if self.premier_product:
-                if not self.premier_product.is_relevant:
-                    msgs.append('Premier product not relevant')
-                if self.premier_product.relevancy_errors:
-                    error = f"PREMIER: {self.premier_product.relevancy_errors}"
-                    msgs.append(error)
-            else:
+            if self.premier_product and not self.premier_product.is_relevant:
+                msgs.append('Premier product not relevant')
+
+            if self.sema_product and not self.sema_product.is_relevant:
+                error = 'SEMA product not relevant'
+                msgs.append(error)
+
+            if not self.premier_product:
                 error = 'Missing Premier product'
                 msgs.append(error)
-            if self.sema_product:
-                if not self.sema_product.is_relevant:
-                    error = 'SEMA product not relevant'
-                    msgs.append(error)
-                if self.sema_product.relevancy_errors:
-                    error = f"SEMA: {self.sema_product.relevancy_errors}"
-                    msgs.append(error)
-            else:
+
+            if not self.sema_product:
                 error = 'Missing SEMA product'
                 msgs.append(error)
-        else:
-            if self.premier_product.is_relevant:
-                error = 'Premier product relevant'
+
+            if not self.shopify_product:
+                error = 'Missing Shopify product'
                 msgs.append(error)
-            if self.sema_product and self.sema_product.is_relevant:
-                error = 'SEMA product relevant'
-                msgs.append(error)
+
+        if (self.premier_product
+                and self.premier_product.relevancy_errors):
+            msgs.append(
+                f"PREMIER: {self.premier_product.relevancy_errors}"
+            )
+
+        if (self.sema_product
+                and self.sema_product.relevancy_errors):
+            msgs.append(f"SEMA: {self.sema_product.relevancy_errors}")
+
+        if (self.shopify_product
+                and self.shopify_product.errors):
+            msgs.append(f"SHOPIFY: {self.shopify_product.errors}")
+
         return ', '.join(msgs)
     relevancy_errors.fget.short_description = 'Errors'
     # </editor-fold>

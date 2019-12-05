@@ -78,7 +78,9 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
         'detail_link',
         'id',
         'name',
-        'product_count'
+        'product_count',
+        'warnings',
+        'errors'
     )
 
     list_display_links = (
@@ -98,6 +100,8 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
                     'vendor_link',
                     'premier_manufacturer_link',
                     'sema_brand_link',
+                    'warnings',
+                    'errors',
                     'id'
                 )
             }
@@ -113,6 +117,8 @@ class ShopifyVendorModelAdmin(ObjectActions, ModelAdmin, ShopifyVendorActions):
 
     readonly_fields = (
         'id',
+        'warnings',
+        'errors',
         'detail_link',
         'vendor_link',
         'premier_manufacturer_link',
@@ -232,6 +238,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
         'metafield_count',
         'rule_count',
         'child_collection_count',
+        'warnings',
         'errors',
         'full_match'
     )
@@ -266,6 +273,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
                 'fields': (
                     'category_paths_link',
                     'sema_category_link',
+                    'warnings',
                     'errors',
                     'id'
                 )
@@ -309,6 +317,7 @@ class ShopifyCollectionModelAdmin(ObjectActions, ModelAdmin,
     readonly_fields = (
         'id',
         'level',
+        'warnings',
         'errors',
         'full_match',
         'image_preview',
@@ -719,6 +728,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
         'image_count',
         'metafield_count',
         'tag_count',
+        'warnings',
         'errors',
         'full_match'
     )
@@ -754,6 +764,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
                     'item_link',
                     'premier_product_link',
                     'sema_product_link',
+                    'warnings',
                     'errors',
                     'id'
                 )
@@ -794,6 +805,7 @@ class ShopifyProductModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
+        'warnings',
         'errors',
         'full_match',
         'detail_link',
