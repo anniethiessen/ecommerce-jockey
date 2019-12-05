@@ -45,6 +45,10 @@ class PremierManufacturer(RelevancyBaseModel):
         format='JPEG',
         options={'quality': 50}
     )
+    slug = CharField(
+        max_length=20,
+        unique=True
+    )
 
     # <editor-fold desc="relevancy properties ...">
     @property
@@ -401,7 +405,9 @@ class PremierProduct(PremierProductInventoryBaseModel,
     # <editor-fold desc="relevancy properties ...">
     @property
     def may_be_relevant(self):
-        return bool(self.manufacturer.is_relevant and self.inventory_ab)
+        return bool(
+            self.manufacturer.is_relevant and self.inventory_ab
+        )
 
     @property
     def relevancy_errors(self):
@@ -429,7 +435,7 @@ class PremierProduct(PremierProductInventoryBaseModel,
             bucket_path = os.path.join(
                 settings.MEDIA_ROOT,
                 'premier',
-                self.manufacturer.vendor.slug,
+                self.manufacturer.slug,
                 'bucket',
                 self.vendor_part_number + '.jpg'
             )

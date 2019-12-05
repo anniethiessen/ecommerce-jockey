@@ -37,7 +37,8 @@ class PremierManufacturerProductsTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (

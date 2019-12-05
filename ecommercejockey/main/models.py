@@ -1,7 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import (
     Model,
-    CharField,
     ForeignKey,
     OneToOneField,
     CASCADE,
@@ -10,23 +9,13 @@ from django.db.models import (
 
 from core.models import (
     NotesBaseModel,
-    RelevancyBaseModel as RelevancyModel
+    RelevancyBaseModel
 )
 from .managers import (
     ItemManager,
     CategoryPathManager,
     VendorManager
 )
-
-
-class RelevancyBaseModel(RelevancyModel):
-    relevancy_exceptions = CharField(
-        blank=True,
-        max_length=255
-    )
-
-    class Meta:
-        abstract = True
 
 
 class Vendor(RelevancyBaseModel, NotesBaseModel):
@@ -47,12 +36,10 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
     )
     shopify_vendor = OneToOneField(
         ShopifyVendor,
-        on_delete=CASCADE,
+        blank=True,
+        on_delete=SET_NULL,
+        null=True,
         related_name='vendor'
-    )
-    slug = CharField(
-        max_length=20,
-        unique=True
     )
 
     # <editor-fold desc="relevancy properties ...">
@@ -130,7 +117,7 @@ class Vendor(RelevancyBaseModel, NotesBaseModel):
     objects = VendorManager()
 
     def __str__(self):
-        return self.slug
+        return f'{self.premier_manufacturer} :: {self.sema_brand}'
 
 
 class CategoryPath(RelevancyBaseModel, NotesBaseModel):
@@ -425,4 +412,10 @@ class Item(RelevancyBaseModel, NotesBaseModel):
     objects = ItemManager()
 
     def __str__(self):
-        return str(self.premier_product)
+        return ' :: '.join(
+            [
+                str(product) for product
+                in [self.premier_product, self.sema_product]
+                if product
+            ]
+        )

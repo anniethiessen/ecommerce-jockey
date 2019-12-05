@@ -96,16 +96,6 @@ class SemaDatasetBaseTabularInline(TabularInline):
     # product_count.admin_order_field = '_product_relevant_count'
     product_count.short_description = 'product count'
 
-    def may_be_relevant_flag(self, obj):
-        if not obj or not obj.pk:
-            return None
-
-        if obj.is_relevant != obj.may_be_relevant:
-            return '~'
-        else:
-            return ''
-    may_be_relevant_flag.short_description = ''
-
     def formfield_for_dbfield(self, db_field, **kwargs):
         formfield = super().formfield_for_dbfield(db_field, **kwargs)
         if db_field.name == 'brand':
@@ -313,7 +303,8 @@ class SemaMakeYearBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -396,7 +387,8 @@ class SemaBaseVehicleBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -490,7 +482,8 @@ class SemaVehicleBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -599,7 +592,8 @@ class SemaEngineBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -672,7 +666,8 @@ class SemaVehicleManyToManyBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -684,6 +679,7 @@ class SemaVehicleManyToManyBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'relevancy_warnings',
         'relevancy_errors',
+        'relevancy_exception',
         'all_link',
         'detail_link',
         'engine_count',
@@ -764,6 +760,13 @@ class SemaVehicleManyToManyBaseTabularInline(TabularInline):
 
         return getattr(self.get_obj(obj), 'relevancy_errors')
     relevancy_errors.short_description = 'errors'
+
+    def relevancy_exception(self, obj):
+        if not obj.pk:
+            return None
+
+        return getattr(self.get_obj(obj), 'relevancy_exception')
+    relevancy_exception.short_description = 'exception'
 
     def may_be_relevant_flag(self, obj):
         if not obj:
@@ -846,7 +849,8 @@ class SemaCategoryManyToManyBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -858,6 +862,7 @@ class SemaCategoryManyToManyBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'relevancy_warnings',
         'relevancy_errors',
+        'relevancy_exception',
         'all_link',
         'detail_link',
         'parent_category_count',
@@ -951,6 +956,13 @@ class SemaCategoryManyToManyBaseTabularInline(TabularInline):
         return getattr(self.get_obj(obj), 'relevancy_errors')
     relevancy_errors.short_description = 'errors'
 
+    def relevancy_exception(self, obj):
+        if not obj.pk:
+            return None
+
+        return getattr(self.get_obj(obj), 'relevancy_exception')
+    relevancy_exception.short_description = 'exception'
+
     def may_be_relevant_flag(self, obj):
         if not obj:
             return None
@@ -1034,7 +1046,8 @@ class SemaProductBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -1165,7 +1178,8 @@ class SemaProductManyToManyBaseTabularInline(TabularInline):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
@@ -1174,9 +1188,10 @@ class SemaProductManyToManyBaseTabularInline(TabularInline):
         'dataset',
         'is_authorized',
         'is_relevant',
+        'may_be_relevant_flag',
         'relevancy_warnings',
         'relevancy_errors',
-        'may_be_relevant_flag',
+        'relevancy_exception',
         'all_link',
         'detail_link',
         'description_pies_attribute_count',
@@ -1266,6 +1281,13 @@ class SemaProductManyToManyBaseTabularInline(TabularInline):
 
         return getattr(self.get_obj(obj), 'relevancy_errors')
     relevancy_errors.short_description = 'errors'
+
+    def relevancy_exception(self, obj):
+        if not obj.pk:
+            return None
+
+        return getattr(self.get_obj(obj), 'relevancy_exception')
+    relevancy_exception.short_description = 'exception'
 
     def may_be_relevant_flag(self, obj):
         if not obj:

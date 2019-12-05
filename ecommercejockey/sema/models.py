@@ -3508,6 +3508,7 @@ class SemaEngine(SemaBaseModel):
 
     class Meta:
         unique_together = (
+            'vehicle',
             'litre',
             'cc',
             'cid',
@@ -6206,7 +6207,11 @@ class SemaProduct(SemaBaseModel):
             relevant_vehicle_count = self.vehicle_relevant_count
         else:
             relevant_vehicle_count = self.dataset.vehicle_relevant_count
-        return self.dataset.is_relevant and relevant_vehicle_count > 0
+
+        return (
+            self.dataset.is_relevant
+            and relevant_vehicle_count > 0
+        )
 
     @property
     def relevancy_errors(self):

@@ -51,6 +51,7 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
         'detail_link',
         'id',
         'name',
+        'slug',
         'product_count',
         'primary_image_preview',
         'is_relevant',
@@ -91,6 +92,7 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
             'Manufacturer', {
                 'fields': (
                     'name',
+                    'slug'
                 )
             }
         ),
@@ -172,6 +174,7 @@ class PremierManufacturerModelAdmin(ObjectActions, ModelAdmin,
                     None, {
                         'fields': (
                             'name',
+                            'slug'
                         )
                     }
                 ),
@@ -224,7 +227,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -233,6 +237,7 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -265,7 +270,8 @@ class PremierProductModelAdmin(ImportMixin, ObjectActions,
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),

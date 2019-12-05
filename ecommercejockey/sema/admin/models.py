@@ -123,7 +123,8 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -132,6 +133,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -155,7 +157,8 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -500,7 +503,8 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -509,6 +513,7 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -526,7 +531,8 @@ class SemaYearModelAdmin(ObjectActions, ModelAdmin, SemaYearActions):
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -763,7 +769,8 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -772,6 +779,7 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -788,7 +796,8 @@ class SemaModelModelAdmin(ObjectActions, ModelAdmin, SemaModelActions):
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -902,7 +911,8 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -911,6 +921,7 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -927,7 +938,8 @@ class SemaSubmodelModelAdmin(ObjectActions, ModelAdmin, SemaSubmodelActions):
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -1049,7 +1061,8 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -1058,6 +1071,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -1077,6 +1091,7 @@ class SemaMakeYearModelAdmin(ObjectActions, ModelAdmin, SemaMakeYearActions):
                     'is_relevant',
                     'relevancy_warnings',
                     'relevancy_errors',
+                    'relevancy_exception',
                     'id'
                 )
             }
@@ -1228,7 +1243,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -1237,6 +1253,7 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -1256,7 +1273,8 @@ class SemaBaseVehicleModelAdmin(ObjectActions, ModelAdmin,
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -1428,7 +1446,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -1437,6 +1456,7 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -1457,7 +1477,8 @@ class SemaVehicleModelAdmin(ObjectActions, ModelAdmin, SemaVehicleActions):
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -1653,7 +1674,8 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -1662,6 +1684,7 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -1691,6 +1714,7 @@ class SemaEngineModelAdmin(ObjectActions, ModelAdmin, SemaEngineActions):
                     'is_relevant',
                     'relevancy_warnings',
                     'relevancy_errors',
+                    'relevancy_exception',
                     'id'
                 )
             }
@@ -1851,7 +1875,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -1860,6 +1885,7 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -1881,7 +1907,8 @@ class SemaCategoryModelAdmin(ObjectActions, ModelAdmin, SemaCategoryActions):
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -2097,7 +2124,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         'may_be_relevant_flag',
         'is_relevant',
         'relevancy_warnings',
-        'relevancy_errors'
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
@@ -2106,6 +2134,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
 
     list_editable = (
         'is_relevant',
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -2132,7 +2161,8 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
                     'may_be_relevant_flag',
                     'is_relevant',
                     'relevancy_warnings',
-                    'relevancy_errors'
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),

@@ -74,7 +74,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
         'is_relevant',
         'relevancy_warnings',
         'relevancy_errors',
-        'relevancy_exceptions',
+        'relevancy_exception',
         'notes'
     )
 
@@ -84,7 +84,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
 
     list_editable = (
         'is_relevant',
-        'relevancy_exceptions'
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -108,7 +108,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
                     'is_relevant',
                     'relevancy_warnings',
                     'relevancy_errors',
-                    'relevancy_exceptions',
+                    'relevancy_exception',
                     'id'
                 )
             }
@@ -274,7 +274,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
         'is_relevant',
         'relevancy_warnings',
         'relevancy_errors',
-        'relevancy_exceptions',
+        'relevancy_exception',
         'notes'
     )
 
@@ -284,7 +284,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
 
     list_editable = (
         'is_relevant',
-        'relevancy_exceptions'
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -308,7 +308,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
                     'is_relevant',
                     'relevancy_warnings',
                     'relevancy_errors',
-                    'relevancy_exceptions',
+                    'relevancy_exception',
                     'id'
                 )
             }
@@ -485,7 +485,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
         'is_relevant',
         'relevancy_warnings',
         'relevancy_errors',
-        'relevancy_exceptions',
+        'relevancy_exception',
         'notes'
     )
 
@@ -495,7 +495,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
 
     list_editable = (
         'is_relevant',
-        'relevancy_exceptions'
+        'relevancy_exception'
     )
 
     list_filter = (
@@ -518,7 +518,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
                     'is_relevant',
                     'relevancy_warnings',
                     'relevancy_errors',
-                    'relevancy_exceptions',
+                    'relevancy_exception',
                     'id'
                 )
             }
