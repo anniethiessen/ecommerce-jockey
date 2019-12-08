@@ -6210,7 +6210,10 @@ class SemaProduct(SemaBaseModel):
 
         return (
             self.dataset.is_relevant
-            and relevant_vehicle_count > 0
+            and (
+                self.vehicle_count == 0
+                or self.vehicle_relevant_count > 0
+            )
         )
 
     @property
@@ -6795,7 +6798,7 @@ class SemaProduct(SemaBaseModel):
         verbose_name = 'SEMA product'
 
     def __str__(self):
-        return f'{self.product_id} :: {self.dataset}'
+        return f'{self.part_number} :: {self.dataset.brand}'
 
 
 class SemaBasePiesAttributeModel(Model, MessagesMixin):

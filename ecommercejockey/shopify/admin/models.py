@@ -2,11 +2,13 @@ from django_object_actions import BaseDjangoObjectActions as ObjectActions
 
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
-from django.utils.safestring import mark_safe
+from django.db.models import CharField, TextField
+from django.forms import TextInput, Textarea
 
 from core.admin.utils import (
     get_change_view_link,
     get_changelist_view_link,
+    get_html_preview,
     get_image_preview,
     get_json_preview
 )
@@ -1552,7 +1554,7 @@ class ShopifyMetafieldModelAdmin(ObjectActions, ModelAdmin,
 
         if (obj.value_type == obj._meta.model.STRING_VALUE_TYPE
                 and obj.value[:6].lower() == '<html>'):
-            return mark_safe(obj.value)
+            return get_html_preview(obj.value)
         elif obj.value_type == obj._meta.model.JSON_VALUE_TYPE:
             return get_json_preview(obj.value)
         else:
@@ -1621,22 +1623,28 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'product',
         'full_match',
-        'sema_description_def_preview',
-        'sema_description_des_preview',
-        'sema_description_inv_preview',
-        'sema_description_ext_preview',
-        'sema_description_tle_preview',
-        'sema_description_sho_preview',
-        'sema_description_asc_preview',
-        'sema_description_mkt_preview',
-        'premier_description_preview',
-        'title_option',
-        'body_html_option',
-        'premier_cost_cad_preview',
-        'variant_price_markup_option',
-        'sema_images_preview',
-        'premier_images_preview',
-        'images_option'
+        'sema_description_def_value_short_preview',
+        'sema_description_des_value_short_preview',
+        'sema_description_inv_value_short_preview',
+        'sema_description_ext_value_short_preview',
+        'sema_description_tle_value_short_preview',
+        'sema_description_sho_value_short_preview',
+        'sema_description_mkt_value_short_preview',
+        'sema_description_key_value_short_preview',
+        'sema_description_asc_value_short_preview',
+        'sema_description_asm_value_short_preview',
+        'sema_description_fab_value_short_preview',
+        'sema_description_lab_value_short_preview',
+        'sema_description_shp_value_short_preview',
+        'sema_description_oth_value_short_preview',
+        'premier_description_value_short_preview',
+        'title_choice',
+        'body_html_choice',
+        'premier_cost_cad_value_preview',
+        'variant_price_markup_choice',
+        'sema_filtered_images_short_preview',
+        'premier_primary_images_short_preview',
+        'images_choice'
     )
 
     list_display_links = (
@@ -1644,10 +1652,10 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_editable = (
-        'title_option',
-        'body_html_option',
-        'variant_price_markup_option',
-        'images_option'
+        'title_choice',
+        'body_html_choice',
+        'variant_price_markup_choice',
+        'images_choice'
     )
 
     change_actions = (
@@ -1679,15 +1687,21 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Text Previews', {
                 'fields': (
-                    'sema_description_def_preview',
-                    'sema_description_des_preview',
-                    'sema_description_inv_preview',
-                    'sema_description_ext_preview',
-                    'sema_description_tle_preview',
-                    'sema_description_sho_preview',
-                    'sema_description_asc_preview',
-                    'sema_description_mkt_preview',
-                    'premier_description_preview'
+                    'sema_description_def_value_preview',
+                    'sema_description_des_value_preview',
+                    'sema_description_inv_value_preview',
+                    'sema_description_ext_value_preview',
+                    'sema_description_tle_value_preview',
+                    'sema_description_sho_value_preview',
+                    'sema_description_mkt_value_preview',
+                    'sema_description_key_value_preview',
+                    'sema_description_asc_value_preview',
+                    'sema_description_asm_value_preview',
+                    'sema_description_fab_value_preview',
+                    'sema_description_lab_value_preview',
+                    'sema_description_shp_value_preview',
+                    'sema_description_oth_value_preview',
+                    'premier_description_value_preview'
                 ),
                 'classes': (
                     'collapse',
@@ -1697,23 +1711,29 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Title', {
                 'fields': (
-                    ('title_match', 'title_difference'),
-                    'title_option'
+                    'title_match',
+                    'title_current_preview',
+                    'title_result_preview',
+                    'title_choice',
+                    'title_custom_value'
                 )
             }
         ),
         (
             'Body HTML', {
                 'fields': (
-                    ('body_html_match', 'body_html_difference'),
-                    'body_html_option'
+                    'body_html_match',
+                    'body_html_current_preview',
+                    'body_html_result_preview',
+                    'body_html_choice',
+                    'body_html_custom_value'
                 )
             }
         ),
         (
             'Weight Previews', {
                 'fields': (
-                    'premier_weight_preview',
+                    'premier_weight_value_preview',
                 ),
                 'classes': (
                     'collapse',
@@ -1723,25 +1743,29 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Variant Weight', {
                 'fields': (
-                    ('variant_weight_match', 'variant_weight_difference'),
-                    'variant_weight_option'
+                    'variant_weight_match',
+                    'variant_weight_current_preview',
+                    'variant_weight_result_preview',
+                    'variant_weight_choice',
+                    'variant_weight_custom_value'
                 )
             }
         ),
         (
             'Variant Weight Unit', {
                 'fields': (
-                    ('variant_weight_unit_match',
-                     'variant_weight_unit_difference'),
-                    'variant_weight_unit_option'
+                    'variant_weight_unit_match',
+                    'variant_weight_unit_current_preview',
+                    'variant_weight_unit_result_preview',
+                    'variant_weight_unit_choice'
                 )
             }
         ),
         (
             'Cost Previews', {
                 'fields': (
-                    'premier_cost_cad_preview',
-                    'premier_cost_usd_preview'
+                    'premier_cost_cad_value_preview',
+                    'premier_cost_usd_value_preview'
                 ),
                 'classes': (
                     'collapse',
@@ -1751,25 +1775,30 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Variant Cost', {
                 'fields': (
-                    ('variant_cost_match', 'variant_cost_difference'),
-                    'variant_cost_option'
+                    'variant_cost_match',
+                    'variant_cost_current_preview',
+                    'variant_cost_result_preview',
+                    'variant_cost_custom_value'
                 )
             }
         ),
         (
             'Variant Price', {
                 'fields': (
-                    ('variant_price_match', 'variant_price_difference'),
-                    'variant_price_base_option',
-                    'variant_price_markup_option'
+                    'variant_price_match',
+                    'variant_price_current_preview',
+                    'variant_price_result_preview',
+                    'variant_price_base_choice',
+                    'variant_price_base_custom_value',
+                    'variant_price_markup_choice'
                 )
             }
         ),
         (
             'Identifier Previews', {
                 'fields': (
-                    'premier_premier_part_number_preview',
-                    'premier_upc_preview'
+                    'premier_premier_part_number_value_preview',
+                    'premier_upc_value_preview'
                 ),
                 'classes': (
                     'collapse',
@@ -1779,24 +1808,40 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Variant SKU', {
                 'fields': (
-                    ('variant_sku_match', 'variant_sku_difference'),
-                    'variant_sku_option'
+                    'variant_sku_match',
+                    'variant_sku_current_preview',
+                    'variant_sku_result_preview',
+                    'variant_sku_choice',
+                    'variant_sku_custom_value'
                 )
             }
         ),
         (
             'Variant Barcode', {
                 'fields': (
-                    ('variant_barcode_match', 'variant_barcode_difference'),
-                    'variant_barcode_option'
+                    'variant_barcode_match',
+                    'variant_barcode_current_preview',
+                    'variant_barcode_result_preview',
+                    'variant_barcode_choice',
+                    'variant_barcode_custom_value'
                 )
             }
         ),
         (
-            'Metafield Previews', {
+            'Metafield Packaging Previews', {
                 'fields': (
-                    'sema_html_packaging_preview',
-                    'sema_vehicle_fitments_preview'
+                    'sema_html_value_preview',
+                    'sema_html_preview'
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Metafield Fitments Previews', {
+                'fields': (
+                    'sema_vehicles_value_preview',
                 ),
                 'classes': (
                     'collapse',
@@ -1806,17 +1851,31 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Metafields', {
                 'fields': (
-                    ('metafields_match', 'metafields_difference'),
-                    'metafields_packaging_option',
-                    'metafields_fitments_option'
+                    'metafields_match',
+                    'metafields_difference',
+                    'metafield_value_packaging_choice',
+                    'metafield_value_packaging_custom_value',
+                    'metafield_value_fitments_choice',
+                    'metafield_value_fitments_custom_value',
+                    'metafields_choice',
+                    'metafields_custom_value'
                 )
             }
         ),
         (
-            'Tag Previews', {
+            'Tag Vendor Previews', {
                 'fields': (
-                    'sema_brand_tags_preview',
-                    'sema_category_tags_preview'
+                    'sema_brand_tag_names_value_preview',
+                ),
+                'classes': (
+                    'collapse',
+                )
+            }
+        ),
+        (
+            'Tag Collection Previews', {
+                'fields': (
+                    'sema_category_tag_names_value_preview',
                 ),
                 'classes': (
                     'collapse',
@@ -1826,17 +1885,22 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Tags', {
                 'fields': (
-                    ('tags_match', 'tags_difference'),
-                    'tags_vendor_option',
-                    'tags_categories_option'
+                    'tags_match',
+                    'tags_difference',
+                    'tag_names_vendor_choice',
+                    'tag_names_vendor_custom_value',
+                    'tag_names_collection_choice',
+                    'tag_names_collection_custom_value',
+                    'tags_choice',
+                    'tags_custom_value'
                 )
             }
         ),
         (
             'Image Previews', {
                 'fields': (
-                    'sema_images_preview',
-                    'premier_images_preview'
+                    'sema_filtered_images_preview',
+                    'premier_primary_images_preview'
                 ),
                 'classes': (
                     'collapse',
@@ -1846,8 +1910,14 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Images', {
                 'fields': (
-                    ('images_match', 'images_difference'),
-                    'images_option'
+                    'images_match',
+                    'images_difference',
+                    'image_urls_sema_choice',
+                    'image_urls_sema_custom_value',
+                    'image_urls_premier_choice',
+                    'image_urls_premier_custom_value',
+                    'images_choice',
+                    'images_custom_value'
                 )
             }
         )
@@ -1867,37 +1937,69 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'tags_match',
         'images_match',
         'full_match',
-        'title_difference',
-        'body_html_difference',
-        'variant_weight_difference',
-        'variant_weight_unit_difference',
-        'variant_cost_difference',
-        'variant_price_difference',
-        'variant_sku_difference',
-        'variant_barcode_difference',
+        'title_current_preview',
+        'title_result_preview',
+        'body_html_current_preview',
+        'body_html_result_preview',
+        'variant_weight_current_preview',
+        'variant_weight_result_preview',
+        'variant_weight_unit_current_preview',
+        'variant_weight_unit_result_preview',
+        'variant_cost_current_preview',
+        'variant_cost_result_preview',
+        'variant_price_current_preview',
+        'variant_price_result_preview',
+        'variant_sku_current_preview',
+        'variant_sku_result_preview',
+        'variant_barcode_current_preview',
+        'variant_barcode_result_preview',
         'metafields_difference',
         'tags_difference',
         'images_difference',
-        'sema_description_def_preview',
-        'sema_description_des_preview',
-        'sema_description_inv_preview',
-        'sema_description_ext_preview',
-        'sema_description_tle_preview',
-        'sema_description_sho_preview',
-        'sema_description_asc_preview',
-        'sema_description_mkt_preview',
-        'sema_html_packaging_preview',
-        'sema_vehicle_fitments_preview',
-        'sema_brand_tags_preview',
-        'sema_category_tags_preview',
-        'sema_images_preview',
-        'premier_description_preview',
-        'premier_weight_preview',
-        'premier_cost_cad_preview',
-        'premier_cost_usd_preview',
-        'premier_premier_part_number_preview',
-        'premier_upc_preview',
-        'premier_images_preview',
+        'sema_description_def_value_preview',
+        'sema_description_def_value_short_preview',
+        'sema_description_des_value_preview',
+        'sema_description_des_value_short_preview',
+        'sema_description_inv_value_preview',
+        'sema_description_inv_value_short_preview',
+        'sema_description_ext_value_preview',
+        'sema_description_ext_value_short_preview',
+        'sema_description_tle_value_preview',
+        'sema_description_tle_value_short_preview',
+        'sema_description_sho_value_preview',
+        'sema_description_sho_value_short_preview',
+        'sema_description_mkt_value_preview',
+        'sema_description_mkt_value_short_preview',
+        'sema_description_key_value_preview',
+        'sema_description_key_value_short_preview',
+        'sema_description_asc_value_preview',
+        'sema_description_asc_value_short_preview',
+        'sema_description_asm_value_preview',
+        'sema_description_asm_value_short_preview',
+        'sema_description_fab_value_preview',
+        'sema_description_fab_value_short_preview',
+        'sema_description_lab_value_preview',
+        'sema_description_lab_value_short_preview',
+        'sema_description_shp_value_preview',
+        'sema_description_shp_value_short_preview',
+        'sema_description_oth_value_preview',
+        'sema_description_oth_value_short_preview',
+        'sema_html_preview',
+        'sema_html_value_preview',
+        'sema_vehicles_value_preview',
+        'sema_brand_tag_names_value_preview',
+        'sema_category_tag_names_value_preview',
+        'sema_filtered_images_preview',
+        'sema_filtered_images_short_preview',
+        'premier_description_value_preview',
+        'premier_description_value_short_preview',
+        'premier_weight_value_preview',
+        'premier_cost_cad_value_preview',
+        'premier_cost_usd_value_preview',
+        'premier_premier_part_number_value_preview',
+        'premier_upc_value_preview',
+        'premier_primary_images_preview',
+        'premier_primary_images_short_preview',
         'detail_link',
         'item_link',
         'product_link',
@@ -1908,6 +2010,11 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
     autocomplete_fields = (
         'product',
     )
+
+    formfield_overrides = {
+        CharField: {'widget': TextInput(attrs={'size': '40'})},
+        TextField: {'widget': Textarea(attrs={'rows': 3, 'cols': 40})},
+    }
 
     def detail_link(self, obj):
         if not obj or not obj.pk:
@@ -1964,20 +2071,24 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
                     None, {
                         'fields': (
                             'product',
-                            'title_option',
-                            'body_html_option',
-                            'variant_weight_option',
-                            'variant_weight_unit_option',
-                            'variant_cost_option',
-                            'variant_price_base_option',
-                            'variant_price_markup_option',
-                            'variant_sku_option',
-                            'variant_barcode_option',
-                            'metafields_packaging_option',
-                            'metafields_fitments_option',
-                            'tags_vendor_option',
-                            'tags_categories_option',
-                            'images_option'
+                            'title_choice',
+                            'body_html_choice',
+                            'variant_weight_choice',
+                            'variant_weight_unit_choice',
+                            'variant_cost_choice',
+                            'variant_price_base_choice',
+                            'variant_price_markup_choice',
+                            'variant_sku_choice',
+                            'variant_barcode_choice',
+                            'metafield_value_packaging_choice',
+                            'metafield_value_fitments_choice',
+                            'metafields_choice',
+                            'tag_names_vendor_choice',
+                            'tag_names_collection_choice',
+                            'tags_choice',
+                            'image_urls_sema_choice',
+                            'image_urls_premier_choice',
+                            'images_choice'
                         )
                     }
                 ),

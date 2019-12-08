@@ -469,4 +469,4 @@ class PremierProduct(PremierProductInventoryBaseModel,
     objects = PremierProductManager()
 
     def __str__(self):
-        return f'{self.premier_part_number} :: {self.manufacturer.name}'
+        return f'{self.vendor_part_number} :: {self.manufacturer.name}'

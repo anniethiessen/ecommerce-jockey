@@ -2,11 +2,11 @@ from django_object_actions import BaseDjangoObjectActions as ObjectActions
 
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin, RelatedOnlyFieldListFilter
-from django.utils.safestring import mark_safe
 
 from core.admin.utils import (
     get_change_view_link,
     get_changelist_view_link,
+    get_html_preview,
     get_image_preview
 )
 from ..models import (
@@ -2308,11 +2308,6 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         if not obj or not obj.pk:
             return None
 
-        if not obj.vehicle_count:
-            return (
-                f'{obj.dataset.vehicle_relevant_count}'
-                f'/{obj.dataset.vehicle_count} (D)'
-            )
         return f'{obj.vehicle_relevant_count}/{obj.vehicle_count}'
     # vehicle_count.admin_order_field = '_vehicle_relevant_count'
     vehicle_count.short_description = 'vehicle count'
@@ -2321,7 +2316,7 @@ class SemaProductModelAdmin(ObjectActions, ModelAdmin, SemaProductActions):
         if not obj or not obj.pk:
             return None
 
-        return mark_safe(obj.clean_html)
+        return get_html_preview(obj.clean_html)
     html_preview.short_description = ''
 
     def may_be_relevant_flag(self, obj):

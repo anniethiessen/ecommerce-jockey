@@ -1110,11 +1110,6 @@ class SemaProductBaseTabularInline(TabularInline):
         if not obj or not obj.pk:
             return None
 
-        if not obj.vehicle_count:
-            return (
-                f'{obj.dataset.vehicle_relevant_count}'
-                f'/{obj.dataset.vehicle_count} (D)'
-            )
         return f'{obj.vehicle_relevant_count}/{obj.vehicle_count}'
     # vehicle_count.admin_order_field = '_vehicle_relevant_count'
     vehicle_count.short_description = 'vehicle count'

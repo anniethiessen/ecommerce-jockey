@@ -3,6 +3,8 @@ from django.contrib.admin import (
     TabularInline
 )
 from django.contrib.contenttypes.admin import GenericTabularInline
+from django.db.models import CharField, TextField
+from django.forms import TextInput, Textarea
 
 from core.admin.utils import (
     get_change_view_link,
@@ -427,31 +429,135 @@ class ShopifyProductCalculatorStackedInline(StackedInline):
             None, {
                 'fields': (
                     'detail_link',
-                    ('title_match', 'title_difference'),
-                    'title_option',
-                    ('body_html_match', 'body_html_difference'),
-                    'body_html_option',
-                    ('variant_weight_match', 'variant_weight_difference'),
-                    'variant_weight_option',
-                    ('variant_weight_unit_match', 'variant_weight_unit_difference'),
-                    'variant_weight_unit_option',
-                    ('variant_cost_match', 'variant_cost_difference'),
-                    'variant_cost_option',
-                    ('variant_price_match', 'variant_price_difference'),
-                    'variant_price_base_option',
-                    'variant_price_markup_option',
-                    ('variant_sku_match', 'variant_sku_difference'),
-                    'variant_sku_option',
-                    ('variant_barcode_match', 'variant_barcode_difference'),
-                    'variant_barcode_option',
-                    ('metafields_match', 'metafields_difference'),
-                    'metafields_packaging_option',
-                    'metafields_fitments_option',
-                    ('tags_match', 'tags_difference'),
-                    'tags_vendor_option',
-                    'tags_categories_option',
-                    ('images_match', 'images_difference'),
-                    'images_option'
+                )
+            }
+        ),
+        (
+            'Title', {
+                'fields': (
+                    'title_match',
+                    'title_current_preview',
+                    'title_result_preview',
+                    'title_choice',
+                    'title_custom_value'
+                )
+            }
+        ),
+        (
+            'Body HTML', {
+                'fields': (
+                    'body_html_match',
+                    'body_html_current_preview',
+                    'body_html_result_preview',
+                    'body_html_choice',
+                    'body_html_custom_value'
+                )
+            }
+        ),
+        (
+            'Variant Weight', {
+                'fields': (
+                    'variant_weight_match',
+                    'variant_weight_current_preview',
+                    'variant_weight_result_preview',
+                    'variant_weight_choice',
+                    'variant_weight_custom_value'
+                )
+            }
+        ),
+        (
+            'Variant Weight Unit', {
+                'fields': (
+                    'variant_weight_unit_match',
+                    'variant_weight_unit_current_preview',
+                    'variant_weight_unit_result_preview',
+                    'variant_weight_unit_choice'
+                )
+            }
+        ),
+        (
+            'Variant Cost', {
+                'fields': (
+                    'variant_cost_match',
+                    'variant_cost_current_preview',
+                    'variant_cost_result_preview',
+                    'variant_cost_custom_value'
+                )
+            }
+        ),
+        (
+            'Variant Price', {
+                'fields': (
+                    'variant_price_match',
+                    'variant_price_current_preview',
+                    'variant_price_result_preview',
+                    'variant_price_base_choice',
+                    'variant_price_base_custom_value',
+                    'variant_price_markup_choice'
+                )
+            }
+        ),
+        (
+            'Variant SKU', {
+                'fields': (
+                    'variant_sku_match',
+                    'variant_sku_current_preview',
+                    'variant_sku_result_preview',
+                    'variant_sku_choice',
+                    'variant_sku_custom_value'
+                )
+            }
+        ),
+        (
+            'Variant Barcode', {
+                'fields': (
+                    'variant_barcode_match',
+                    'variant_barcode_current_preview',
+                    'variant_barcode_result_preview',
+                    'variant_barcode_choice',
+                    'variant_barcode_custom_value'
+                )
+            }
+        ),
+        (
+            'Metafields', {
+                'fields': (
+                    'metafields_match',
+                    'metafields_difference',
+                    'metafield_value_packaging_choice',
+                    'metafield_value_packaging_custom_value',
+                    'metafield_value_fitments_choice',
+                    'metafield_value_fitments_custom_value',
+                    'metafields_choice',
+                    'metafields_custom_value'
+                )
+            }
+        ),
+        (
+            'Tags', {
+                'fields': (
+                    'tags_match',
+                    'tags_difference',
+                    'tag_names_vendor_choice',
+                    'tag_names_vendor_custom_value',
+                    'tag_names_collection_choice',
+                    'tag_names_collection_custom_value',
+                    'tags_choice',
+                    'tags_custom_value'
+                )
+            }
+        ),
+        (
+            'Images', {
+                'fields': (
+                    'images_match',
+                    'images_difference',
+                    'image_urls_sema_choice',
+                    'image_urls_sema_custom_value',
+                    'image_urls_premier_choice',
+                    'image_urls_premier_custom_value',
+                    'images_choice',
+                    'images_custom_value'
                 )
             }
         ),
@@ -470,18 +576,31 @@ class ShopifyProductCalculatorStackedInline(StackedInline):
         'metafields_match',
         'tags_match',
         'images_match',
-        'title_difference',
-        'body_html_difference',
-        'variant_weight_difference',
-        'variant_weight_unit_difference',
-        'variant_cost_difference',
-        'variant_price_difference',
-        'variant_sku_difference',
-        'variant_barcode_difference',
+        'title_current_preview',
+        'title_result_preview',
+        'body_html_current_preview',
+        'body_html_result_preview',
+        'variant_weight_current_preview',
+        'variant_weight_result_preview',
+        'variant_weight_unit_current_preview',
+        'variant_weight_unit_result_preview',
+        'variant_cost_current_preview',
+        'variant_cost_result_preview',
+        'variant_price_current_preview',
+        'variant_price_result_preview',
+        'variant_sku_current_preview',
+        'variant_sku_result_preview',
+        'variant_barcode_current_preview',
+        'variant_barcode_result_preview',
         'metafields_difference',
         'tags_difference',
         'images_difference'
     )
+
+    formfield_overrides = {
+        CharField: {'widget': TextInput(attrs={'size': '40'})},
+        TextField: {'widget': Textarea(attrs={'rows': 3, 'cols': 40})},
+    }
 
     def detail_link(self, obj):
         if not obj:

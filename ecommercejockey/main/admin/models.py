@@ -216,7 +216,7 @@ class VendorModelAdmin(ObjectActions, ModelAdmin, VendorActions):
                             'notes'
                         )
                     }
-                )
+                ),
             )
 
         return super().get_fieldsets(request, obj)
@@ -419,7 +419,7 @@ class ItemModelAdmin(ObjectActions, ModelAdmin, ItemActions):
                             'notes'
                         )
                     }
-                )
+                ),
             )
 
         return super().get_fieldsets(request, obj)
@@ -674,7 +674,7 @@ class CategoryPathModelAdmin(ObjectActions, ModelAdmin, CategoryPathActions):
                             'notes'
                         )
                     }
-                )
+                ),
             )
 
         return super().get_fieldsets(request, obj)

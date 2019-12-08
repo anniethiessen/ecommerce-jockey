@@ -1,13 +1,14 @@
 import json
 from decimal import Decimal
 
+from jsondiff import diff
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import (
     GenericForeignKey,
     GenericRelation
 )
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import (
     Model,
     BigIntegerField,
@@ -26,13 +27,19 @@ from django.db.models import (
     SET_NULL,
     Q
 )
+from django.utils.html import mark_safe
 
 from core.mixins import MessagesMixin
 from core.models import (
     NotesBaseModel,
     RelevancyBaseModel
 )
-from core.admin.utils import get_images_preview
+from core.admin.utils import (
+    get_html_preview,
+    # get_image_preview,
+    get_images_preview,
+    get_json_preview
+)
 from .clients import shopify_client
 from .managers import (
     ShopifyCollectionCalculatorManager,
@@ -1285,8 +1292,7 @@ class ShopifyCollectionCalculator(Model, MessagesMixin):
     def shopify_subcollections_preview(self):
         if not self.shopify_subcollections_value:
             return None
-
-        return str(self.shopify_subcollections_value)
+        return get_json_preview(json.dumps(self.shopify_subcollections_value))
     shopify_subcollections_preview.fget.short_description = 'Shopify Subcollections'
     # </editor-fold>
 
@@ -2479,7 +2485,8 @@ class ShopifyVariant(Model, MessagesMixin):
     )
     sku = CharField(
         blank=True,
-        max_length=50
+        max_length=50,
+        verbose_name='SKU'
     )
     barcode = CharField(
         blank=True,
@@ -2768,54 +2775,77 @@ class ShopifyVariant(Model, MessagesMixin):
 
 
 class ShopifyProductCalculator(Model, MessagesMixin):
-    CUSTOM_VALUE = 'custom_value'
-
     product = OneToOneField(
         ShopifyProduct,
         related_name='calculator',
         on_delete=CASCADE
     )
-    title_option = CharField(
+    title_choice = CharField(
         choices=(
-            ('sema_description_def_value', 'SEMA Definition'),
-            ('sema_description_des_value', 'SEMA Description'),
-            ('sema_description_inv_value', 'SEMA Invoice'),
-            ('sema_description_ext_value', 'SEMA Extended'),
-            ('sema_description_tle_value', 'SEMA Title'),
-            ('sema_description_sho_value', 'SEMA Short'),
-            ('sema_description_asc_value', 'SEMA ASC'),
-            ('sema_description_mkt_value', 'SEMA Marketing'),
+            ('sema_description_def_value', 'SEMA PIES Description'),
+            ('sema_description_des_value', 'SEMA DES Description'),
+            ('sema_description_inv_value', 'SEMA INV Description'),
+            ('sema_description_ext_value', 'SEMA EXT Description'),
+            ('sema_description_tle_value', 'SEMA TLE Description'),
+            ('sema_description_sho_value', 'SEMA SHO Description'),
+            ('sema_description_mkt_value', 'SEMA MKT Description'),
+            ('sema_description_key_value', 'SEMA KEY Description'),
+            ('sema_description_asc_value', 'SEMA ASC Description'),
+            ('sema_description_asm_value', 'SEMA ASM Description'),
+            ('sema_description_fab_value', 'SEMA FAB Description'),
+            ('sema_description_lab_value', 'SEMA LAB Description'),
+            ('sema_description_shp_value', 'SEMA SHP Description'),
+            ('sema_description_oth_value', 'SEMA OTH Description'),
             ('premier_description_value', 'Premier Description'),
-            (CUSTOM_VALUE, 'Custom')
+            ('custom_title_value', 'Custom Title')
         ),
         default='sema_description_sho_value',
         max_length=50
     )
-    body_html_option = CharField(
+    title_custom_value = CharField(
+        blank=True,
+        max_length=100
+    )
+    body_html_choice = CharField(
         choices=(
-            ('sema_description_def_value', 'SEMA Definition'),
-            ('sema_description_des_value', 'SEMA Description'),
-            ('sema_description_inv_value', 'SEMA Invoice'),
-            ('sema_description_ext_value', 'SEMA Extended'),
-            ('sema_description_tle_value', 'SEMA Title'),
-            ('sema_description_sho_value', 'SEMA Short'),
-            ('sema_description_asc_value', 'SEMA ASC'),
-            ('sema_description_mkt_value', 'SEMA Marketing'),
+            ('sema_description_def_value', 'SEMA DEF Description'),
+            ('sema_description_des_value', 'SEMA DES Description'),
+            ('sema_description_inv_value', 'SEMA INV Description'),
+            ('sema_description_ext_value', 'SEMA EXT Description'),
+            ('sema_description_tle_value', 'SEMA TLE Description'),
+            ('sema_description_sho_value', 'SEMA SHO Description'),
+            ('sema_description_mkt_value', 'SEMA MKT Description'),
+            ('sema_description_key_value', 'SEMA KEY Description'),
+            ('sema_description_asc_value', 'SEMA ASC Description'),
+            ('sema_description_asm_value', 'SEMA ASM Description'),
+            ('sema_description_fab_value', 'SEMA FAB Description'),
+            ('sema_description_lab_value', 'SEMA LAB Description'),
+            ('sema_description_shp_value', 'SEMA SHP Description'),
+            ('sema_description_oth_value', 'SEMA OTH Description'),
             ('premier_description_value', 'Premier Description'),
-            (CUSTOM_VALUE, 'Custom')
+            ('custom_body_html_value', 'Custom Body HTML')
         ),
         default='sema_description_ext_value',
         max_length=50
     )
-    variant_weight_option = CharField(
+    body_html_custom_value = TextField(
+        blank=True
+    )
+    variant_weight_choice = CharField(
         choices=(
             ('premier_weight_value', 'Premier Weight'),
-            (CUSTOM_VALUE, 'Custom')
+            ('custom_variant_weight_value', 'Custom Weight')
         ),
         default='premier_weight_value',
         max_length=50
     )
-    variant_weight_unit_option = CharField(
+    variant_weight_custom_value = DecimalField(
+        blank=True,
+        decimal_places=2,
+        max_digits=10,
+        null=True
+    )
+    variant_weight_unit_choice = CharField(
         choices=(
             (ShopifyVariant.G_UNIT, ShopifyVariant.G_UNIT),
             (ShopifyVariant.KG_UNIT, ShopifyVariant.KG_UNIT),
@@ -2825,25 +2855,37 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         default=ShopifyVariant.LB_UNIT,
         max_length=5
     )
-    variant_cost_option = CharField(
+    variant_cost_choice = CharField(
         choices=(
             ('premier_cost_cad_value', 'Premier Cost CAD'),
             ('premier_cost_usd_value', 'Premier Cost USD'),
-            (CUSTOM_VALUE, 'Custom')
+            ('custom_variant_cost_value', 'Custom Cost')
         ),
         default='premier_cost_cad_value',
         max_length=50
     )
-    variant_price_base_option = CharField(
+    variant_cost_custom_value = DecimalField(
+        blank=True,
+        decimal_places=2,
+        max_digits=10,
+        null=True
+    )
+    variant_price_base_choice = CharField(
         choices=(
             ('premier_cost_cad_value', 'Premier Cost CAD'),
             ('premier_cost_usd_value', 'Premier Cost USD'),
-            (CUSTOM_VALUE, 'Custom')
+            ('custom_variant_price_base_value', 'Custom Price Base')
         ),
         default='premier_cost_cad_value',
         max_length=50
     )
-    variant_price_markup_option = CharField(
+    variant_price_base_custom_value = DecimalField(
+        blank=True,
+        decimal_places=2,
+        max_digits=10,
+        null=True
+    )
+    variant_price_markup_choice = CharField(
         choices=(
             ('0.00', '0%'),
             ('0.05', '5%'),
@@ -2853,88 +2895,163 @@ class ShopifyProductCalculator(Model, MessagesMixin):
             ('0.25', '25%'),
             ('0.30', '30%'),
             ('0.35', '35%'),
-            ('0.40', '40%'),
+            ('0.40', '40%')
         ),
         default='0.20',
         max_length=5
     )
-    variant_sku_option = CharField(
+    variant_sku_choice = CharField(
         choices=(
             ('premier_premier_part_number_value', 'Premier Part Number'),
-            (CUSTOM_VALUE, 'Custom')
+            ('custom_variant_sku_value', 'Custom SKU')
         ),
         default='premier_premier_part_number_value',
         max_length=50
     )
-    variant_barcode_option = CharField(
+    variant_sku_custom_value = CharField(
+        blank=True,
+        max_length=50
+    )
+    variant_barcode_choice = CharField(
         choices=(
             ('premier_upc_value', 'Premier UPC'),
-            (CUSTOM_VALUE, 'Custom')
+            ('custom_variant_barcode_value', 'Custom Barcode')
         ),
         default='premier_upc_value',
         max_length=50
     )
-    metafields_packaging_option = CharField(
-        choices=(
-            ('sema_html_packaging_value', 'SEMA HTML'),
-            (CUSTOM_VALUE, 'Custom')
-        ),
-        default='sema_html_packaging_value',
+    variant_barcode_custom_value = CharField(
+        blank=True,
         max_length=50
     )
-    metafields_fitments_option = CharField(
+    metafield_value_packaging_choice = CharField(
         choices=(
-            ('sema_vehicle_fitments_value', 'SEMA Vehicles'),
-            (CUSTOM_VALUE, 'Custom')
+            ('sema_html_value', 'SEMA HTML'),
+            ('custom_packaging_metafield_value_value', 'Custom Packaging Metafield Value')
         ),
-        default='sema_vehicle_fitments_value',
+        default='sema_html_value',
         max_length=50
     )
-    tags_vendor_option = CharField(
+    metafield_value_packaging_custom_value = TextField(
+        blank=True,
+        help_text='format: <html>...</html>'
+    )
+    metafield_value_fitments_choice = CharField(
         choices=(
-            ('sema_brand_tags_value', 'SEMA Brand'),
-            (CUSTOM_VALUE, 'Custom')
+            ('sema_vehicles_value', 'SEMA Vehicles'),
+            ('custom_fitments_metafield_value_value', 'Custom Fitments Metafield Value')
         ),
-        default='sema_brand_tags_value',
+        default='sema_vehicles_value',
         max_length=50
     )
-    tags_categories_option = CharField(
+    metafield_value_fitments_custom_value = TextField(
+        blank=True,
+        help_text='format: [{"year", "make", "model", "submodel"}]',
+        verbose_name='Custom Fitments Metafields'
+    )
+    metafields_choice = CharField(
         choices=(
-            ('sema_category_tags_value', 'SEMA Categories'),
-            (CUSTOM_VALUE, 'Custom')
+            ('metafields_dict_all_value', 'All Metafields'),
+            ('metafields_dict_packaging_value', 'Packaging Metafields'),
+            ('metafields_dict_fitments_value', 'Fitments Metafields'),
+            ('metafields_dict_custom_value', 'Custom Metafields')
         ),
-        default='sema_category_tags_value',
+        default='metafields_dict_all_value',
         max_length=50
     )
-    images_option = CharField(
+    metafields_custom_value = TextField(
+        blank=True,
+        help_text=(
+            'format: '
+            '[{"namespace", "key": "owner_resource", "value", "value_type"}]'),
+    )
+    tag_names_vendor_choice = CharField(
         choices=(
-            ('all_images_value', 'All Images'),
-            ('sema_images_value', 'SEMA Images'),
-            ('premier_images_value', 'Premier Images'),
-            (CUSTOM_VALUE, 'Custom')
+            ('sema_brand_tag_names_value', 'SEMA Brand Tag Names'),
+            ('custom_vendor_tag_names_value', 'Custom Vendor Tag Names')
         ),
-        default='sema_images_value',
+        default='sema_brand_tag_names_value',
         max_length=50
+    )
+    tag_names_vendor_custom_value = TextField(
+        blank=True,
+        help_text='format: [""]'
+    )
+    tag_names_collection_choice = CharField(
+        choices=(
+            ('sema_category_tag_names_value', 'SEMA Category Tag Names'),
+            ('custom_collection_tag_names_value', 'Custom Collection Tag Names')
+        ),
+        default='sema_category_tag_names_value',
+        max_length=50
+    )
+    tag_names_collection_custom_value = TextField(
+        blank=True,
+        help_text='format: [""]'
+    )
+    tags_choice = CharField(
+        choices=(
+            ('tags_dict_all_value', 'All Tags'),
+            ('tags_dict_vendor_value', 'Vendor Tags'),
+            ('tags_dict_collection_value', 'Collection Tags'),
+            ('tags_dict_custom_value', 'Custom Tags')
+        ),
+        default='tags_dict_all_value',
+        max_length=50
+    )
+    tags_custom_value = TextField(
+        blank=True,
+        help_text='format: [{"name"}]'
+    )
+    image_urls_sema_choice = CharField(
+        choices=(
+            ('sema_filtered_image_urls_value', 'SEMA Filtered Image URLs'),
+            ('custom_sema_image_urls_value', 'Custom SEMA Image URLs')
+        ),
+        default='sema_filtered_image_urls_value',
+        max_length=50
+    )
+    image_urls_sema_custom_value = TextField(
+        blank=True,
+        help_text='format: [""]'
+    )
+    image_urls_premier_choice = CharField(
+        choices=(
+            ('premier_primary_image_urls_value', 'Premier Primary Image URLs'),
+            ('custom_premier_image_urls_value', 'Custom Premier Image URLs')
+        ),
+        default='premier_primary_image_urls_value',
+        max_length=50
+    )
+    image_urls_premier_custom_value = TextField(
+        blank=True,
+        help_text='format: [""]'
+    )
+    images_choice = CharField(
+        choices=(
+            ('images_dict_all_value', 'All Images'),
+            ('images_dict_sema_value', 'SEMA Images'),
+            ('images_dict_premier_value', 'Premier Images'),
+            ('images_dict_custom_value', 'Custom Images')
+        ),
+        default='images_dict_sema_value',
+        max_length=50
+    )
+    images_custom_value = TextField(
+        blank=True,
+        help_text='[{"link"}]'
     )
 
     # <editor-fold desc="internal properties ...">
     @property
-    def shopify_product(self):
-        return self.product
-
-    @property
-    def shopify_variant(self):
-        return self.product.variants.first()
-
-    @property
-    def __has_premier_product(self):
+    def has_premier_product(self):
         return bool(
             self.product.item
             and self.product.item.premier_product
         )
 
     @property
-    def __has_sema_product(self):
+    def has_sema_product(self):
         return bool(
             self.product.item
             and self.product.item.sema_product
@@ -2944,274 +3061,353 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     def sema_product(self):
         return (
             self.product.item.sema_product
-            if self.__has_sema_product else None
+            if self.has_sema_product else None
+        )
+
+    @property
+    def sema_brand(self):
+        return (
+            self.sema_product.dataset.brand
+            if self.has_sema_product
+            and self.sema_product.dataset.brand.is_relevant
+            else None
+        )
+
+    @property
+    def sema_categories(self):
+        return (
+            self.sema_product.categories.filter(
+                is_relevant=True
+            )
+            if self.has_sema_product else None
+        )
+
+    @property
+    def sema_vehicles(self):
+        return (
+            self.sema_product.vehicles.filter(
+                is_relevant=True
+            ).order_by(
+                'base_vehicle__make_year__make__name',
+                'base_vehicle__model__name',
+                'submodel__name',
+                'base_vehicle__make_year__year__year'
+            )
+            if self.has_sema_product else None
+        )
+
+    @property
+    def sema_description_pies_attributes(self):
+        return (
+            self.sema_product.description_pies_attributes.all()
+            if self.has_sema_product else None
+        )
+
+    @property
+    def sema_digital_assets_pies_attributes(self):
+        return (
+            self.sema_product.digital_assets_pies_attributes.all()
+            if self.has_sema_product else None
         )
 
     @property
     def premier_product(self):
         return (
             self.product.item.premier_product
-            if self.__has_premier_product else None
+            if self.has_premier_product else None
+        )
+
+    @property
+    def shopify_product(self):
+        return self.product
+
+    @property
+    def shopify_variant(self):
+        return self.product.variants.first()
+
+    @property
+    def shopify_tags(self):
+        return self.product.tags.all()
+
+    @property
+    def shopify_metafields(self):
+        return self.product.metafields.all()
+
+    @property
+    def shopify_images(self):
+        return self.product.images.all()
+
+    def get_premier_product_attr_value(self, attr):
+        if not self.premier_product:
+            return None
+
+        value = getattr(self.premier_product, attr)
+        if not value:
+            return None
+
+        return value
+
+    def get_sema_product_attr_value(self, attr):
+        if not self.sema_product:
+            return None
+
+        value = getattr(self.sema_product, attr)
+        if not value:
+            return None
+
+        return value
+
+    def get_shopify_product_attr_value(self, attr):
+        value = getattr(self.shopify_product, attr)
+        if not value:
+            return None
+
+        return value
+
+    def get_shopify_variant_attr_value(self, attr):
+        value = getattr(self.shopify_variant, attr)
+        if not value:
+            return None
+
+        return value
+
+    def get_sema_description_pies_attribute_value(self, segment):
+        if not self.sema_description_pies_attributes:
+            return None
+
+        pies_attrs = self.sema_description_pies_attributes.filter(
+            segment__startswith=segment
+        )
+
+        if pies_attrs.count() == 0:
+            return None
+        elif pies_attrs.count() == 1:
+            return pies_attrs.first().value.strip()
+        else:
+            values = []
+            for index, pies_attr in enumerate(pies_attrs, start=1):
+                values.append(f'{index}: {pies_attr.value.strip()}')
+            return ', '.join(values)
+
+    def get_short_text_preview(self, value):
+        max_length = 20
+
+        if not value:
+            return None
+
+        value_length = len(value)
+
+        if value_length <= max_length:
+            return value
+
+        return f'{value[:max_length]} (+{value_length - max_length})'
+
+    def get_short_images_preview(self, values):
+        max_length = 5
+
+        if not values:
+            return None
+
+        value_length = len(values)
+
+        if value_length <= max_length:
+            return get_images_preview(values)
+
+        return (
+            get_images_preview(values[:max_length], width="50")
+            + mark_safe(f'+({len(values) - max_length})')
         )
     # </editor-fold>
 
     # <editor-fold desc="value properties ...">
     @property
-    def custom_value(self):
-        return None
-
-    @property
     def premier_description_value(self):
-        attr = 'description'
+        field = 'description'
 
-        if not self.premier_product:
-            return
-
-        description = getattr(self.premier_product, attr)
-        if not description:
+        value = self.get_premier_product_attr_value(field)
+        if not value:
             return None
 
-        return description.strip()
+        return value.strip()
 
     @property
     def premier_weight_value(self):
-        attr = 'weight'
+        field = 'weight'
 
-        if not self.premier_product:
+        value = self.get_premier_product_attr_value(field)
+        if not value:
             return None
 
-        weight = getattr(self.premier_product, attr)
-        if not weight:
-            return None
-
-        return round(weight, 2)
+        return round(value, 2)
 
     @property
     def premier_cost_cad_value(self):
-        attr = 'cost_cad'
+        field = 'cost_cad'
 
-        if not self.premier_product:
+        value = self.get_premier_product_attr_value(field)
+        if not value:
             return None
 
-        cost_cad = getattr(self.premier_product, attr)
-        if not cost_cad:
-            return None
-
-        return round(cost_cad, 2)
+        return round(value, 2)
 
     @property
     def premier_cost_usd_value(self):
-        attr = 'cost_usd'
+        field = 'cost_usd'
 
-        if not self.premier_product:
+        value = self.get_premier_product_attr_value(field)
+        if not value:
             return None
 
-        cost_usd = getattr(self.premier_product, attr)
-        if not cost_usd:
-            return None
-
-        return round(cost_usd, 2)
+        return round(value, 2)
 
     @property
     def premier_premier_part_number_value(self):
-        attr = 'premier_part_number'
+        field = 'premier_part_number'
 
-        if not self.premier_product:
+        value = self.get_premier_product_attr_value(field)
+        if not value:
             return None
 
-        premier_part_number = getattr(self.premier_product, attr)
-        if not premier_part_number:
-            return None
-
-        return premier_part_number.strip()
+        return value.strip()
 
     @property
     def premier_upc_value(self):
-        attr = 'upc'
+        field = 'upc'
 
-        if not self.premier_product:
+        value = self.get_premier_product_attr_value(field)
+        if not value:
             return None
 
-        upc = getattr(self.premier_product, attr)
-        if not upc:
-            return None
-
-        return upc.strip()
+        return value.strip()
 
     @property
-    def premier_images_value(self):
-        attr = 'primary_image'
+    def premier_primary_image_urls_value(self):
+        field = 'primary_image'
 
-        if not self.premier_product:
+        value = self.get_premier_product_attr_value(field)
+        if not value:
             return None
 
-        primary_image = getattr(self.premier_product, attr)
-        if not primary_image:
-            return None
-
-        return [settings.COMPANY_HOST + primary_image.url]
+        return [settings.COMPANY_HOST + value.url]
 
     @property
     def sema_description_def_value(self):
-        segment = 'C10_DEF_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
+        segment = 'C10_DEF'
+        return self.get_sema_description_pies_attribute_value(segment)
 
     @property
     def sema_description_des_value(self):
-        segment = 'C10_DES_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
+        segment = 'C10_DES'
+        return self.get_sema_description_pies_attribute_value(segment)
 
     @property
     def sema_description_inv_value(self):
-        segment = 'C10_INV_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
+        segment = 'C10_INV'
+        return self.get_sema_description_pies_attribute_value(segment)
 
     @property
     def sema_description_ext_value(self):
-        segment = 'C10_EXT_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
+        segment = 'C10_EXT'
+        return self.get_sema_description_pies_attribute_value(segment)
 
     @property
     def sema_description_tle_value(self):
-        segment = 'C10_TLE_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
+        segment = 'C10_TLE'
+        return self.get_sema_description_pies_attribute_value(segment)
 
     @property
     def sema_description_sho_value(self):
-        segment = 'C10_SHO_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
-
-    @property
-    def sema_description_asc_value(self):
-        segment = 'C10_ASC_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
+        segment = 'C10_SHO'
+        return self.get_sema_description_pies_attribute_value(segment)
 
     @property
     def sema_description_mkt_value(self):
-        segment = 'C10_MKT_EN'
-
-        if not self.sema_product:
-            return None
-
-        try:
-            pies_attr = self.sema_product.description_pies_attributes.get(
-                segment=segment
-            )
-        except ObjectDoesNotExist:
-            return None
-
-        return pies_attr.value.strip()
+        segment = 'C10_MKT'
+        return self.get_sema_description_pies_attribute_value(segment)
 
     @property
-    def sema_html_packaging_value(self):
+    def sema_description_key_value(self):
+        segment = 'C10_KEY'
+        return self.get_sema_description_pies_attribute_value(segment)
+
+    @property
+    def sema_description_asc_value(self):
+        segment = 'C10_ASC'
+        return self.get_sema_description_pies_attribute_value(segment)
+
+    @property
+    def sema_description_asm_value(self):
+        segment = 'C10_ASM'
+        return self.get_sema_description_pies_attribute_value(segment)
+
+    @property
+    def sema_description_fab_value(self):
+        segment = 'C10_FAB'
+        return self.get_sema_description_pies_attribute_value(segment)
+
+    @property
+    def sema_description_lab_value(self):
+        segment = 'C10_LAB'
+        return self.get_sema_description_pies_attribute_value(segment)
+
+    @property
+    def sema_description_shp_value(self):
+        segment = 'C10_SHP'
+        return self.get_sema_description_pies_attribute_value(segment)
+
+    @property
+    def sema_description_oth_value(self):
+        if not self.sema_description_pies_attributes:
+            return None
+
+        pies_attrs = self.sema_description_pies_attributes.exclude(
+            Q(segment__startswith='C10_DEF')
+            | Q(segment__startswith='C10_DES')
+            | Q(segment__startswith='C10_INV')
+            | Q(segment__startswith='C10_EXT')
+            | Q(segment__startswith='C10_TLE')
+            | Q(segment__startswith='C10_SHO')
+            | Q(segment__startswith='C10_MKT')
+            | Q(segment__startswith='C10_KEY')
+            | Q(segment__startswith='C10_ASC')
+            | Q(segment__startswith='C10_ASM')
+            | Q(segment__startswith='C10_FAB')
+            | Q(segment__startswith='C10_LAB')
+            | Q(segment__startswith='C10_SHP')
+        )
+
+        if pies_attrs.count() == 0:
+            return None
+        elif pies_attrs.count() == 1:
+            return pies_attrs.first().value.strip()
+        else:
+            values = []
+            for index, pies_attr in enumerate(pies_attrs, start=1):
+                values.append(f'{index}: {pies_attr.value.strip()}')
+            return ', '.join(values)
+
+    @property
+    def sema_html_value(self):
         attr = 'clean_html'
 
         if not self.sema_product:
             return None
 
-        html = getattr(self.sema_product, attr)
-        if not html:
+        value = self.get_sema_product_attr_value(attr)
+        if not value:
             return None
 
-        return html.strip()
+        return value.strip()
 
     @property
-    def sema_vehicle_fitments_value(self):
-        if not self.sema_product:
-            return None
-
-        vehicles = self.sema_product.vehicles.filter(
-            is_relevant=True
-        ).order_by(
-            'base_vehicle__make_year__make__name',
-            'base_vehicle__model__name',
-            'submodel__name',
-            'base_vehicle__make_year__year__year'
-        )
-
+    def sema_vehicles_value(self):
+        vehicles = self.sema_vehicles
         if not vehicles:
             return None
 
-        fitments = []
+        values = []
         for vehicle in vehicles:
-            fitments.append(
+            values.append(
                 {
                     'year': vehicle.base_vehicle.make_year.year.year,
                     'make': vehicle.base_vehicle.make_year.make.name,
@@ -3219,220 +3415,801 @@ class ShopifyProductCalculator(Model, MessagesMixin):
                     'submodel': vehicle.submodel.name
                 }
             )
-        return fitments
+        return values
 
     @property
-    def sema_brand_tags_value(self):
-        if not self.sema_product:
-            return None
-
-        brand = self.sema_product.dataset.brand
-        if not brand.is_relevant:
+    def sema_brand_tag_names_value(self):
+        brand = self.sema_brand
+        if not brand:
             return None
 
         return [brand.tag_name]
 
     @property
-    def sema_category_tags_value(self):
-        if not self.sema_product:
-            return None
-
-        categories = self.sema_product.categories.filter(is_relevant=True)
+    def sema_category_tag_names_value(self):
+        categories = self.sema_categories
         if not categories:
             return None
 
-        tags = [category.tag_name for category in categories]
-        tags.sort()
-        return tags
+        return [category.tag_name for category in categories]
 
     @property
-    def sema_images_value(self):
-        if not self.sema_product:
+    def sema_filtered_image_urls_value(self):
+        pies_attrs = self.sema_digital_assets_pies_attributes
+        if not pies_attrs:
             return None
 
-        pies_attrs = self.sema_product.digital_assets_pies_attributes.exclude(
+        pies_attrs = pies_attrs.exclude(
             Q(value__endswith='.pdf')
             | Q(value__contains='logo')
         )
         if not pies_attrs:
             return None
 
-        images = [pies_attr.value for pies_attr in pies_attrs]
-        images.sort()
-        return images
+        return [pies_attr.value for pies_attr in pies_attrs]
 
     @property
-    def all_images_value(self):
-        images = []
-        if self.premier_images_value:
-            images += self.premier_images_value
-        if self.sema_images_value:
-            images += self.sema_images_value
+    def custom_title_value(self):
+        field = 'title_custom_value'
 
-        images.sort()
-        return images
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return value.strip()
+
+    @property
+    def custom_body_html_value(self):
+        field = 'body_html_custom_value'
+
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return value.strip()
+
+    @property
+    def custom_variant_weight_value(self):
+        field = 'variant_weight_custom_value'
+
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return round(value, 2)
+
+    @property
+    def custom_variant_cost_value(self):
+        field = 'variant_cost_custom_value'
+
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return round(value, 2)
+
+    @property
+    def custom_variant_price_base_value(self):
+        field = 'variant_price_base_custom_value'
+
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return round(value, 2)
+
+    @property
+    def custom_variant_sku_value(self):
+        field = 'variant_sku_custom_value'
+
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return value.strip()
+
+    @property
+    def custom_variant_barcode_value(self):
+        field = 'variant_barcode_custom_value'
+
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return value.strip()
+
+    @property
+    def custom_packaging_metafield_value_value(self):
+        field = 'metafield_value_packaging_custom_value'
+
+        value = getattr(self, field)
+        if not value:
+            return None
+
+        return value.strip()
+
+    @property
+    def custom_fitments_metafield_value_value(self):
+        field = 'metafield_value_fitments_custom_value'
+
+        values = getattr(self, field)
+        if not values:
+            return None
+
+        return json.loads(values.strip())
+
+    @property
+    def custom_vendor_tag_names_value(self):
+        field = 'tag_names_vendor_custom_value'
+
+        values = getattr(self, field)
+        if not values:
+            return None
+
+        return json.loads(values.strip())
+
+    @property
+    def custom_collection_tag_names_value(self):
+        attr = 'tag_names_collection_custom_value'
+
+        values = getattr(self, attr)
+        if not values:
+            return None
+
+        return json.loads(values.strip())
+
+    @property
+    def custom_sema_image_urls_value(self):
+        attr = 'image_urls_sema_custom_value'
+
+        values = getattr(self, attr)
+        if not values:
+            return None
+
+        return json.loads(values.strip())
+
+    @property
+    def custom_premier_image_urls_value(self):
+        attr = 'image_urls_premier_custom_value'
+
+        values = getattr(self, attr)
+        if not values:
+            return None
+
+        return json.loads(values.strip())
+
+    @property
+    def metafields_dict_packaging_value(self):
+        choice_field = 'metafield_value_packaging_choice'
+
+        value = getattr(self, getattr(self, choice_field))
+        if not value:
+            return None
+
+        return [
+            {
+                'namespace': 'additional',
+                'key': 'packaging',
+                'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
+                'value': value,
+                'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+            }
+        ]
+
+    @property
+    def metafields_dict_fitments_value(self):
+        choice_field = 'metafield_value_fitments_choice'
+
+        values = getattr(self, getattr(self, choice_field))
+        if not values:
+            return None
+
+        return [
+            {
+                'namespace': 'additional',
+                'key': 'fitments',
+                'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
+                'value': json.dumps(values),
+                'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+            }
+        ]
+
+    @property
+    def metafields_dict_custom_value(self):
+        attr = 'metafields_custom_value'
+
+        values = getattr(self, attr)
+        if not values:
+            return None
+
+        return sorted(
+            json.loads(values.strip()),
+            key=lambda k: k['value']
+        )
+
+    @property
+    def metafields_dict_all_value(self):
+        attrs = [
+            'metafields_dict_packaging_value',
+            'metafields_dict_fitments_value',
+            'metafields_dict_custom_value'
+        ]
+
+        metafields = []
+        for attr in attrs:
+            values = getattr(self, attr)
+            if values:
+                metafields += values
+
+        if not metafields:
+            return None
+
+        return sorted(metafields, key=lambda k: k['value'])
+
+    @property
+    def tags_dict_vendor_value(self):
+        choice_field = 'tag_names_vendor_choice'
+
+        values = getattr(self, getattr(self, choice_field))
+        if not values:
+            return None
+
+        return sorted(
+            [
+                {'name': tag_name}
+                for tag_name in values
+            ],
+            key=lambda k: k['name']
+        )
+
+    @property
+    def tags_dict_collection_value(self):
+        choice_field = 'tag_names_collection_choice'
+
+        values = getattr(self, getattr(self, choice_field))
+        if not values:
+            return None
+
+        return sorted(
+            [
+                {'name': tag_name}
+                for tag_name in values
+            ],
+            key=lambda k: k['name']
+        )
+
+    @property
+    def tags_dict_custom_value(self):
+        attr = 'tags_custom_value'
+
+        values = getattr(self, attr)
+        if not values:
+            return None
+
+        return sorted(
+            json.loads(values.strip()),
+            key=lambda k: k['name']
+        )
+
+    @property
+    def tags_dict_all_value(self):
+        attrs = [
+            'tags_dict_vendor_value',
+            'tags_dict_collection_value',
+            'tags_dict_custom_value'
+        ]
+
+        tags = []
+        for attr in attrs:
+            values = getattr(self, attr)
+            if values:
+                tags += values
+
+        if not tags:
+            return None
+
+        return sorted(tags, key=lambda k: k['name'])
+
+    @property
+    def images_dict_sema_value(self):
+        choice_field = 'image_urls_sema_choice'
+
+        values = getattr(self, getattr(self, choice_field))
+        if not values:
+            return None
+
+        return sorted(
+            [
+                {'link': image_url}
+                for image_url in values
+            ],
+            key=lambda k: k['link']
+        )
+
+    @property
+    def images_dict_premier_value(self):
+        choice_field = 'image_urls_premier_choice'
+
+        values = getattr(self, getattr(self, choice_field))
+        if not values:
+            return None
+
+        return sorted(
+            [
+                {'link': image_url}
+                for image_url in values
+            ],
+            key=lambda k: k['link']
+        )
+
+    @property
+    def images_dict_custom_value(self):
+        attr = 'images_custom_value'
+
+        values = getattr(self, attr)
+        if not values:
+            return None
+
+        return sorted(
+            json.loads(values.strip()),
+            key=lambda k: k['link']
+        )
+
+    @property
+    def images_dict_all_value(self):
+        attrs = [
+            'images_dict_sema_value',
+            'images_dict_premier_value',
+            'images_dict_custom_value'
+        ]
+
+        images = []
+        for attr in attrs:
+            values = getattr(self, attr)
+            if values:
+                images += values
+
+        if not images:
+            return None
+
+        return sorted(images, key=lambda k: k['link'])
     # </editor-fold>
 
-    # <editor-fold desc="preview properties ...">
+    # <editor-fold desc="value preview properties ...">
     @property
-    def premier_description_preview(self):
-        return self.premier_description_value
-    premier_description_preview.fget.short_description = 'Premier Description'
+    def premier_description_value_short_preview(self):
+        value_attr = 'premier_description_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    premier_description_value_short_preview.fget.short_description = (
+        'Premier Description'
+    )
 
     @property
-    def premier_weight_preview(self):
-        return self.premier_weight_value
-    premier_weight_preview.fget.short_description = 'Premier Weight'
+    def premier_description_value_preview(self):
+        value_attr = 'premier_description_value'
+        return getattr(self, value_attr)
+    premier_description_value_preview.fget.short_description = (
+        'Premier Description'
+    )
 
     @property
-    def premier_cost_cad_preview(self):
-        return self.premier_cost_cad_value
-    premier_cost_cad_preview.fget.short_description = 'Premier Cost CAD'
+    def premier_weight_value_preview(self):
+        value_attr = 'premier_weight_value'
+        return getattr(self, value_attr)
+    premier_weight_value_preview.fget.short_description = 'Premier Weight'
 
     @property
-    def premier_cost_usd_preview(self):
-        return self.premier_cost_usd_value
-    premier_cost_usd_preview.fget.short_description = 'Premier Cost USD'
+    def premier_cost_cad_value_preview(self):
+        value_attr = 'premier_cost_cad_value'
+        return getattr(self, value_attr)
+    premier_cost_cad_value_preview.fget.short_description = 'Premier Cost CAD'
 
     @property
-    def premier_premier_part_number_preview(self):
-        return self.premier_premier_part_number_value
-    premier_premier_part_number_preview.fget.short_description = 'Premier Part Number'
+    def premier_cost_usd_value_preview(self):
+        value_attr = 'premier_cost_usd_value'
+        return getattr(self, value_attr)
+    premier_cost_usd_value_preview.fget.short_description = 'Premier Cost USD'
 
     @property
-    def premier_upc_preview(self):
-        return self.premier_upc_value
-    premier_upc_preview.fget.short_description = 'Premier UPC'
+    def premier_premier_part_number_value_preview(self):
+        value_attr = 'premier_premier_part_number_value'
+        return getattr(self, value_attr)
+    premier_premier_part_number_value_preview.fget.short_description = (
+        'Premier Part Number'
+    )
 
     @property
-    def premier_images_preview(self):
-        if not self.premier_images_value:
+    def premier_upc_value_preview(self):
+        value_attr = 'premier_upc_value'
+        return getattr(self, value_attr)
+    premier_upc_value_preview.fget.short_description = 'Premier UPC'
+
+    @property
+    def premier_primary_image_urls_value_preview(self):
+        value_attr = 'premier_primary_image_urls_value'
+        values = getattr(self, value_attr)
+        if not values:
             return None
 
-        return get_images_preview(self.premier_images_value, width="100")
-    premier_images_preview.fget.short_description = 'Premier Images'
+        return get_json_preview(json.dumps(values))
+    premier_primary_image_urls_value_preview.fget.short_description = (
+        'Premier Primary Images'
+    )
 
     @property
-    def sema_description_def_preview(self):
-        return self.sema_description_def_value
-    sema_description_def_preview.fget.short_description = 'SEMA Definition'
-
-    @property
-    def sema_description_des_preview(self):
-        return self.sema_description_des_value
-    sema_description_des_preview.fget.short_description = 'SEMA Description'
-
-    @property
-    def sema_description_inv_preview(self):
-        return self.sema_description_inv_value
-    sema_description_inv_preview.fget.short_description = 'SEMA Invoice'
-
-    @property
-    def sema_description_ext_preview(self):
-        return self.sema_description_ext_value
-    sema_description_ext_preview.fget.short_description = 'SEMA Extended'
-
-    @property
-    def sema_description_tle_preview(self):
-        return self.sema_description_tle_value
-    sema_description_tle_preview.fget.short_description = 'SEMA Title'
-
-    @property
-    def sema_description_sho_preview(self):
-        return self.sema_description_sho_value
-    sema_description_sho_preview.fget.short_description = 'SEMA Short'
-
-    @property
-    def sema_description_asc_preview(self):
-        return self.sema_description_asc_value
-    sema_description_asc_preview.fget.short_description = 'SEMA ASC'
-
-    @property
-    def sema_description_mkt_preview(self):
-        return self.sema_description_mkt_value
-    sema_description_mkt_preview.fget.short_description = 'SEMA Marketing'
-
-    @property
-    def sema_html_packaging_preview(self):
-        if not self.sema_html_packaging_value:
+    def premier_primary_images_short_preview(self):
+        value_attr = 'premier_primary_image_urls_value'
+        values = getattr(self, value_attr)
+        if not values:
             return None
 
-        return self.sema_html_packaging_value[:10] + ' ...'
-    sema_html_packaging_preview.fget.short_description = 'SEMA HTML'
+        return self.get_short_images_preview(values)
+    premier_primary_images_short_preview.fget.short_description = (
+        'Premier Primary Images'
+    )
 
     @property
-    def sema_vehicle_fitments_preview(self):
-        if not self.sema_vehicle_fitments_value:
+    def premier_primary_images_preview(self):
+        value_attr = 'premier_primary_image_urls_value'
+        values = getattr(self, value_attr)
+        if not values:
             return None
 
-        return len(self.sema_vehicle_fitments_value)
-    sema_vehicle_fitments_preview.fget.short_description = 'SEMA Vehicles'
+        return get_images_preview(values)
+    premier_primary_images_preview.fget.short_description = (
+        'Premier Primary Images'
+    )
 
     @property
-    def sema_brand_tags_preview(self):
-        if not self.sema_brand_tags_value:
-            return None
-
-        return str(self.sema_brand_tags_value)
-    sema_brand_tags_preview.fget.short_description = 'SEMA Brand'
-
-    @property
-    def sema_category_tags_preview(self):
-        if not self.sema_category_tags_value:
-            return None
-
-        return str(self.sema_category_tags_value)
-    sema_category_tags_preview.fget.short_description = 'SEMA Categories'
+    def sema_description_def_value_short_preview(self):
+        value_attr = 'sema_description_def_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_def_value_short_preview.fget.short_description = (
+        'SEMA DEF Description'
+    )
 
     @property
-    def sema_images_preview(self):
-        if not self.sema_images_value:
+    def sema_description_def_value_preview(self):
+        value_attr = 'sema_description_def_value'
+        return getattr(self, value_attr)
+    sema_description_def_value_preview.fget.short_description = (
+        'SEMA DEF Description'
+    )
+
+    @property
+    def sema_description_des_value_short_preview(self):
+        value_attr = 'sema_description_des_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_des_value_short_preview.fget.short_description = (
+        'SEMA DES Description'
+    )
+
+    @property
+    def sema_description_des_value_preview(self):
+        value_attr = 'sema_description_des_value'
+        return getattr(self, value_attr)
+    sema_description_des_value_preview.fget.short_description = (
+        'SEMA DES Description'
+    )
+
+    @property
+    def sema_description_inv_value_short_preview(self):
+        value_attr = 'sema_description_inv_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_inv_value_short_preview.fget.short_description = (
+        'SEMA INV Description'
+    )
+
+    @property
+    def sema_description_inv_value_preview(self):
+        value_attr = 'sema_description_inv_value'
+        return getattr(self, value_attr)
+    sema_description_inv_value_preview.fget.short_description = (
+        'SEMA INV Description'
+    )
+
+    @property
+    def sema_description_ext_value_short_preview(self):
+        value_attr = 'sema_description_ext_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_ext_value_short_preview.fget.short_description = (
+        'SEMA EXT Description'
+    )
+
+    @property
+    def sema_description_ext_value_preview(self):
+        value_attr = 'sema_description_ext_value'
+        return getattr(self, value_attr)
+    sema_description_ext_value_preview.fget.short_description = (
+        'SEMA EXT Description'
+    )
+
+    @property
+    def sema_description_tle_value_short_preview(self):
+        value_attr = 'sema_description_tle_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_tle_value_short_preview.fget.short_description = (
+        'SEMA TLE Description'
+    )
+
+    @property
+    def sema_description_tle_value_preview(self):
+        value_attr = 'sema_description_tle_value'
+        return getattr(self, value_attr)
+    sema_description_tle_value_preview.fget.short_description = (
+        'SEMA TLE Description'
+    )
+
+    @property
+    def sema_description_sho_value_short_preview(self):
+        value_attr = 'sema_description_sho_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_sho_value_short_preview.fget.short_description = (
+        'SEMA SHO Description'
+    )
+
+    @property
+    def sema_description_sho_value_preview(self):
+        value_attr = 'sema_description_sho_value'
+        return getattr(self, value_attr)
+    sema_description_sho_value_preview.fget.short_description = (
+        'SEMA SHO Description'
+    )
+
+    @property
+    def sema_description_mkt_value_short_preview(self):
+        value_attr = 'sema_description_mkt_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_mkt_value_short_preview.fget.short_description = (
+        'SEMA MKT Description'
+    )
+
+    @property
+    def sema_description_mkt_value_preview(self):
+        value_attr = 'sema_description_mkt_value'
+        return getattr(self, value_attr)
+    sema_description_mkt_value_preview.fget.short_description = (
+        'SEMA MKT Description'
+    )
+
+    @property
+    def sema_description_key_value_short_preview(self):
+        value_attr = 'sema_description_key_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_mkt_value_short_preview.fget.short_description = (
+        'SEMA KEY Description'
+    )
+
+    @property
+    def sema_description_key_value_preview(self):
+        value_attr = 'sema_description_key_value'
+        return getattr(self, value_attr)
+    sema_description_mkt_value_preview.fget.short_description = (
+        'SEMA KEY Description'
+    )
+
+    @property
+    def sema_description_asc_value_short_preview(self):
+        value_attr = 'sema_description_asc_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_asc_value_short_preview.fget.short_description = (
+        'SEMA ASC Description'
+    )
+
+    @property
+    def sema_description_asc_value_preview(self):
+        value_attr = 'sema_description_asc_value'
+        return getattr(self, value_attr)
+    sema_description_asc_value_preview.fget.short_description = (
+        'SEMA ASC Description'
+    )
+
+    @property
+    def sema_description_asm_value_short_preview(self):
+        value_attr = 'sema_description_asm_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_asm_value_short_preview.fget.short_description = (
+        'SEMA ASM Description'
+    )
+
+    @property
+    def sema_description_asm_value_preview(self):
+        value_attr = 'sema_description_asm_value'
+        return getattr(self, value_attr)
+    sema_description_asm_value_preview.fget.short_description = (
+        'SEMA ASM Description'
+    )
+
+    @property
+    def sema_description_fab_value_short_preview(self):
+        value_attr = 'sema_description_fab_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_fab_value_short_preview.fget.short_description = (
+        'SEMA FAB Description'
+    )
+
+    @property
+    def sema_description_fab_value_preview(self):
+        value_attr = 'sema_description_fab_value'
+        return getattr(self, value_attr)
+    sema_description_fab_value_preview.fget.short_description = (
+        'SEMA FAB Description'
+    )
+
+    @property
+    def sema_description_lab_value_short_preview(self):
+        value_attr = 'sema_description_lab_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_lab_value_short_preview.fget.short_description = (
+        'SEMA LAB Description'
+    )
+
+    @property
+    def sema_description_lab_value_preview(self):
+        value_attr = 'sema_description_lab_value'
+        return getattr(self, value_attr)
+    sema_description_lab_value_preview.fget.short_description = (
+        'SEMA LAB Description'
+    )
+
+    @property
+    def sema_description_shp_value_short_preview(self):
+        value_attr = 'sema_description_shp_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_shp_value_short_preview.fget.short_description = (
+        'SEMA SHP Description'
+    )
+
+    @property
+    def sema_description_shp_value_preview(self):
+        value_attr = 'sema_description_shp_value'
+        return getattr(self, value_attr)
+    sema_description_shp_value_preview.fget.short_description = (
+        'SEMA SHP Description'
+    )
+
+    @property
+    def sema_description_oth_value_short_preview(self):
+        value_attr = 'sema_description_oth_value'
+        return self.get_short_text_preview(getattr(self, value_attr))
+    sema_description_oth_value_short_preview.fget.short_description = (
+        'SEMA OTH Description'
+    )
+
+    @property
+    def sema_description_oth_value_preview(self):
+        value_attr = 'sema_description_oth_value'
+        return getattr(self, value_attr)
+    sema_description_oth_value_preview.fget.short_description = (
+        'SEMA OTH Description'
+    )
+
+    @property
+    def sema_html_value_preview(self):
+        value_attr = 'sema_html_value'
+        return getattr(self, value_attr)
+    sema_html_value_preview.fget.short_description = 'SEMA HTML'
+
+    @property
+    def sema_html_preview(self):
+        value_attr = 'sema_html_value'
+        value = getattr(self, value_attr)
+        if not value:
             return None
 
-        return get_images_preview(self.sema_images_value, width="100")
-    sema_images_preview.fget.short_description = 'SEMA Images'
+        return get_html_preview(value)
+    sema_html_preview.fget.short_description = 'SEMA HTML'
+
+    @property
+    def sema_vehicles_value_preview(self):
+        value_attr = 'sema_vehicles_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+    sema_vehicles_value_preview.fget.short_description = 'SEMA Vehicles'
+
+    @property
+    def sema_brand_tag_names_value_preview(self):
+        value_attr = 'sema_brand_tag_names_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+    sema_brand_tag_names_value_preview.fget.short_description = (
+        'SEMA Brand Tag Names'
+    )
+
+    @property
+    def sema_category_tag_names_value_preview(self):
+        value_attr = 'sema_category_tag_names_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+    sema_category_tag_names_value_preview.fget.short_description = (
+        'SEMA Category Tag Names'
+    )
+
+    @property
+    def sema_filtered_image_urls_value_preview(self):
+        value_attr = 'sema_filtered_image_urls_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_images_preview(values)
+    sema_filtered_image_urls_value_preview.fget.short_description = (
+        'SEMA Filtered Images'
+    )
+
+    @property
+    def sema_filtered_images_short_preview(self):
+        value_attr = 'sema_filtered_image_urls_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return self.get_short_images_preview(values)
+    sema_filtered_images_short_preview.fget.short_description = (
+        'SEMA Filtered Images'
+    )
+
+    @property
+    def sema_filtered_images_preview(self):
+        value_attr = 'sema_filtered_image_urls_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_images_preview(values)
+    sema_filtered_images_preview.fget.short_description = (
+        'SEMA Filtered Images'
+    )
     # </editor-fold>
 
     # <editor-fold desc="result properties ...">
     @property
     def title_result(self):
-        return getattr(self, self.title_option)
+        choice_field = 'title_choice'
+        return getattr(self, getattr(self, choice_field))
     title_result.fget.short_description = ''
 
     @property
     def body_html_result(self):
-        return getattr(self, self.body_html_option)
+        choice_field = 'body_html_choice'
+        return getattr(self, getattr(self, choice_field))
     body_html_result.fget.short_description = ''
 
     @property
     def variant_weight_result(self):
-        return getattr(self, self.variant_weight_option)
+        choice_field = 'variant_weight_choice'
+        return getattr(self, getattr(self, choice_field))
     variant_weight_result.fget.short_description = ''
 
     @property
     def variant_weight_unit_result(self):
-        return self.variant_weight_unit_option
+        choice_field = 'variant_weight_unit_choice'
+        return getattr(self, choice_field)
     variant_weight_unit_result.fget.short_description = ''
 
     @property
     def variant_cost_result(self):
-        return getattr(self, self.variant_cost_option)
+        choice_field = 'variant_cost_choice'
+        return getattr(self, getattr(self, choice_field))
     variant_cost_result.fget.short_description = ''
 
     @property
-    def variant_price_base_result(self):
-        return getattr(self, self.variant_price_base_option)
-    variant_price_base_result.fget.short_description = ''
-
-    @property
-    def variant_price_markup_result(self):
-        return Decimal(self.variant_price_markup_option)
-    variant_price_markup_result.fget.short_description = ''
-
-    @property
     def variant_price_result(self):
-        price_base = self.variant_price_base_result
-        price_markup = self.variant_price_markup_result
+        price_base_choice_field = 'variant_price_base_choice'
+        price_markup_choice_field = 'variant_price_markup_choice'
+
+        price_base = getattr(self, getattr(self, price_base_choice_field))
+        price_markup = Decimal(getattr(self, price_markup_choice_field))
+
         if not price_base:
             return None
 
@@ -3441,221 +4218,415 @@ class ShopifyProductCalculator(Model, MessagesMixin):
 
     @property
     def variant_sku_result(self):
-        return getattr(self, self.variant_sku_option)
+        choice_field = 'variant_sku_choice'
+        return getattr(self, getattr(self, choice_field))
     variant_sku_result.fget.short_description = ''
 
     @property
     def variant_barcode_result(self):
-        return getattr(self, self.variant_barcode_option)
+        choice_field = 'variant_barcode_choice'
+        return getattr(self, getattr(self, choice_field))
     variant_barcode_result.fget.short_description = ''
 
     @property
-    def metafields_packaging_result(self):
-        value = getattr(self, self.metafields_packaging_option)
-        if not value:
-            return None
-
-        return {
-            'namespace': 'additional',
-            'key': 'packaging',
-            'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
-            'value': value,
-            'value_type': ShopifyMetafield.STRING_VALUE_TYPE
-        }
-    metafields_packaging_result.fget.short_description = ''
-
-    @property
-    def metafields_fitments_result(self):
-        fitments = getattr(self, self.metafields_fitments_option)
-        if not fitments:
-            return None
-
-        return {
-            'namespace': 'additional',
-            'key': 'fitments',
-            'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
-            'value': json.dumps(fitments),
-            'value_type': ShopifyMetafield.JSON_VALUE_TYPE
-        }
-    metafields_fitments_result.fget.short_description = ''
-
-    @property
     def metafields_result(self):
-        metafields = []
-        if self.metafields_packaging_result:
-            metafields.append(self.metafields_packaging_result)
-        if self.metafields_fitments_result:
-            metafields.append(self.metafields_fitments_result)
-
-        metafields = sorted(metafields, key=lambda k: k['value'])
-        return metafields
+        choice_field = 'metafields_choice'
+        return getattr(self, getattr(self, choice_field))
     metafields_result.fget.short_description = ''
 
     @property
-    def tags_vendor_result(self):
-        tag_names = getattr(self, self.tags_vendor_option)
-        if not tag_names:
-            return None
-
-        tags = [
-            {'name': tag_name}
-            for tag_name in tag_names
-        ]
-        tags = sorted(tags, key=lambda k: k['name'])
-        return tags
-    tags_vendor_result.fget.short_description = ''
-
-    @property
-    def tags_categories_result(self):
-        tag_names = getattr(self, self.tags_categories_option)
-        if not tag_names:
-            return None
-
-        tags = [
-            {'name': tag_name}
-            for tag_name in tag_names
-        ]
-        tags = sorted(tags, key=lambda k: k['name'])
-        return tags
-    tags_categories_result.fget.short_description = ''
-
-    @property
     def tags_result(self):
-        tags = []
-        if self.tags_vendor_result:
-            tags += self.tags_vendor_result
-        if self.tags_categories_result:
-            tags += self.tags_categories_result
-
-        tags = sorted(tags, key=lambda k: k['name'])
-        return tags
+        choice_field = 'tags_choice'
+        return getattr(self, getattr(self, choice_field))
     tags_result.fget.short_description = ''
 
     @property
     def images_result(self):
-        image_urls = getattr(self, self.images_option)
-        if not image_urls:
+        choice_field = 'images_choice'
+        return getattr(self, getattr(self, choice_field))
+    images_result.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="result preview properties ...">
+    @property
+    def title_result_preview(self):
+        result_attr = 'title_result'
+        return getattr(self, result_attr)
+
+    @property
+    def body_html_result_preview(self):
+        result_attr = 'body_html_result'
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        images = [
-            {'link': image_url}
-            for image_url in image_urls
-        ]
-        images = sorted(images, key=lambda k: k['link'])
-        return images
-    images_result.fget.short_description = ''
+        return get_html_preview(result)
+
+    @property
+    def variant_weight_result_preview(self):
+        result_attr = 'variant_weight_result'
+        return getattr(self, result_attr)
+
+    @property
+    def variant_weight_unit_result_preview(self):
+        result_attr = 'variant_weight_unit_result'
+        return getattr(self, result_attr)
+
+    @property
+    def variant_cost_result_preview(self):
+        result_attr = 'variant_cost_result'
+        return getattr(self, result_attr)
+
+    @property
+    def variant_price_result_preview(self):
+        result_attr = 'variant_price_result'
+        return getattr(self, result_attr)
+
+    @property
+    def variant_sku_result_preview(self):
+        result_attr = 'variant_sku_result'
+        return getattr(self, result_attr)
+
+    @property
+    def variant_barcode_result_preview(self):
+        result_attr = 'variant_barcode_result'
+        return getattr(self, result_attr)
+
+    @property
+    def metafields_result_preview(self):
+        result_attr = 'metafields_result'
+        values = getattr(self, result_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def tags_result_preview(self):
+        result_attr = 'tags_result'
+        values = getattr(self, result_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def images_result_preview(self):
+        result_attr = 'images_result'
+        values = getattr(self, result_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+    # </editor-fold>
+
+    # <editor-fold desc="current properties ...">
+    @property
+    def title_current(self):
+        field = 'title'
+        return self.get_shopify_product_attr_value(field)
+    title_current.fget.short_description = ''
+
+    @property
+    def body_html_current(self):
+        field = 'body_html'
+        return self.get_shopify_product_attr_value(field)
+    body_html_current.fget.short_description = ''
+
+    @property
+    def variant_weight_current(self):
+        field = 'weight'
+        return self.get_shopify_variant_attr_value(field)
+    variant_weight_current.fget.short_description = ''
+
+    @property
+    def variant_weight_unit_current(self):
+        field = 'weight_unit'
+        return self.get_shopify_variant_attr_value(field)
+    variant_weight_unit_current.fget.short_description = ''
+
+    @property
+    def variant_cost_current(self):
+        field = 'cost'
+        return self.get_shopify_variant_attr_value(field)
+    variant_cost_current.fget.short_description = ''
+
+    @property
+    def variant_price_current(self):
+        field = 'price'
+        return self.get_shopify_variant_attr_value(field)
+    variant_price_current.fget.short_description = ''
+
+    @property
+    def variant_sku_current(self):
+        field = 'sku'
+        return self.get_shopify_variant_attr_value(field)
+    variant_sku_current.fget.short_description = ''
+
+    @property
+    def variant_barcode_current(self):
+        field = 'barcode'
+        return self.get_shopify_variant_attr_value(field)
+    variant_barcode_current.fget.short_description = ''
+
+    @property
+    def metafields_current(self):
+        metafields = self.shopify_metafields
+        if not metafields:
+            return None
+
+        return sorted(
+            [
+                {
+                    'namespace': metafield.namespace,
+                    'key': metafield.key,
+                    'owner_resource': metafield.owner_resource,
+                    'value': metafield.value,
+                    'value_type': metafield.value_type
+                }
+                for metafield in metafields
+            ],
+            key=lambda k: k['value']
+        )
+    metafields_current.fget.short_description = ''
+
+    @property
+    def tags_current(self):
+        tags = self.shopify_tags
+        if not tags:
+            return None
+
+        return sorted(
+            [{'name': tag.name} for tag in tags],
+            key=lambda k: k['name']
+        )
+    tags_current.fget.short_description = ''
+
+    @property
+    def images_current(self):
+        images = self.shopify_images
+        if not images:
+            return None
+
+        return sorted(
+            [{'link': image.link} for image in images],
+            key=lambda k: k['link']
+        )
+    images_current.fget.short_description = ''
+    # </editor-fold>
+
+    # <editor-fold desc="current preview properties ...">
+    @property
+    def title_current_preview(self):
+        current_attr = 'title_current'
+        return getattr(self, current_attr)
+
+    @property
+    def body_html_current_preview(self):
+        current_attr = 'body_html_current'
+        current = getattr(self, current_attr)
+        if not current:
+            return None
+
+        return get_html_preview(current)
+
+    @property
+    def variant_weight_current_preview(self):
+        current_attr = 'variant_weight_current'
+        return getattr(self, current_attr)
+
+    @property
+    def variant_weight_unit_current_preview(self):
+        current_attr = 'variant_weight_unit_current'
+        return getattr(self, current_attr)
+
+    @property
+    def variant_cost_current_preview(self):
+        current_attr = 'variant_cost_current'
+        return getattr(self, current_attr)
+
+    @property
+    def variant_price_current_preview(self):
+        current_attr = 'variant_price_current'
+        return getattr(self, current_attr)
+
+    @property
+    def variant_sku_current_preview(self):
+        current_attr = 'variant_sku_current'
+        return getattr(self, current_attr)
+
+    @property
+    def variant_barcode_current_preview(self):
+        current_attr = 'variant_barcode_current'
+        return getattr(self, current_attr)
+
+    @property
+    def metafields_current_preview(self):
+        current_attr = 'metafields_current'
+        values = getattr(self, current_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def tags_current_preview(self):
+        current_attr = 'tags_current'
+        values = getattr(self, current_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def images_current_preview(self):
+        current_attr = 'images_current'
+        values = getattr(self, current_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
     # </editor-fold>
 
     # <editor-fold desc="match properties ...">
     def title_match(self):
-        if not self.title_result:
+        current_attr = 'title_current'
+        result_attr = 'title_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        return bool(self.shopify_product.title == self.title_result)
+        return bool(current == result)
     title_match.boolean = True
     title_match.short_description = 'Title Match'
 
     def body_html_match(self):
-        if not self.body_html_result:
+        current_attr = 'body_html_current'
+        result_attr = 'body_html_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        return bool(self.shopify_product.body_html == self.body_html_result)
+        return bool(current == result)
     body_html_match.boolean = True
     body_html_match.short_description = 'Body HTML Match'
 
     def variant_weight_match(self):
-        if not self.variant_weight_result:
+        current_attr = 'variant_weight_current'
+        result_attr = 'variant_weight_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        return bool(self.shopify_variant.weight == self.variant_weight_result)
+        return bool(current == result)
     variant_weight_match.boolean = True
     variant_weight_match.short_description = 'Weight Match'
 
     def variant_weight_unit_match(self):
-        return bool(
-            self.shopify_variant.weight_unit
-            == self.variant_weight_unit_result
-        )
+        current_attr = 'variant_weight_unit_current'
+        result_attr = 'variant_weight_unit_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+
+        return bool(current == result)
     variant_weight_unit_match.boolean = True
     variant_weight_unit_match.short_description = 'Weight Unit Match'
 
     def variant_cost_match(self):
-        if not self.variant_cost_result:
+        current_attr = 'variant_cost_current'
+        result_attr = 'variant_cost_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        return bool(self.shopify_variant.cost == self.variant_cost_result)
+        return bool(current == result)
     variant_cost_match.boolean = True
     variant_cost_match.short_description = 'Cost Match'
 
     def variant_price_match(self):
-        if not self.variant_price_result:
+        current_attr = 'variant_price_current'
+        result_attr = 'variant_price_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        return bool(self.shopify_variant.price == self.variant_price_result)
+        return bool(current == result)
     variant_price_match.boolean = True
     variant_price_match.short_description = 'Price Match'
 
     def variant_sku_match(self):
-        if not self.variant_sku_result:
+        current_attr = 'variant_sku_current'
+        result_attr = 'variant_sku_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        return bool(self.shopify_variant.sku == self.variant_sku_result)
+        return bool(current == result)
     variant_sku_match.boolean = True
     variant_sku_match.short_description = 'SKU Match'
 
     def variant_barcode_match(self):
-        if not self.variant_barcode_result:
+        current_attr = 'variant_barcode_current'
+        result_attr = 'variant_barcode_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        return bool(
-            self.shopify_variant.barcode
-            == self.variant_barcode_result
-        )
+        return bool(current == result)
     variant_barcode_match.boolean = True
     variant_barcode_match.short_description = 'Barcode Match'
 
     def metafields_match(self):
-        if not self.metafields_result:
+        current_attr = 'metafields_current'
+        result_attr = 'metafields_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        metafields = [
-            {
-                'namespace': metafield.namespace,
-                'key': metafield.key,
-                'owner_resource': metafield.owner_resource,
-                'value': metafield.value,
-                'value_type': metafield.value_type
-            }
-            for metafield in self.shopify_product.metafields.all()
-        ]
-        metafields = sorted(metafields, key=lambda k: k['value'])
-        return bool(metafields == self.metafields_result)
+        return bool(current == result)
     metafields_match.boolean = True
     metafields_match.short_description = 'Metafields Match'
 
     def tags_match(self):
-        if not self.tags_result:
+        current_attr = 'tags_current'
+        result_attr = 'tags_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        tags = [
-            {'name': tag.name}
-            for tag in self.shopify_product.tags.all()
-        ]
-        tags = sorted(tags, key=lambda k: k['name'])
-        return bool(tags == self.tags_result)
+        return bool(current == result)
     tags_match.boolean = True
     tags_match.short_description = 'Tags Match'
 
     def images_match(self):
-        if not self.images_result:
+        current_attr = 'images_current'
+        result_attr = 'images_result'
+
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+        if not result:
             return None
 
-        images = [
-            {'link': image.link}
-            for image in self.shopify_product.images.all()
-        ]
-        images = sorted(images, key=lambda k: k['link'])
-        return bool(images == self.images_result)
+        return bool(current == result)
     images_match.boolean = True
     images_match.short_description = 'Images Match'
 
@@ -3680,101 +4651,190 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     # <editor-fold desc="difference properties ...">
     @property
     def title_difference(self):
-        if self.title_match() is not False:
+        current_preview_attr = 'title_current_preview'
+        result_preview_attr = 'title_result_preview'
+        match_attr = 'title_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return f'{self.shopify_product.title} <- {self.title_result}'
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     title_difference.fget.short_description = ''
 
     @property
     def body_html_difference(self):
-        if self.body_html_match() is not False:
+        current_preview_attr = 'body_html_current_preview'
+        result_preview_attr = 'body_html_result_preview'
+        match_attr = 'body_html_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return f'{self.shopify_product.body_html} <- {self.body_html_result}'
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     body_html_difference.fget.short_description = ''
 
     @property
     def variant_weight_difference(self):
-        if self.variant_weight_match() is not False:
+        current_preview_attr = 'variant_weight_current_preview'
+        result_preview_attr = 'variant_weight_result_preview'
+        match_attr = 'variant_weight_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return f'{self.shopify_variant.weight} <- {self.variant_weight_result}'
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     variant_weight_difference.fget.short_description = ''
 
     @property
     def variant_weight_unit_difference(self):
-        if self.variant_weight_unit_match() is not False:
+        current_preview_attr = 'variant_weight_unit_current_preview'
+        result_preview_attr = 'variant_weight_unit_result_preview'
+        match_attr = 'variant_weight_unit_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return (
-            f'{self.shopify_variant.weight_unit} '
-            f'<- {self.variant_weight_unit_result}'
-        )
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     variant_weight_unit_difference.fget.short_description = ''
 
     @property
     def variant_cost_difference(self):
-        if self.variant_cost_match() is not False:
+        current_preview_attr = 'variant_cost_current_preview'
+        result_preview_attr = 'variant_cost_result_preview'
+        match_attr = 'variant_cost_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return f'{self.shopify_variant.cost} <- {self.variant_cost_result}'
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     variant_cost_difference.fget.short_description = ''
 
     @property
     def variant_price_difference(self):
-        if self.variant_price_match() is not False:
+        current_preview_attr = 'variant_price_current_preview'
+        result_preview_attr = 'variant_price_result_preview'
+        match_attr = 'variant_price_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return f'{self.shopify_variant.price} <- {self.variant_price_result}'
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     variant_price_difference.fget.short_description = ''
 
     @property
     def variant_sku_difference(self):
-        if self.variant_sku_match() is not False:
+        current_preview_attr = 'variant_sku_current_preview'
+        result_preview_attr = 'variant_sku_result_preview'
+        match_attr = 'variant_sku_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return f'{self.shopify_variant.sku} <- {self.variant_sku_result}'
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     variant_sku_difference.fget.short_description = ''
 
     @property
     def variant_barcode_difference(self):
-        if self.variant_barcode_match() is not False:
+        current_preview_attr = 'variant_barcode_current_preview'
+        result_preview_attr = 'variant_barcode_result_preview'
+        match_attr = 'variant_barcode_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return f'{self.shopify_variant.barcode} <- {self.variant_barcode_result}'
+        current_preview = getattr(self, current_preview_attr)
+        result_preview = getattr(self, result_preview_attr)
+
+        return f'{current_preview} <- {result_preview}'
     variant_barcode_difference.fget.short_description = ''
 
     @property
     def metafields_difference(self):
-        if self.metafields_match() is not False:
+        current_attr = 'metafields_current'
+        result_attr = 'metafields_result'
+        match_attr = 'metafields_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return (
-            f'{self.shopify_product.metafields.count()} '
-            f'<- {len(self.metafields_result)}'
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+
+        return get_json_preview(
+            json.dumps(
+                diff(
+                    current,
+                    result,
+                    syntax='symmetric'
+                )
+            )
         )
     metafields_difference.fget.short_description = ''
 
     @property
     def tags_difference(self):
-        if self.tags_match() is not False:
+        current_attr = 'tags_current'
+        result_attr = 'tags_result'
+        match_attr = 'tags_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return (
-            f'{self.shopify_product.tags.count()} '
-            f'<- {len(self.tags_result)}'
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+
+        return get_json_preview(
+            json.dumps(
+                diff(
+                    current,
+                    result,
+                    syntax='symmetric'
+                )
+            )
         )
     tags_difference.fget.short_description = ''
 
     @property
     def images_difference(self):
-        if self.images_match() is not False:
+        current_attr = 'images_current'
+        result_attr = 'images_result'
+        match_attr = 'images_match'
+
+        if getattr(self, match_attr)() is not False:
             return ''
 
-        return (
-            f'{self.shopify_product.images.count()} '
-            f'<- {len(self.images_result)}'
+        current = getattr(self, current_attr)
+        result = getattr(self, result_attr)
+
+        return get_json_preview(
+            json.dumps(
+                diff(
+                    current,
+                    result,
+                    syntax='symmetric'
+                )
+            )
         )
     images_difference.fget.short_description = ''
     # </editor-fold>

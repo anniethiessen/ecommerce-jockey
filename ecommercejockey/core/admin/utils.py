@@ -74,3 +74,10 @@ def get_json_preview(json_value):
         return mark_safe(style + response)
     except Exception:
         raise
+
+
+def get_html_preview(html):
+    try:
+        return mark_safe(html)
+    except Exception:
+        raise

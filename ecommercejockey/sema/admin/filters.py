@@ -422,38 +422,31 @@ class SemaCategoryMayBeRelevant(MayBeRelevantBaseListFilter):
 class SemaProductMayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
         queryset = queryset.annotate(
-            _product_vehicle_count=Count(
+            _vehicle_count=Count(
                 'vehicles',
                 distinct=True
             ),
-            _product_vehicle_relevant_count=Count(
+            _vehicle_relevant_count=Count(
                 'vehicles',
                 filter=Q(vehicles__is_relevant=True),
                 distinct=True
-            ),
-            _dataset_vehicle_relevant_count=Count(
-                'dataset__vehicles',
-                filter=Q(dataset__vehicles__is_relevant=True),
-                distinct=True
-            ),
-            _vehicle_relevant_count=Case(
-                When(
-                    _product_vehicle_count=0,
-                    then=F('_dataset_vehicle_relevant_count')
-                ),
-                default=F('_product_vehicle_relevant_count'),
-                output_field=IntegerField()
             )
         )
 
         if self.value() == 'True':
             return queryset.filter(
                 Q(dataset__is_relevant=True)
-                & Q(_vehicle_relevant_count__gt=0)
+                & (
+                    Q(_vehicle_count=0)
+                    | Q(_vehicle_relevant_count__gt=0)
+                )
             )
 
         if self.value() == 'False':
             return queryset.filter(
                 Q(dataset__is_relevant=False)
-                | Q(_vehicle_relevant_count=0)
+                | (
+                    Q(_vehicle_count__gt=0)
+                    & Q(_vehicle_relevant_count=0)
+                )
             )
