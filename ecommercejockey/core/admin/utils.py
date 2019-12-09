@@ -46,21 +46,19 @@ def get_changelist_view_link(model, link_name, query=None):
     return mark_safe(f'<a href="{url}">{link_name}</a>')
 
 
-def get_image_preview(image_link, width="150"):
+def get_image_preview(image_link, width=150):
     try:
-        return mark_safe(
-            f'<img src="{image_link}" width={width} />'
-        )
+        return mark_safe(f'<img src="{image_link}" width="{width}" />')
     except Exception:
         raise
 
 
-def get_images_preview(image_links, width="150"):
+def get_images_preview(image_links, width=50):
     try:
-        images_html = ''
+        html = ''
         for image_link in image_links:
-            images_html += f'<img src="{image_link}" width={width} />'
-        return mark_safe(f'<div>{images_html}</div>')
+            html += f'<div><img src="{image_link}" width="{width}" /></div>'
+        return mark_safe(f'<div style="width:{width * 3}px;">{html}</div>')
     except Exception:
         raise
 

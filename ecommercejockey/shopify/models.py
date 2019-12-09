@@ -2782,7 +2782,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     )
     title_choice = CharField(
         choices=(
-            ('sema_description_def_value', 'SEMA PIES Description'),
+            ('sema_description_def_value', 'SEMA DEF Description'),
             ('sema_description_des_value', 'SEMA DES Description'),
             ('sema_description_inv_value', 'SEMA INV Description'),
             ('sema_description_ext_value', 'SEMA EXT Description'),
@@ -3190,7 +3190,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
             return ', '.join(values)
 
     def get_short_text_preview(self, value):
-        max_length = 20
+        max_length = 200
 
         if not value:
             return None
@@ -3203,7 +3203,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         return f'{value[:max_length]} (+{value_length - max_length})'
 
     def get_short_images_preview(self, values):
-        max_length = 5
+        max_length = 6
 
         if not values:
             return None
@@ -3214,7 +3214,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
             return get_images_preview(values)
 
         return (
-            get_images_preview(values[:max_length], width="50")
+            get_images_preview(values[:max_length], width=50)
             + mark_safe(f'+({len(values) - max_length})')
         )
     # </editor-fold>
@@ -3441,7 +3441,8 @@ class ShopifyProductCalculator(Model, MessagesMixin):
 
         pies_attrs = pies_attrs.exclude(
             Q(value__endswith='.pdf')
-            | Q(value__contains='logo')
+            | Q(value__icontains='logo')
+            | Q(value__contains='youtu')
         )
         if not pies_attrs:
             return None
@@ -3610,7 +3611,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
                 'key': 'fitments',
                 'owner_resource': ShopifyMetafield.PRODUCT_OWNER_RESOURCE,
                 'value': json.dumps(values),
-                'value_type': ShopifyMetafield.STRING_VALUE_TYPE
+                'value_type': ShopifyMetafield.JSON_VALUE_TYPE
             }
         ]
 
@@ -4141,7 +4142,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         if not values:
             return None
 
-        return get_images_preview(values)
+        return get_json_preview(json.dumps(values))
     sema_filtered_image_urls_value_preview.fget.short_description = (
         'SEMA Filtered Images'
     )
@@ -4169,6 +4170,105 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     sema_filtered_images_preview.fget.short_description = (
         'SEMA Filtered Images'
     )
+
+    @property
+    def metafields_dict_fitments_value_preview(self):
+        value_attr = 'metafields_dict_fitments_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def metafields_dict_custom_value_preview(self):
+        value_attr = 'metafields_dict_custom_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def metafields_dict_all_value_preview(self):
+        value_attr = 'metafields_dict_all_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def tags_dict_vendor_value_preview(self):
+        value_attr = 'tags_dict_vendor_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def tags_dict_collection_value_preview(self):
+        value_attr = 'tags_dict_collection_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def tags_dict_custom_value_preview(self):
+        value_attr = 'tags_dict_custom_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def tags_dict_all_value_preview(self):
+        value_attr = 'tags_dict_all_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def images_dict_sema_value_preview(self):
+        value_attr = 'images_dict_sema_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def images_dict_premier_value_preview(self):
+        value_attr = 'images_dict_premier_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def images_dict_custom_value_preview(self):
+        value_attr = 'images_dict_custom_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
+
+    @property
+    def images_dict_all_value_preview(self):
+        value_attr = 'images_dict_all_value'
+        values = getattr(self, value_attr)
+        if not values:
+            return None
+
+        return get_json_preview(json.dumps(values))
     # </editor-fold>
 
     # <editor-fold desc="result properties ...">
@@ -4782,12 +4882,11 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         result = getattr(self, result_attr)
 
         return get_json_preview(
-            json.dumps(
-                diff(
-                    current,
-                    result,
-                    syntax='symmetric'
-                )
+            diff(
+                current,
+                result,
+                syntax='symmetric',
+                dump=True
             )
         )
     metafields_difference.fget.short_description = ''
@@ -4805,12 +4904,11 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         result = getattr(self, result_attr)
 
         return get_json_preview(
-            json.dumps(
-                diff(
-                    current,
-                    result,
-                    syntax='symmetric'
-                )
+            diff(
+                current,
+                result,
+                syntax='symmetric',
+                dump=True
             )
         )
     tags_difference.fget.short_description = ''
@@ -4828,12 +4926,11 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         result = getattr(self, result_attr)
 
         return get_json_preview(
-            json.dumps(
-                diff(
-                    current,
-                    result,
-                    syntax='symmetric'
-                )
+            diff(
+                current,
+                result,
+                syntax='symmetric',
+                dump=True
             )
         )
     images_difference.fget.short_description = ''
@@ -4841,66 +4938,97 @@ class ShopifyProductCalculator(Model, MessagesMixin):
 
     # <editor-fold desc="perform properties ...">
     def perform_calculated_fields_update(self):
+        product = self.shopify_product
+        variant = self.shopify_variant
+
         try:
             if self.title_match() is False:
-                self.shopify_product.title = self.title_result
-                self.shopify_product.save()
+                product.title = self.title_result
+                product.save()
 
             if self.body_html_match() is False:
-                self.shopify_product.body_html = self.body_html_result
-                self.shopify_product.save()
+                product.body_html = self.body_html_result
+                product.save()
 
             if self.variant_weight_match() is False:
-                self.shopify_variant.weight = self.variant_weight_result
-                self.shopify_variant.save()
+                variant.weight = self.variant_weight_result
+                variant.save()
 
             if self.variant_weight_unit_match() is False:
-                self.shopify_variant.weight_unit = self.variant_weight_unit_result
-                self.shopify_variant.save()
+                variant.weight_unit = self.variant_weight_unit_result
+                variant.save()
 
             if self.variant_cost_match() is False:
-                self.shopify_variant.cost = self.variant_cost_result
-                self.shopify_variant.save()
+                variant.cost = self.variant_cost_result
+                variant.save()
 
             if self.variant_price_match() is False:
-                self.shopify_variant.price = self.variant_price_result
-                self.shopify_variant.save()
+                variant.price = self.variant_price_result
+                variant.save()
 
             if self.variant_sku_match() is False:
-                self.shopify_variant.sku = self.variant_sku_result
-                self.shopify_variant.save()
+                variant.sku = self.variant_sku_result
+                variant.save()
 
             if self.variant_barcode_match() is False:
-                self.shopify_variant.barcode = self.variant_barcode_result
-                self.shopify_variant.save()
+                variant.barcode = self.variant_barcode_result
+                variant.save()
 
             if self.metafields_match() is False:
-                for metafield_data in self.metafields_result:
+                metafields_result = self.metafields_result
+
+                for metafield_data in metafields_result:
                     defaults = {
                         'value': metafield_data.pop('value'),
                         'value_type': metafield_data.pop('value_type')
                     }
                     ShopifyMetafield.objects.update_or_create(
-                        object_id=self.shopify_product.pk,
-                        content_type=ContentType.objects.get_for_model(self.shopify_product),
+                        object_id=product.pk,
+                        content_type=ContentType.objects.get_for_model(product),
                         **metafield_data,
                         defaults=defaults
                     )
 
+                # for metafield in self.shopify_metafields:  # FIXME
+                #     metafield_data = {
+                #         'namespace': metafield.namespace,
+                #         'key': metafield.key,
+                #         'owner_resource': metafield.owner_resource,
+                #         'value': metafield.value,
+                #         'value_type': metafield.value_type
+                #     }
+                #     if metafield_data not in metafields_result:
+                #         metafield.delete()
+
             if self.tags_match() is False:
-                for tag_data in self.tags_result:
+                tags_result = self.tags_result
+
+                for tag_data in tags_result:
                     tag, _ = ShopifyTag.objects.get_or_create(**tag_data)
-                    self.shopify_product.tags.add(tag)
-                    self.shopify_product.save()
+                    product.tags.add(tag)
+                    product.save()
+
+                for tag in self.shopify_tags:
+                    tag_data = {'name': tag.name}
+                    if tag_data not in tags_result:
+                        product.tags.remove(tag)
+                        product.save()
 
             if self.images_match() is False:
-                for image_data in self.images_result:
+                images_result = self.images_result
+
+                for image_data in images_result:
                     ShopifyImage.objects.get_or_create(
-                        product=self.shopify_product,
+                        product=product,
                         **image_data
                     )
 
-            return self.shopify_product.get_update_success_msg()
+                for image in self.shopify_images:
+                    image_data = {'link': image.link}
+                    if image_data not in images_result:
+                        image.delete()
+
+            return product.get_update_success_msg()
         except Exception as err:
             return self.get_instance_error_msg(str(err))
     # </editor-fold>

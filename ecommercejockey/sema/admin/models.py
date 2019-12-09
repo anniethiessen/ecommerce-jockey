@@ -242,7 +242,7 @@ class SemaBrandModelAdmin(ObjectActions, ModelAdmin, SemaBrandActions):
         if not obj or not obj.pk or not obj.primary_image_url:
             return None
 
-        return get_image_preview(obj.primary_image_url, width="100")
+        return get_image_preview(obj.primary_image_url)
     primary_image_preview.short_description = ''
 
     def may_be_relevant_flag(self, obj):

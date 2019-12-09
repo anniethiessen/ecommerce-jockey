@@ -6156,6 +6156,10 @@ class SemaProduct(SemaBaseModel):
             'brand-logo'
         ]
 
+        all_extra_div_classes = [
+            'youtube-vids',
+        ]
+
         def remove_head(html_):
             prefix = '<html>\n' if '<html>' in html_ else ''
             if '<head>' in html_:
@@ -6182,9 +6186,43 @@ class SemaProduct(SemaBaseModel):
             html_ = str(soup)
             return html_
 
+        def remove_extra_divs(html_, extra_div_classes_=None):
+            if not extra_div_classes_:
+                extra_div_classes_ = all_extra_div_classes
+            soup = BeautifulSoup(html_)
+            for div_class in extra_div_classes_:
+                for div in soup.find_all('div', {'id': div_class}):
+                    div.decompose()
+            html_ = str(soup)
+            return html_
+
+        def remove_buttons(html_):
+            soup = BeautifulSoup(html_)
+            for button in soup.find_all('button'):
+                button.decompose()
+            html_ = str(soup)
+            return html_
+
+        def remove_scripts(html_):
+            soup = BeautifulSoup(html_)
+            for script in soup.find_all('script'):
+                script.decompose()
+            html_ = str(soup)
+            return html_
+
         if not self.html:
             return '<html></html>'
-        return remove_head(remove_images(self.html))
+        return remove_head(
+            remove_extra_divs(
+                remove_scripts(
+                    remove_buttons(
+                        remove_images(
+                            self.html
+                        )
+                    )
+                )
+            )
+        )
 
     # <editor-fold desc="relevancy properties ...">
     @property
