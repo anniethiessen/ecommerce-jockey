@@ -30,6 +30,8 @@ from .actions import (
     SemaBrandActions,
     SemaCategoryActions,
     SemaDatasetActions,
+    SemaDescriptionPiesAttributeActions,
+    SemaDigitalAssetsPiesAttributeActions,
     SemaEngineActions,
     SemaMakeActions,
     SemaMakeYearActions,
@@ -58,6 +60,8 @@ from .filters import (
     SemaBaseVehicleMayBeRelevant,
     SemaCategoryMayBeRelevant,
     SemaBrandMayBeRelevant,
+    SemaDescriptionPiesAttributeMayBeRelevant,
+    SemaDigitalAssetsPiesAttributeMayBeRelevant,
     SemaEngineByDecade,
     SemaEngineMayBeRelevant,
     SemaMakeYearByDecade,
@@ -2373,6 +2377,11 @@ class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
         'product',
     )
 
+    actions = (
+        'mark_as_relevant_queryset_action',
+        'mark_as_irrelevant_queryset_action'
+    )
+
     search_fields = (
         'id',
         'segment',
@@ -2390,11 +2399,27 @@ class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
         'id',
         'product',
         'segment',
-        'value'
+        'value',
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_warnings',
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     list_display_links = (
         'detail_link',
+    )
+
+    list_editable = (
+        'is_relevant',
+        'relevancy_exception'
+    )
+
+    list_filter = (
+        'is_authorized',
+        'is_relevant'
     )
 
     fieldsets = (
@@ -2402,6 +2427,12 @@ class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
             None, {
                 'fields': (
                     'id',
+                    'is_authorized',
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_warnings',
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -2432,6 +2463,9 @@ class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
 
     readonly_fields = (
         'id',
+        'relevancy_warnings',
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'detail_link',
         'product_link'
     )
@@ -2450,6 +2484,16 @@ class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
         return get_change_view_link(obj.product, 'See Full Product')
     product_link.short_description = ''
 
+    def may_be_relevant_flag(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
+
     def get_fieldsets(self, request, obj=None):
         if not obj:
             return (
@@ -2467,26 +2511,30 @@ class SemaPiesAttributeBaseModelAdmin(ModelAdmin):
 
 
 @admin.register(SemaDescriptionPiesAttribute)
-class SemaDescriptionPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdmin):
-    pass
+class SemaDescriptionPiesAttributeModelAdmin(ObjectActions,
+                                             SemaPiesAttributeBaseModelAdmin,
+                                             SemaDescriptionPiesAttributeActions):
+    def get_list_filter(self, request):
+        return super().get_list_filter(request) + (
+            SemaDescriptionPiesAttributeMayBeRelevant,
+        )
 
 
 @admin.register(SemaDigitalAssetsPiesAttribute)
-class SemaSemaDigitalAssetsPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdmin):
-    list_display = (
-        'detail_link',
-        'id',
-        'product',
-        'segment',
-        'value',
-        'image_preview'
-    )
-
+class SemaSemaDigitalAssetsPiesAttributeModelAdmin(ObjectActions,
+                                                   SemaPiesAttributeBaseModelAdmin,
+                                                   SemaDigitalAssetsPiesAttributeActions):
     fieldsets = (
         (
             None, {
                 'fields': (
                     'id',
+                    'is_authorized',
+                    'may_be_relevant_flag',
+                    'is_relevant',
+                    'relevancy_warnings',
+                    'relevancy_errors',
+                    'relevancy_exception'
                 )
             }
         ),
@@ -2511,13 +2559,6 @@ class SemaSemaDigitalAssetsPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdm
         )
     )
 
-    readonly_fields = (
-        'id',
-        'image_preview',
-        'detail_link',
-        'product_link'
-    )
-
     def image_preview(self, obj):
         if not obj or not obj.pk or not obj.value:
             return None
@@ -2527,3 +2568,32 @@ class SemaSemaDigitalAssetsPiesAttributeModelAdmin(SemaPiesAttributeBaseModelAdm
         except Exception as err:
             return str(err)
     image_preview.short_description = ''
+
+    def get_actions(self, request):
+        self.actions = self.actions + (
+            'update_relevancy_queryset_action',
+
+        )
+        return super().get_actions(request)
+
+    def get_list_display(self, request):
+        return super().get_list_display(request) + (
+            'image_preview',
+        )
+
+    def get_list_filter(self, request):
+        return super().get_list_filter(request) + (
+            SemaDigitalAssetsPiesAttributeMayBeRelevant,
+        )
+
+    def get_change_actions(self, request, object_id, form_url):
+        self.change_actions = self.change_actions + (
+            'update_relevancy_object_action',
+
+        )
+        return super().get_change_actions(request,  object_id, form_url)
+
+    def get_readonly_fields(self, request, obj=None):
+        return super().get_readonly_fields(request, obj) + (
+            'image_preview',
+        )

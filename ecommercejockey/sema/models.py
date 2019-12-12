@@ -4,6 +4,9 @@ This module defines all models for the SEMA app.
 """
 
 
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
+
 from bs4 import BeautifulSoup
 from slugify import slugify
 
@@ -21,7 +24,6 @@ from django.db.models import (
 )
 
 from core.models import (
-    MessagesMixin,
     NotesBaseModel,
     RelevancyBaseModel
 )
@@ -6839,7 +6841,7 @@ class SemaProduct(SemaBaseModel):
         return f'{self.part_number} :: {self.dataset.brand}'
 
 
-class SemaBasePiesAttributeModel(Model, MessagesMixin):
+class SemaBasePiesAttributeModel(SemaBaseModel):
     """
     This abstract model class defines base attributes for SEMA PIES
     attribute models.
@@ -6929,6 +6931,25 @@ class SemaDescriptionPiesAttribute(SemaBasePiesAttributeModel):
         max_length=2000
     )
 
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. always relevant
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        return True
+    # </editor-fold>
+
     objects = SemaDescriptionPiesAttributeManager()
 
     class Meta:
@@ -6950,6 +6971,46 @@ class SemaDigitalAssetsPiesAttribute(SemaBasePiesAttributeModel):
     value = URLField(
         max_length=500
     )
+
+    @property
+    def is_broken(self):
+        try:
+            urlopen(self.value)
+            return True
+        except (URLError, HTTPError):
+            return False
+        except Exception:
+            raise
+
+    # <editor-fold desc="relevancy properties ...">
+    @property
+    def may_be_relevant(self):
+        """
+        Returns whether or not object may be relevant based on
+        attributes and related attributes.
+
+        .. Topic:: **-May Be Relevant Conditions-**
+
+            1. ends with .jpg or .png
+            2. does not end with .pdf
+            3. does not end with .mp4
+            4. does not contain logo
+            5. does not contain youtu
+
+        :return: whether or not object may be relevant
+        :rtype: bool
+
+        """
+
+        if ((self.value[-4:].lower() == '.jpg'
+             or self.value[-4:].lower() == '.png')
+                and not self.value[-4:].lower() == '.pdf'
+                and not self.value[-4:].lower() == '.mp4'
+                and 'logo' not in self.value.lower()
+                and 'youtu' not in self.value.lower()):
+            return True
+        return False
+    # </editor-fold>
 
     objects = SemaDigitalAssetsPiesAttributeManager()
 

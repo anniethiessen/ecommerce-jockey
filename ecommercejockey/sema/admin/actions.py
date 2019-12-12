@@ -318,3 +318,35 @@ class SemaProductActions(SemaProductVehiclesActions,
                          SemaProductPiesAttributesActions,
                          SemaProductHtmlActions):
     pass
+
+
+class SemaDescriptionPiesAttributeActions(RelevancyActions):
+    pass
+
+
+class SemaDigitalAssetsPiesAttributeActions(RelevancyActions):
+
+    def update_relevancy_queryset_action(self, request, queryset):
+        try:
+            msgs = queryset.perform_relevancy_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_relevancy_queryset_action.allowed_permissions = ('view',)
+    update_relevancy_queryset_action.short_description = (
+        'Update relevancy of selected %(verbose_name_plural)s '
+        'according to URL rules'
+    )
+
+    def update_relevancy_object_action(self, request, obj):
+        try:
+            queryset = self.model.objects.filter(pk=obj.pk)
+            msgs = queryset.perform_relevancy_update()
+            self.display_messages(request, msgs, include_info=False)
+        except Exception as err:
+            messages.error(request, str(err))
+    update_relevancy_object_action.allowed_permissions = ('view',)
+    update_relevancy_object_action.label = 'Update Relevancy'
+    update_relevancy_object_action.short_description = (
+        'Update relevancy according to URL rules'
+    )

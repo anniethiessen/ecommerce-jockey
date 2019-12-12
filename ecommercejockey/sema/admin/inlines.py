@@ -1353,11 +1353,20 @@ class SemaPiesAttributeBaseTabularInline(TabularInline):
         'id',
         'product',
         'segment',
-        'value'
+        'value',
+        'is_authorized',
+        'may_be_relevant_flag',
+        'is_relevant',
+        'relevancy_warnings',
+        'relevancy_errors',
+        'relevancy_exception'
     )
 
     readonly_fields = (
         'id',
+        'relevancy_warnings',
+        'relevancy_errors',
+        'may_be_relevant_flag',
         'detail_link'
     )
 
@@ -1366,6 +1375,16 @@ class SemaPiesAttributeBaseTabularInline(TabularInline):
             return None
         return get_change_view_link(obj, 'Details')
     detail_link.short_description = ''
+
+    def may_be_relevant_flag(self, obj):
+        if not obj or not obj.pk:
+            return None
+
+        if obj.is_relevant != obj.may_be_relevant:
+            return '~'
+        else:
+            return ''
+    may_be_relevant_flag.short_description = ''
 
 
 class SemaBrandDatasetsTabularInline(SemaDatasetBaseTabularInline):
@@ -1486,9 +1505,9 @@ class SemaProductDigitalAssetsPiesAttributeTabularInline(SemaPiesAttributeBaseTa
     image_preview.short_description = ''
 
     def get_fields(self, request, obj=None):
-        return super().get_fields(
-            request, obj,
-        ) + ('image_preview',)
+        return super().get_fields(request, obj) + (
+            'image_preview',
+        )
 
     def get_readonly_fields(self, request, obj=None):
         return super().get_readonly_fields(

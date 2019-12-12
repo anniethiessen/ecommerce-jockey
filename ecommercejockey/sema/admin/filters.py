@@ -450,3 +450,39 @@ class SemaProductMayBeRelevant(MayBeRelevantBaseListFilter):
                     & Q(_vehicle_relevant_count=0)
                 )
             )
+
+
+class SemaDescriptionPiesAttributeMayBeRelevant(MayBeRelevantBaseListFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset
+
+        if self.value() == 'False':
+            return queryset.none()
+
+
+class SemaDigitalAssetsPiesAttributeMayBeRelevant(MayBeRelevantBaseListFilter):
+    def queryset(self, request, queryset):
+        if self.value() == 'True':
+            return queryset.filter(
+                ~Q(value__icontains='logo')
+                & ~Q(value__icontains='youtu')
+                & ~Q(value__iendswith='.pdf')
+                & ~Q(value__iendswith='.mp4')
+                & (
+                    Q(value__iendswith='.jpg')
+                    | Q(value__iendswith='.png')
+                )
+            )
+
+        if self.value() == 'False':
+            return queryset.filter(
+                Q(value__icontains='logo')
+                | Q(value__icontains='youtu')
+                | Q(value__iendswith='.pdf')
+                | Q(value__iendswith='.mp4')
+                | (
+                    ~Q(value__iendswith='.jpg')
+                    & ~Q(value__iendswith='.png')
+                )
+            )

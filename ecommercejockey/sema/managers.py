@@ -4925,7 +4925,43 @@ class SemaDigitalAssetsPiesAttributeQuerySet(SemaBasePiesAttributeQuerySet):
 
     """
 
-    pass
+    # <editor-fold desc="perform properties ...">
+    def perform_relevancy_update(self):
+        msgs = []
+
+        for pies_attr in self:
+            if pies_attr.may_be_relevant:
+                try:
+                    if pies_attr.is_broken:
+                        relevant = False
+                        relevancy_exception = 'Broken'
+                    else:
+                        relevant = True
+                        relevancy_exception = ''
+                except Exception as err:
+                    relevant = False
+                    relevancy_exception = str(err)[:100]
+            else:
+                relevant = False
+                relevancy_exception = ''
+
+            if not pies_attr.is_relevant == relevant:
+                pies_attr.is_relevant = relevant
+                pies_attr.relevancy_exception = relevancy_exception
+                pies_attr.save()
+                msgs.append(
+                    pies_attr.get_update_success_msg(
+                        previous_data={'relevant': not relevant},
+                        new_data={'relevant': relevant},
+                    )
+                )
+            else:
+                msgs.append(pies_attr.get_up_to_date_msg())
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
 
 
 class SemaBaseManager(Manager):
@@ -12379,6 +12415,7 @@ class SemaBasePiesAttributeManager(SemaBaseManager):
 
         try:
             fields = {
+                'is_authorized': True,
                 'product_id': data['ProductId'],
                 'segment': data['PiesSegment'],
                 'value': data['Value']
@@ -12420,6 +12457,56 @@ class SemaBasePiesAttributeManager(SemaBaseManager):
             raise
     # </editor-fold>
 
+    # <editor-fold desc="unauthorize properties ...">
+    def get_pk_list_from_api_data(self, data):
+        """
+        Returns a list of object PKs from full API data.
+
+        :param data: API data
+        :type data: list
+
+        :return: list of PKs
+        :rtype: list
+
+        :raises Exception: on general exception
+
+        **-Expected Data Format-**
+        ::
+            data = [
+                {
+                    "ProductId": <int>,
+                    "PiesSegment": <str>,
+                    "Value": <str>
+                },
+                {..}
+            ]
+
+        **-Return Format-**
+        ::
+            ret = [
+                <int>,
+                ...
+            ]
+
+        """
+
+        try:
+            pk_list = []
+            for item in data:
+                try:
+                    pies_attribute = self.get(
+                        product_id=item['ProductId'],
+                        segment=item['PiesSegment'],
+                        value=item['Value']
+                    )
+                    pk_list.append(pies_attribute.pk)
+                except self.model.DoesNotExist:
+                    pass
+            return pk_list
+        except Exception:
+            raise
+    # </editor-fold>
+
 
 class SemaDescriptionPiesAttributeManager(SemaBasePiesAttributeManager):
     """
@@ -12450,3 +12537,16 @@ class SemaDigitalAssetsPiesAttributeManager(SemaBasePiesAttributeManager):
             self.model,
             using=self._db
         )
+
+# <editor-fold desc="perform properties ...">
+    def perform_relevancy_update(self):
+        msgs = []
+        try:
+            msgs += self.get_queryset().perform_relevancy_update()
+        except Exception as err:
+            msgs.append(self.model.get_class_error_msg(str(err)))
+
+        if not msgs:
+            msgs.append(self.model.get_class_up_to_date_msg())
+        return msgs
+    # </editor-fold>
