@@ -1616,14 +1616,14 @@ class ShopifyProduct(Model, MessagesMixin):
         if not self.vendor:
             error = "missing vendor"
             msgs.append(error)
-        if not self.tags.all().count() >= 4:
+        if not self.tag_count >= 4:
             error = "missing tags"
             msgs.append(error)
-        if not self.images.all().count() >= 1:
-            error = "missing tags"
+        if not self.image_count >= 1:
+            error = "missing images"
             msgs.append(error)
-        if not self.variants.all().count() >= 1:
-            error = "missing variants"
+        if not self.variant_count >= 1:
+            error = "missing variant"
             msgs.append(error)
         if not self.variants.first().title == 'Default Title':
             error = "first variant not default title"
@@ -3005,10 +3005,10 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     )
     image_urls_sema_choice = CharField(
         choices=(
-            ('sema_filtered_image_urls_value', 'SEMA Filtered Image URLs'),
+            ('sema_digital_asset_image_urls_value', 'SEMA Digital Asset Image URLs'),
             ('custom_sema_image_urls_value', 'Custom SEMA Image URLs')
         ),
-        default='sema_filtered_image_urls_value',
+        default='sema_digital_asset_image_urls_value',
         max_length=50
     )
     image_urls_sema_custom_value = TextField(
@@ -3099,14 +3099,18 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     @property
     def sema_description_pies_attributes(self):
         return (
-            self.sema_product.description_pies_attributes.all()
+            self.sema_product.description_pies_attributes.filter(
+                is_relevant=True
+            )
             if self.has_sema_product else None
         )
 
     @property
     def sema_digital_assets_pies_attributes(self):
         return (
-            self.sema_product.digital_assets_pies_attributes.all()
+            self.sema_product.digital_assets_pies_attributes.filter(
+                is_relevant=True
+            )
             if self.has_sema_product else None
         )
 
@@ -3434,16 +3438,8 @@ class ShopifyProductCalculator(Model, MessagesMixin):
         return [category.tag_name for category in categories]
 
     @property
-    def sema_filtered_image_urls_value(self):
+    def sema_digital_asset_image_urls_value(self):
         pies_attrs = self.sema_digital_assets_pies_attributes
-        if not pies_attrs:
-            return None
-
-        pies_attrs = pies_attrs.exclude(
-            Q(value__endswith='.pdf')
-            | Q(value__icontains='logo')
-            | Q(value__contains='youtu')
-        )
         if not pies_attrs:
             return None
 
@@ -3977,7 +3973,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     def sema_description_key_value_short_preview(self):
         value_attr = 'sema_description_key_value'
         return self.get_short_text_preview(getattr(self, value_attr))
-    sema_description_mkt_value_short_preview.fget.short_description = (
+    sema_description_key_value_short_preview.fget.short_description = (
         'SEMA KEY Description'
     )
 
@@ -3985,7 +3981,7 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     def sema_description_key_value_preview(self):
         value_attr = 'sema_description_key_value'
         return getattr(self, value_attr)
-    sema_description_mkt_value_preview.fget.short_description = (
+    sema_description_key_value_preview.fget.short_description = (
         'SEMA KEY Description'
     )
 
@@ -4136,39 +4132,39 @@ class ShopifyProductCalculator(Model, MessagesMixin):
     )
 
     @property
-    def sema_filtered_image_urls_value_preview(self):
-        value_attr = 'sema_filtered_image_urls_value'
+    def sema_digital_asset_image_urls_value_preview(self):
+        value_attr = 'sema_digital_asset_image_urls_value'
         values = getattr(self, value_attr)
         if not values:
             return None
 
         return get_json_preview(json.dumps(values))
-    sema_filtered_image_urls_value_preview.fget.short_description = (
-        'SEMA Filtered Images'
+    sema_digital_asset_image_urls_value_preview.fget.short_description = (
+        'SEMA Digital Asset Image URLs'
     )
 
     @property
-    def sema_filtered_images_short_preview(self):
-        value_attr = 'sema_filtered_image_urls_value'
+    def sema_digital_asset_images_short_preview(self):
+        value_attr = 'sema_digital_asset_image_urls_value'
         values = getattr(self, value_attr)
         if not values:
             return None
 
         return self.get_short_images_preview(values)
-    sema_filtered_images_short_preview.fget.short_description = (
-        'SEMA Filtered Images'
+    sema_digital_asset_images_short_preview.fget.short_description = (
+        'SEMA Digital Asset Images'
     )
 
     @property
-    def sema_filtered_images_preview(self):
-        value_attr = 'sema_filtered_image_urls_value'
+    def sema_digital_asset_images_preview(self):
+        value_attr = 'sema_digital_asset_image_urls_value'
         values = getattr(self, value_attr)
         if not values:
             return None
 
         return get_images_preview(values)
-    sema_filtered_images_preview.fget.short_description = (
-        'SEMA Filtered Images'
+    sema_digital_asset_images_preview.fget.short_description = (
+        'SEMA Digital Asset Images'
     )
 
     @property

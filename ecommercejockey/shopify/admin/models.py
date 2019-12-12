@@ -1006,6 +1006,11 @@ class ShopifyImageModelAdmin(ObjectActions, ModelAdmin, ShopifyImageActions):
         'detail_link',
     )
 
+    list_filter = (
+        'product__vendor',
+        'product__tags'
+    )
+
     change_actions = (
         'import_from_api_object_action',
         'export_to_api_object_action'
@@ -1669,7 +1674,8 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
                     'item_link',
                     'premier_product_link',
                     'sema_product_link',
-                    'id',
+                    'full_match',
+                    'id'
                 )
             }
         ),
@@ -1778,6 +1784,7 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
                     'variant_cost_match',
                     'variant_cost_current_preview',
                     'variant_cost_result_preview',
+                    'variant_cost_choice',
                     'variant_cost_custom_value'
                 )
             }
@@ -1830,8 +1837,8 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Metafield Packaging Previews', {
                 'fields': (
-                    'sema_html_value_preview',
-                    'sema_html_preview'
+                    # 'sema_html_value_preview',
+                    'sema_html_preview',
                 ),
                 'classes': (
                     'collapse',
@@ -1899,7 +1906,9 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Image Previews', {
                 'fields': (
-                    'sema_filtered_images_preview',
+                    'sema_digital_asset_image_urls_value_preview',
+                    'sema_digital_asset_images_preview',
+                    'premier_primary_image_urls_value_preview',
                     'premier_primary_images_preview'
                 ),
                 'classes': (
@@ -1989,8 +1998,9 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'sema_vehicles_value_preview',
         'sema_brand_tag_names_value_preview',
         'sema_category_tag_names_value_preview',
-        'sema_filtered_images_preview',
-        'sema_filtered_images_short_preview',
+        'sema_digital_asset_image_urls_value_preview',
+        'sema_digital_asset_images_preview',
+        'sema_digital_asset_images_short_preview',
         'premier_description_value_preview',
         'premier_description_value_short_preview',
         'premier_weight_value_preview',
@@ -1998,6 +2008,7 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'premier_cost_usd_value_preview',
         'premier_premier_part_number_value_preview',
         'premier_upc_value_preview',
+        'premier_primary_image_urls_value_preview',
         'premier_primary_images_preview',
         'premier_primary_images_short_preview',
         'detail_link',
