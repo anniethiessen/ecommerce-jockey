@@ -2138,7 +2138,32 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'id',
         'collection',
         'full_match',
-        'title_option'
+
+        'sema_category_chained_title_value_preview',
+        'title_match',
+        'title_current_preview',
+        'title_result_preview',
+        'title_choice',
+        'title_custom_value',
+
+        'sema_category_title_value_preview',
+        'shopify_collection_collection_family_value_preview',
+        'metafields_match',
+        'metafields_difference',
+        'metafield_value_display_name_choice',
+        'metafield_value_display_name_custom_value',
+        'metafield_value_collection_family_choice',
+        'metafield_value_collection_family_custom_value',
+        'metafields_choice',
+        'metafields_custom_value',
+
+        'sema_category_tag_names_value_preview',
+        'tags_match',
+        'tags_difference',
+        'tag_names_collection_choice',
+        'tag_names_collection_custom_value',
+        'tags_choice',
+        'tags_custom_value'
     )
 
     list_display_links = (
@@ -2146,7 +2171,20 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
     )
 
     list_editable = (
-        'title_option',
+        'title_choice',
+        'title_custom_value',
+
+        'metafield_value_display_name_choice',
+        'metafield_value_display_name_custom_value',
+        'metafield_value_collection_family_choice',
+        'metafield_value_collection_family_custom_value',
+        'metafields_choice',
+        'metafields_custom_value',
+
+        'tag_names_collection_choice',
+        'tag_names_collection_custom_value',
+        'tags_choice',
+        'tags_custom_value'
     )
 
     change_actions = (
@@ -2159,6 +2197,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
                 'fields': (
                     'category_paths_link',
                     'sema_category_link',
+                    'full_match',
                     'id'
                 )
             }
@@ -2177,7 +2216,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Text Previews', {
                 'fields': (
-                    'sema_category_chained_title_preview',
+                    'sema_category_chained_title_value_preview',
                 ),
                 'classes': (
                     'collapse',
@@ -2187,16 +2226,19 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Title', {
                 'fields': (
-                    ('title_match', 'title_difference'),
-                    'title_option'
+                    'title_match',
+                    'title_current_preview',
+                    'title_result_preview',
+                    'title_choice',
+                    'title_custom_value'
                 )
             }
         ),
         (
             'Metafield Previews', {
                 'fields': (
-                    'sema_category_display_name_preview',
-                    'shopify_subcollections_preview'
+                    'sema_category_title_value_preview',
+                    'shopify_collection_collection_family_value_preview'
                 ),
                 'classes': (
                     'collapse',
@@ -2206,16 +2248,21 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Metafields', {
                 'fields': (
-                    ('metafields_match', 'metafields_difference'),
-                    'metafields_display_name_option',
-                    'metafields_subcollections_option'
+                    'metafields_match',
+                    'metafields_difference',
+                    'metafield_value_display_name_choice',
+                    'metafield_value_display_name_custom_value',
+                    'metafield_value_collection_family_choice',
+                    'metafield_value_collection_family_custom_value',
+                    'metafields_choice',
+                    'metafields_custom_value',
                 )
             }
         ),
         (
             'Tag Previews', {
                 'fields': (
-                    'sema_category_tags_preview',
+                    'sema_category_tag_names_value_preview',
                 ),
                 'classes': (
                     'collapse',
@@ -2225,8 +2272,12 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
         (
             'Tags', {
                 'fields': (
-                    ('tags_match', 'tags_difference'),
-                    'tags_categories_option'
+                    'tags_match',
+                    'tags_difference',
+                    'tag_names_collection_choice',
+                    'tag_names_collection_custom_value',
+                    'tags_choice',
+                    'tags_custom_value'
                 )
             }
         )
@@ -2234,17 +2285,18 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
 
     readonly_fields = (
         'id',
-        'title_match',
-        'metafields_match',
-        'tags_match',
         'full_match',
-        'title_difference',
+        'title_match',
+        'tags_match',
+        'metafields_match',
+        'sema_category_chained_title_value_preview',
+        'sema_category_title_value_preview',
+        'shopify_collection_collection_family_value_preview',
+        'sema_category_tag_names_value_preview',
+        'title_current_preview',
+        'title_result_preview',
         'metafields_difference',
         'tags_difference',
-        'sema_category_chained_title_preview',
-        'sema_category_display_name_preview',
-        'shopify_subcollections_preview',
-        'sema_category_tags_preview',
         'detail_link',
         'collection_link',
         'category_paths_link',
@@ -2254,6 +2306,11 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
     autocomplete_fields = (
         'collection',
     )
+
+    formfield_overrides = {
+        CharField: {'widget': TextInput(attrs={'size': '40'})},
+        TextField: {'widget': Textarea(attrs={'rows': 3, 'cols': 40})},
+    }
 
     def detail_link(self, obj):
         if not obj:
@@ -2269,7 +2326,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
     collection_link.short_description = ''
 
     def category_paths_link(self, obj):
-        if not obj or not obj.pk or not not obj.collection:
+        if not obj or not obj.pk or not obj.collection:
             return None
 
         if obj.collection.level == '1':
@@ -2280,7 +2337,7 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
             query = f'shopify_branch_collection={obj.collection.pk}'
         else:
             category_path_model = obj.collection.leaf_category_paths.first()._meta.model
-            query = f'shopify_leaf_collection={obj.collection.pk}'
+            query = f'shopify_leaf_collection__id={obj.collection.pk}'
 
         return get_changelist_view_link(
             category_path_model,
@@ -2319,10 +2376,12 @@ class ShopifyCollectionCalculatorModelAdmin(ObjectActions, ModelAdmin,
                     None, {
                         'fields': (
                             'collection',
-                            'title_option',
-                            'metafields_display_name_option',
-                            'metafields_subcollections_option',
-                            'tags_categories_option'
+                            'title_choice',
+                            'metafield_value_display_name_choice',
+                            'metafield_value_collection_family_choice',
+                            'metafields_choice',
+                            'tag_names_collection_choice',
+                            'tags_choice',
                         )
                     }
                 ),

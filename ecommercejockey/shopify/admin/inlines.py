@@ -639,27 +639,63 @@ class ShopifyCollectionCalculatorStackedInline(StackedInline):
             None, {
                 'fields': (
                     'detail_link',
-                    ('title_match', 'title_difference'),
-                    'title_option',
-                    ('metafields_match', 'metafields_difference'),
-                    'metafields_display_name_option',
-                    'metafields_subcollections_option',
-                    ('tags_match', 'tags_difference'),
-                    'tags_categories_option'
+                )
+            }
+        ),
+        (
+            'Title', {
+                'fields': (
+                    'title_match',
+                    'title_current_preview',
+                    'title_result_preview',
+                    'title_choice',
+                    'title_custom_value'
+                )
+            }
+        ),
+        (
+            'Metafields', {
+                'fields': (
+                    'metafields_match',
+                    'metafields_difference',
+                    'metafield_value_display_name_choice',
+                    'metafield_value_display_name_custom_value',
+                    'metafield_value_collection_family_choice',
+                    'metafield_value_collection_family_custom_value',
+                    'metafields_choice',
+                    'metafields_custom_value'
+                )
+            }
+        ),
+        (
+            'Tags', {
+                'fields': (
+                    'tags_match',
+                    'tags_difference',
+                    'tag_names_collection_choice',
+                    'tag_names_collection_custom_value',
+                    'tags_choice',
+                    'tags_custom_value'
                 )
             }
         ),
     )
 
     readonly_fields = (
-        'detail_link',
         'title_match',
-        'metafields_match',
         'tags_match',
-        'title_difference',
+        'metafields_match',
+        'title_current_preview',
+        'title_result_preview',
         'metafields_difference',
-        'tags_difference'
+        'tags_difference',
+        'detail_link'
     )
+
+    formfield_overrides = {
+        CharField: {'widget': TextInput(attrs={'size': '40'})},
+        TextField: {'widget': Textarea(attrs={'rows': 3, 'cols': 40})},
+    }
 
     def detail_link(self, obj):
         if not obj:
