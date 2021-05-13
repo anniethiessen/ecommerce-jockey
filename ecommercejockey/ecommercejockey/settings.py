@@ -27,6 +27,10 @@ SHOPIFY_BASE_URL = (
 )
 
 
+SUPERUSER_EMAIL_ADDRESS = os.environ['SUPERUSER_EMAIL_ADDRESS']
+SUPERUSER_PASSWORD = os.environ['SUPERUSER_PASSWORD']
+
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ['SECRET_KEY']
 
