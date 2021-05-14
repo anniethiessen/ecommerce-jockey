@@ -11,9 +11,12 @@ from django.core.exceptions import MultipleObjectsReturned
 from django.db.models import (
     Manager,
     QuerySet,
+    Case,
     Count,
     F,
     Q,
+    When,
+    BooleanField,
     ManyToManyField
 )
 from django.db.models.functions import Floor
@@ -54,6 +57,21 @@ class SemaBrandQuerySet(SemaBaseQuerySet):
     """
 
     def with_admin_data(self):
+        return self.with_relevancy_data()
+
+    def with_relevancy_data(self):
+        return self.with_dataset_count_data().annotate(
+            _may_be_relevant=Case(
+                When(
+                    _dataset_relevant_count__gt=0,
+                    then=True
+                ),
+                default=False,
+                output_field=BooleanField()
+            )
+        )
+
+    def with_dataset_count_data(self):
         return self.prefetch_related(
             'datasets',
         ).annotate(
@@ -5333,6 +5351,12 @@ class SemaBrandManager(SemaBaseManager):
 
     def with_admin_data(self):
         return self.get_queryset().with_admin_data()
+
+    def with_relevancy_data(self):
+        return self.get_queryset().with_relevancy_data()
+
+    def with_dataset_count_data(self):
+        return self.get_queryset().with_dataset_count_data()
 
     # <editor-fold desc="retrieve properties ...">
     def retrieve_data_from_api(self):
