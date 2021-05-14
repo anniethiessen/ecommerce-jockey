@@ -1,0 +1,10 @@
+branch-defaults:
+  master:
+    environment: ecommerce-jockey
+global:
+  application_name: ecommerce
+  default_platform: Python 3.7 running on 64bit Amazon Linux 2
+  default_region: us-west-2
+  profile: eb-cli
+  sc: git
+  workspace_type: Application
