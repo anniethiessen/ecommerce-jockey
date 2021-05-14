@@ -1647,7 +1647,7 @@ class ShopifyProductCalculatorModelAdmin(ObjectActions, ModelAdmin,
         'body_html_choice',
         'premier_cost_cad_value_preview',
         'variant_price_markup_choice',
-        'sema_filtered_images_short_preview',
+        'sema_digital_asset_images_short_preview',
         'premier_primary_images_short_preview',
         'images_choice'
     )
