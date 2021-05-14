@@ -302,13 +302,18 @@ class HasShopifyProduct(BooleanBaseListFilter):
             return queryset.filter(item__shopify_product__isnull=True)
 
 
-class SemaBrandMayBeRelevant(MayBeRelevantBaseListFilter):
+class MayBeRelevant(MayBeRelevantBaseListFilter):
     def queryset(self, request, queryset):
         if self.value() == 'True':
-            return queryset.filter(_dataset_relevant_count__gt=0)
+            return queryset.with_relevancy_data().filter(_may_be_relevant=True)
 
         if self.value() == 'False':
-            return queryset.filter(_dataset_relevant_count=0)
+            return queryset.with_relevancy_data().filter(_may_be_relevant=False)
+
+
+class SemaBrandMayBeRelevant(MayBeRelevant):
+    def queryset(self, request, queryset):
+        pass
 
 
 class SemaYearMayBeRelevant(MayBeRelevantBaseListFilter):
