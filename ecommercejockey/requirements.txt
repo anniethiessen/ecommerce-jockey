@@ -60,7 +60,7 @@ pytz==2019.2
 PyYAML>=3.10,<4
 requests>=2.15.1,<=2.22.0
 retry==0.9.2
-rsa==4.0
+rsa==4.7
 semantic-version==2.5.0
 simplejson==3.16.0
 six==1.11.0
