@@ -39,7 +39,7 @@ Jinja2==2.10.3
 jsondiff==1.2.0
 jsonschema==2.6.0
 MarkupSafe==1.1.1
-numpy==1.17.2
+numpy==1.22.0
 odfpy==1.4.0
 openpyxl==2.6.3
 packaging==19.2
